@@ -1,0 +1,478 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>DHRUVA - Cinematic Portfolio</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    "colors": {
+                        "surface-bright": "#3a3939",
+                        "surface-container-high": "#2a2a2a",
+                        "surface-container-low": "#1c1b1b",
+                        "inverse-surface": "#e5e2e1",
+                        "outline-variant": "#444748",
+                        "background": "#141313",
+                        "secondary-fixed": "#e2e2e2",
+                        "on-secondary-fixed": "#1a1c1c",
+                        "tertiary-fixed": "#e2e2e2",
+                        "inverse-primary": "#5d5f5f",
+                        "inverse-on-surface": "#313030",
+                        "outline": "#8e9192",
+                        "surface-container-lowest": "#0e0e0e",
+                        "surface-tint": "#c6c6c7",
+                        "tertiary-fixed-dim": "#c6c6c7",
+                        "secondary-fixed-dim": "#c6c6c7",
+                        "surface-container": "#201f1f",
+                        "tertiary-container": "#e2e2e2",
+                        "on-tertiary-fixed-variant": "#454747",
+                        "surface-dim": "#141313",
+                        "error": "#ffb4ab",
+                        "on-surface": "#e5e2e1",
+                        "on-error-container": "#ffdad6",
+                        "primary-fixed-dim": "#c6c6c7",
+                        "on-tertiary-fixed": "#1a1c1c",
+                        "primary": "#ffffff",
+                        "on-primary": "#2f3131",
+                        "on-surface-variant": "#c4c7c8",
+                        "tertiary": "#ffffff",
+                        "on-primary-fixed": "#1a1c1c",
+                        "on-primary-container": "#636565",
+                        "primary-fixed": "#e2e2e2",
+                        "on-error": "#690005",
+                        "secondary-container": "#454747",
+                        "primary-container": "#e2e2e2",
+                        "on-background": "#e5e2e1",
+                        "on-tertiary": "#2f3131",
+                        "surface-container-highest": "#353434",
+                        "on-secondary-container": "#b4b5b5",
+                        "surface-variant": "#353434",
+                        "on-secondary-fixed-variant": "#454747",
+                        "on-primary-fixed-variant": "#454747",
+                        "surface": "#141313",
+                        "on-tertiary-container": "#636565",
+                        "secondary": "#c6c6c7",
+                        "on-secondary": "#2f3131",
+                        "error-container": "#93000a"
+                    },
+                    "borderRadius": {
+                        "DEFAULT": "0.25rem",
+                        "lg": "0.5rem",
+                        "xl": "0.75rem",
+                        "full": "9999px"
+                    },
+                    "spacing": {
+                        "gutter": "24px",
+                        "stack-sm": "8px",
+                        "section-gap": "160px",
+                        "margin-mobile": "20px",
+                        "stack-md": "16px",
+                        "stack-lg": "32px",
+                        "container-max": "1280px"
+                    },
+                    "fontFamily": {
+                        "label-md": ["Inter"],
+                        "body-md": ["Inter"],
+                        "body-lg": ["Inter"],
+                        "display-lg-mobile": ["Inter"],
+                        "display-lg": ["Inter"],
+                        "button": ["Inter"],
+                        "headline-xl": ["Inter"],
+                        "headline-lg": ["Inter"]
+                    },
+                    "fontSize": {
+                        "label-md": ["14px", { "lineHeight": "1.4", "letterSpacing": "0.02em", "fontWeight": "600" }],
+                        "body-md": ["16px", { "lineHeight": "1.6", "letterSpacing": "0em", "fontWeight": "400" }],
+                        "body-lg": ["18px", { "lineHeight": "1.6", "letterSpacing": "0em", "fontWeight": "400" }],
+                        "display-lg-mobile": ["40px", { "lineHeight": "1.2", "letterSpacing": "-0.02em", "fontWeight": "800" }],
+                        "display-lg": ["72px", { "lineHeight": "1.1", "letterSpacing": "-0.04em", "fontWeight": "800" }],
+                        "button": ["15px", { "lineHeight": "1", "letterSpacing": "0.01em", "fontWeight": "600" }],
+                        "headline-xl": ["48px", { "lineHeight": "1.2", "letterSpacing": "-0.03em", "fontWeight": "800" }],
+                        "headline-lg": ["32px", { "lineHeight": "1.3", "letterSpacing": "-0.02em", "fontWeight": "700" }]
+                    }
+                }
+            }
+        }
+    </script>
+<style>
+        body {
+            background-color: #0e0e0e; /* surface-container-lowest */
+            color: #e5e2e1; /* on-surface */
+            overflow-x: hidden;
+            scroll-behavior: smooth;
+        }
+
+        /* Theatre Intro Transitions */
+        #theatre-intro {
+            transition: opacity 1.5s cubic-bezier(0.4, 0, 0.2, 1), visibility 1.5s;
+        }
+        #theatre-intro.fade-out {
+            opacity: 0;
+            visibility: hidden;
+        }
+        
+        #main-content {
+            opacity: 0;
+            transform: translateY(20px);
+            transition: opacity 1.5s cubic-bezier(0.4, 0, 0.2, 1) 0.5s, transform 1.5s cubic-bezier(0.4, 0, 0.2, 1) 0.5s;
+        }
+        #main-content.fade-in {
+            opacity: 1;
+            transform: translateY(0);
+        }
+
+        /* Cinematic Letterboxing */
+        .letterbox {
+            position: absolute;
+            left: 0;
+            width: 100%;
+            height: 10vh;
+            background-color: black;
+            z-index: 10;
+        }
+        .letterbox.top { top: 0; }
+        .letterbox.bottom { bottom: 0; }
+
+        /* Card Hover Effects */
+        .service-card {
+            transition: all 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+            border: 1px solid rgba(255,255,255,0.05);
+        }
+        
+        .services-container:hover .service-card:not(:hover) {
+            transform: scale(0.95);
+            opacity: 0.5;
+        }
+        
+        .service-card:hover {
+            transform: scale(1.05);
+            background-color: #1c1b1b; /* surface-container-low */
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+            z-index: 10;
+        }
+
+        /* Ambient Glow Inner Border */
+        .inner-glow {
+            box-shadow: inset 0 1px 0 0 rgba(255,255,255,0.05);
+        }
+
+        /* Face Cycle Animation */
+        .face-image {
+            transition: opacity 1s ease-in-out;
+        }
+
+        /* Project Hover */
+        .project-card {
+            transition: transform 0.6s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        .project-card:hover {
+            transform: scale(1.02);
+        }
+        .project-overlay {
+            transition: opacity 0.4s ease;
+        }
+        .project-card:hover .project-overlay {
+            opacity: 1;
+        }
+    </style>
+</head>
+<body class="antialiased">
+<!-- SECTION 1 (Theatre Intro) -->
+<div class="fixed inset-0 z-[100] bg-black flex items-center justify-center cursor-pointer overflow-hidden" id="theatre-intro">
+<div class="letterbox top"></div>
+<div class="text-center">
+<h1 class="font-display-lg text-display-lg-mobile md:text-display-lg text-primary tracking-tighter">DHRUVA</h1>
+<p class="font-body-md text-body-md text-on-surface-variant mt-4 opacity-50">Click or scroll to enter</p>
+</div>
+<div class="letterbox bottom"></div>
+</div>
+<!-- MAIN CONTENT (Hidden initially) -->
+<div class="relative" id="main-content">
+<!-- Navigation (Injected JSON Component) -->
+<nav class="fixed top-6 left-1/2 -translate-x-1/2 w-[90%] max-w-container-max rounded-full backdrop-blur-xl border border-white/5 shadow-2xl flex justify-between items-center px-gutter py-4 z-50 bg-background/80 dark:bg-background/80 transition-all duration-300">
+<div class="font-display-lg text-display-lg-mobile md:text-display-lg tracking-tighter text-primary dark:text-primary">DHRUVA</div>
+<div class="hidden md:flex gap-8 items-center">
+<a class="font-label-md text-label-md text-primary font-bold border-b border-primary pb-1 hover:text-primary transition-all duration-300 ease-in-out" href="#work">Work</a>
+<a class="font-label-md text-label-md text-on-surface-variant font-medium hover:text-primary transition-all duration-300 ease-in-out" href="#services">Services</a>
+<a class="font-label-md text-label-md text-on-surface-variant font-medium hover:text-primary transition-all duration-300 ease-in-out" href="#projects">Projects</a>
+<a class="font-label-md text-label-md text-on-surface-variant font-medium hover:text-primary transition-all duration-300 ease-in-out" href="#contact">Contact</a>
+</div>
+<button class="bg-primary text-on-primary font-button text-button px-6 py-3 rounded-full hover:scale-105 duration-300" style="transition-timing-function: cubic-bezier(0.4,0,0.2,1);">
+                Hire Me
+            </button>
+</nav>
+<!-- SECTION 2 (Hero) -->
+<section class="min-h-screen flex items-center justify-center pt-32 pb-section-gap px-gutter relative">
+<div class="max-w-container-max mx-auto w-full relative">
+<!-- Portrait Left -->
+<div class="hidden md:block absolute left-0 top-1/2 -translate-y-1/2 w-64 h-96 pointer-events-none mix-blend-screen opacity-70">
+<img alt="Portrait" class="absolute inset-0 w-full h-full object-cover rounded-2xl opacity-100 face-image face-left-1" data-alt="Cinematic monochrome portrait of a thoughtful creative professional looking towards the center. Deep shadows, dramatic studio lighting against a pure black background. High contrast, professional cinematic look." src="https://lh3.googleusercontent.com/aida-public/AB6AXuBeXm93CFLYiDBFEt8MSND-6jJVC0V0mZKHAbmHvHAwI5plQCgZ39CVf34D47CXBn9XzvomNUuVsu2kBDX8cbYOwi0Z4WsvUvWY5jquuH3y15Z8KO3UgtpoVcm2klnwtIUludY1xGdvaqxwXfKdP2zgJSiYKvOms1xDjg4890TVljN9_bhIf4tVqt9oodV8FgQKMipW8P7Xfqj5yLOgq620pXmkdiK1aWoqOdR3wRXKGmu5vgiAahpV"/>
+<img alt="Portrait" class="absolute inset-0 w-full h-full object-cover rounded-2xl opacity-0 face-image face-left-2" data-alt="Cinematic monochrome portrait of a creative professional smiling subtly. Dramatic studio lighting, dark background, high contrast editorial photography style." src="https://lh3.googleusercontent.com/aida-public/AB6AXuA7lLKyvxTke6xmNdEG6LHOc6dGDqWdOkfTHMdDMx2hc3HntS_6RtocoLIF305fed0o-4ZnjhrQtJZb3PbiWo0PjrHP1q1OBhy-fIzx-BrTtJxaDT3WXIGe8abWP12ajWOVDofaBffq0YbsLO06IDVhndxZkOZd1GERYsuRF6z4qs6xgWD85er3DdMPqXlCgzCoEEVrzGmPFrX8oSpQHaRKq8lP_2BUJkMwliNWrkSfOAoz2HoA4qMt"/>
+</div>
+<!-- Center Content -->
+<div class="text-center relative z-10 max-w-4xl mx-auto flex flex-col items-center">
+<h1 class="font-headline-xl text-headline-xl md:text-[80px] md:leading-[1.1] font-extrabold text-primary tracking-tighter mb-8">
+                        Make Audience <br/>
+<span class="text-on-surface-variant">Feel Your Presence</span>
+</h1>
+<p class="font-body-lg text-body-lg text-on-surface-variant max-w-2xl mx-auto mb-12">
+                        Beautiful websites, powerful visuals, and videos that make your brand impossible to ignore. A cinematic approach to digital presence.
+                    </p>
+<button class="bg-primary text-on-primary font-button text-button px-8 py-4 rounded-full transition-all duration-300 ease-[cubic-bezier(0.4,0,0.2,1)] hover:scale-105">
+                        I'm Ready To Grow
+                    </button>
+</div>
+<!-- Portrait Right -->
+<div class="hidden md:block absolute right-0 top-1/2 -translate-y-1/2 w-64 h-96 pointer-events-none mix-blend-screen opacity-70">
+<img alt="Portrait" class="absolute inset-0 w-full h-full object-cover rounded-2xl opacity-100 face-image face-right-1" data-alt="Cinematic monochrome portrait of a professional looking away. Dramatic rim lighting, deep shadows, dark moody background. High-end editorial photography." src="https://lh3.googleusercontent.com/aida-public/AB6AXuCYrT0C5uIkdOJSl_wz8hp0ljLhVG5FyzXxuZxpiU7-et67mStsu5e7SeCHT4MlF5Gpe0yk2fxdypILGcIufyaIeeumDutUd8VWEvpEI-UQLjABWXyp7twiucLcKtON6YWSPByNVMu7dcntiFg0wGF-YtFNpm3JUQ1KngyHNFTPf_Za3YQgjNscD_BVMbStyfP37djBt3gqyQ2NVTkG3V6Z7UyPFg7gqW-8gmQ6RRE0joAA4N9x-E4Y"/>
+<img alt="Portrait" class="absolute inset-0 w-full h-full object-cover rounded-2xl opacity-0 face-image face-right-2" data-alt="Cinematic monochrome portrait of a professional looking directly at the camera with intense focus. Moody lighting, black background, sharp details." src="https://lh3.googleusercontent.com/aida-public/AB6AXuDazfTXyc_Dd5rdfXG5LoeU-j6NxuBPHy0TlMTrLNiju6H8LRGbIc1b_QaNxEInBCe1vN5rn_KE9ehPuRLyDuraU6cWuUxSlbfKTKBJYXp358pj48O4XqaXD4wSKLd6JF7HCFKcLz0Ep92hm235L56N3S523ZO33vFDeraEeWXXj2VZd7SjpdwX4-8MBjIkXiKb3XuxrHe0EPgMLQ4ZJcYL77Itvysn7kJm3OI3H3xrpXiNtn3BO-rY"/>
+</div>
+</div>
+</section>
+<!-- SECTION 3 (Services) -->
+<section class="py-section-gap px-gutter bg-background" id="services">
+<div class="max-w-container-max mx-auto">
+<h2 class="font-headline-lg text-headline-lg text-primary mb-16 text-center">Core Disciplines</h2>
+<div class="flex flex-col md:flex-row gap-6 h-[600px] services-container">
+<!-- Card 1 -->
+<div class="flex-1 rounded-2xl bg-surface-container overflow-hidden service-card relative group flex flex-col justify-end p-8 inner-glow">
+<div class="absolute inset-0 bg-gradient-to-t from-black/80 to-transparent z-10"></div>
+<img alt="Video Editing" class="absolute inset-0 w-full h-full object-cover opacity-50 group-hover:opacity-80 transition-opacity duration-500" data-alt="Dark, moody cinematic shot of a professional video editing timeline on a glowing monitor in a dimly lit studio. Shallow depth of field, high-tech luxury aesthetic." src="https://lh3.googleusercontent.com/aida-public/AB6AXuCGFStH1QIw0JSe-fwmPyaL232oi2MqwxIkrbXdzYj2P0ZVStW2mIcIPYALqiUJeOAAsCP7zu5lQ9N40OdfZGexTTCgAr-7dEdXB95Z34mkSe_jRh3xAR6he2E3DUuncWQDBGSA6cmy8pcYa8P2wIv0ckB5daty2XVDUC3Z2TO7rSGJqqy2xccMrNvBJ2GyGkprgSn88emExiP9il7X7gg5VbQkflHtVdGK0GIY-EybXxeqYBzEJC66"/>
+<div class="relative z-20">
+<span class="material-symbols-outlined text-primary mb-4 text-4xl">movie</span>
+<h3 class="font-headline-lg text-headline-lg-mobile md:text-[28px] text-primary mb-2">Video Editing</h3>
+<p class="font-body-md text-body-md text-on-surface-variant opacity-0 group-hover:opacity-100 transition-opacity duration-300 delay-100 h-0 group-hover:h-auto">Narrative-driven cinematic cuts that hold attention and build emotional resonance.</p>
+</div>
+</div>
+<!-- Card 2 -->
+<div class="flex-1 rounded-2xl bg-surface-container overflow-hidden service-card relative group flex flex-col justify-end p-8 inner-glow">
+<div class="absolute inset-0 bg-gradient-to-t from-black/80 to-transparent z-10"></div>
+<img alt="Web Development" class="absolute inset-0 w-full h-full object-cover opacity-50 group-hover:opacity-80 transition-opacity duration-500" data-alt="Abstract minimal composition of sleek glowing code lines floating in dark space. Cinematic lighting, luxury technology vibe, pure black background." src="https://lh3.googleusercontent.com/aida-public/AB6AXuBz7GURkmK7lObrmsf4ariMV0NJPPeSFOie2u6L71cRz-_X8ORntnkGVT-hrQsat9Y3iqXkzbD8LZWTM4-aLd9Z-Ahtku4hGidGUt7ReTybTpvoCJUzjmkoXbnz0dJqxIqfl0xLoWSDKcvDoEVh7ldZL6rFm9EHMJC76qA56ftExT3LYQ0dexUxTbxPjrah1AmycrEa1lRNscUikRAmZMhcaB-02XqAk04gcC7TqrLlMxfgPn9X8F-1"/>
+<div class="relative z-20">
+<span class="material-symbols-outlined text-primary mb-4 text-4xl">code</span>
+<h3 class="font-headline-lg text-headline-lg-mobile md:text-[28px] text-primary mb-2">Website Development</h3>
+<p class="font-body-md text-body-md text-on-surface-variant opacity-0 group-hover:opacity-100 transition-opacity duration-300 delay-100 h-0 group-hover:h-auto">High-performance, beautifully interactive digital experiences engineered for conversion.</p>
+</div>
+</div>
+<!-- Card 3 -->
+<div class="flex-1 rounded-2xl bg-surface-container overflow-hidden service-card relative group flex flex-col justify-end p-8 inner-glow">
+<div class="absolute inset-0 bg-gradient-to-t from-black/80 to-transparent z-10"></div>
+<img alt="Graphic Design" class="absolute inset-0 w-full h-full object-cover opacity-50 group-hover:opacity-80 transition-opacity duration-500" data-alt="Minimalist graphic design workspace showing abstract geometric shapes on a matte screen. Monochromatic tones, dramatic shadows, premium design studio environment." src="https://lh3.googleusercontent.com/aida-public/AB6AXuDBMWi3j92DeLTqIbGgBM15sOGPn2g-t-BJw5Xybo2AS6LHrCuXPwQbFDOCNdSAaOdn5cQKA17xBW8__WrZmn2LJVv6RuOnKZRXjm8FyuYZNf_SEf1pbYjbrbhNz4pmLDi8CuSHhkohPfQPXknH-labM_N2BsiQ6GDVwaquT-vzZlj39G5hNKhglpYyaI-3Q7uxpnWHgJCIAumD7tfntx8NZkMayHxh5mTmTG0gjh5sH-ZBYsjPiTny"/>
+<div class="relative z-20">
+<span class="material-symbols-outlined text-primary mb-4 text-4xl">design_services</span>
+<h3 class="font-headline-lg text-headline-lg-mobile md:text-[28px] text-primary mb-2">Graphic Design</h3>
+<p class="font-body-md text-body-md text-on-surface-variant opacity-0 group-hover:opacity-100 transition-opacity duration-300 delay-100 h-0 group-hover:h-auto">Striking visual identities that command authority and communicate quality.</p>
+</div>
+</div>
+</div>
+</div>
+</section>
+<!-- SECTION 4 (Video Showcase) -->
+<section class="py-section-gap px-gutter bg-surface-container-lowest" id="video">
+<div class="max-w-container-max mx-auto">
+<h2 class="font-headline-lg text-headline-lg text-primary mb-16 text-center">Video Showcase</h2>
+<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+<div class="relative rounded-2xl overflow-hidden aspect-[9/16] project-card cursor-pointer">
+<img alt="Video Project" class="absolute inset-0 w-full h-full object-cover" src="https://lh3.googleusercontent.com/aida-public/AB6AXuB6Pr6sWeoSKZrOWeM0aluaUlRVYWQUqZEoJ7MCnVlzpJfeQUjq9LK9TIHWnwSqwidyNlILlWiWa2opVfjdfiLi6cNg1JYzo1vThQMuYhTd39I5ZcCXuIcLBr87fMrH1SoqjalEb-Xr7oScp1EMd2ZwSO_gsDVwhjtp23cjxxgIeaq2kEImtc48ti4Dj2COZJUAsYNZ6QNJ88A5ArCYj04lCC-S8OTUO728NGEc8SschdFtDnF6_Ip8"/>
+<div class="absolute inset-0 bg-black/60 project-overlay opacity-0 flex items-center justify-center">
+<span class="material-symbols-outlined text-primary text-5xl">play_circle</span>
+</div>
+</div>
+<div class="relative rounded-2xl overflow-hidden aspect-square md:aspect-[9/16] lg:aspect-square project-card cursor-pointer">
+<img alt="Video Project" class="absolute inset-0 w-full h-full object-cover" src="https://lh3.googleusercontent.com/aida-public/AB6AXuDznMudDxW4qtPR8q9IcK_pd2i6zcnaK6yCRZNq42V8zUJqNWkGVstWJMTwuvyOOTpfVdqsvcxmlRPwlSNTUoHFibYh8ABe4ocbTy_zRGO44DBlIvuScVKG6qnpLGK_qsGV9Si0NpNs_D3Vhs4IsO2_nV1BG1tBBBWjZErTYJdIXIcOxOFWfA6n2ej1G3QZu1fCRAfxaQdG2Yd44CUutvYF-K1hTx4ccEjty9nPoO068FGI8sWV-r9e"/>
+<div class="absolute inset-0 bg-black/60 project-overlay opacity-0 flex items-center justify-center">
+<span class="material-symbols-outlined text-primary text-5xl">play_circle</span>
+</div>
+</div>
+<div class="relative rounded-2xl overflow-hidden aspect-[9/16] project-card cursor-pointer">
+<img alt="Video Project" class="absolute inset-0 w-full h-full object-cover" src="https://lh3.googleusercontent.com/aida-public/AB6AXuDxuTHbzllj4gWI6R63uqWs4KQS-KtpuaI_Sebl-FNoV9QFkN5ielJc8FW0hOFs5jnSNnps0J9iyyjPJB6pnJ5ztuYWCX1VFIOZjIo3v0kCIK3X4VfI7FabQFwEEFaT0nfqz7jHRZLR4QRwQItS4dq0JYiMrA1dS4eqbU1E7hGOpHOYZoB44eiyW7_ROjj3paatbADbinOBmDeM6JpSpuzSqx1yS0VdVgJR8QR_8D_nkcXZSgmfl3IX"/>
+<div class="absolute inset-0 bg-black/60 project-overlay opacity-0 flex items-center justify-center">
+<span class="material-symbols-outlined text-primary text-5xl">play_circle</span>
+</div>
+</div>
+</div>
+</div>
+</section>
+<!-- SECTION 5 (Websites & Graphic Work) -->
+<section class="py-section-gap px-gutter bg-background" id="projects">
+<div class="max-w-container-max mx-auto">
+<h2 class="font-headline-lg text-headline-lg text-primary mb-16 text-center">Selected Work</h2>
+<div class="grid grid-cols-1 lg:grid-cols-2 gap-12">
+<!-- Websites -->
+<div>
+<h3 class="font-headline-lg text-2xl text-primary mb-8 border-b border-outline-variant pb-4">Digital Experiences</h3>
+<div class="space-y-8">
+<div class="relative rounded-xl overflow-hidden aspect-video project-card group cursor-pointer border border-white/5">
+<img alt="Web Project" class="absolute inset-0 w-full h-full object-cover" src="https://lh3.googleusercontent.com/aida-public/AB6AXuCpWJ8FT-r4kYfu0Yu5aTM3fdSIZGExCt4m2226aoQ5ilD6QW78Ta1KHGjWAwV66qmpcEfQIR3wrUEL_fbvXj7IWbOHXooWvtWn1X2delF9FpapDT2IsCKWiHOi-Z9QPGSNjOo-gdb11lzCnv5z8qiIZXBMMk9FbjaQXO76ub89iiKLMO1WPkQHMlE7JkQf4fhD9sk4tJnRYl6zFg81V38VhtNSP4knUdDRz8Mv5uycXiAABIS3OIsW"/>
+<div class="absolute inset-0 bg-gradient-to-t from-black/90 via-black/40 to-transparent project-overlay opacity-0 flex flex-col justify-end p-6">
+<h4 class="text-xl font-bold text-primary mb-2">E-Commerce Platform</h4>
+<p class="text-on-surface-variant font-body-sm">Next.js, Tailwind CSS</p>
+</div>
+</div>
+<div class="relative rounded-xl overflow-hidden aspect-video project-card group cursor-pointer border border-white/5">
+<img alt="Web Project" class="absolute inset-0 w-full h-full object-cover" src="https://lh3.googleusercontent.com/aida-public/AB6AXuCtrlT6vMZ6ofZQWpKPTTuhfRGbdcWqTbpb4U4xuicrdJ1hehoMy76tGMxK-17XHM5EbsJlLwmCTINZ57EWBIkbnp4Qawzc2XeIFtxzyfQ4vvQBww0Ar17P-0MgkTYwoU_5VAGIUPYnhHUY9iXK_kfTV261TC25bS34-RpUCFT0aarmlaD3-XzoO57ojvzT-Mt8C8hREM5DLOXkotTDsyE5P3F2KpF5OdmGEt7J7PiIXdXUUUsDW1un"/>
+<div class="absolute inset-0 bg-gradient-to-t from-black/90 via-black/40 to-transparent project-overlay opacity-0 flex flex-col justify-end p-6">
+<h4 class="text-xl font-bold text-primary mb-2">Creative Agency Portfolio</h4>
+<p class="text-on-surface-variant font-body-sm">React, GSAP</p>
+</div>
+</div>
+</div>
+</div>
+<!-- Graphic Design -->
+<div>
+<h3 class="font-headline-lg text-2xl text-primary mb-8 border-b border-outline-variant pb-4">Brand Identity</h3>
+<div class="grid grid-cols-2 gap-4">
+<div class="relative rounded-xl overflow-hidden aspect-square project-card group cursor-pointer border border-white/5">
+<img alt="Graphic Project" class="absolute inset-0 w-full h-full object-cover" src="https://lh3.googleusercontent.com/aida-public/AB6AXuCxV9Tl2_QmpAuHFypuLY1L48R54t7BGhV0t-CFj3DhB5uus5Jgjri1sWH6MkpOIiEnE9GsQ9aZbi2aeMs_FUE1gX2r32l-qExv8HrVruOcEG023t1lHlxaCBo6fX2mT0Zp2IxyfsaYSoS9-ucN4h2UOAzOtnxcNYRZuQLwgXOKCmoILVxTR5fx2NByiMLxnwXfx9EBie6oQFD9kX2Cc-JawiYjSlLxYp9nUJJ8gz-gvpAxkmsZEfJK"/>
+<div class="absolute inset-0 bg-black/80 project-overlay opacity-0 flex items-center justify-center p-4 text-center">
+<h4 class="text-lg font-bold text-primary">Tech Startup Branding</h4>
+</div>
+</div>
+<div class="relative rounded-xl overflow-hidden aspect-square project-card group cursor-pointer border border-white/5">
+<img alt="Graphic Project" class="absolute inset-0 w-full h-full object-cover" src="https://lh3.googleusercontent.com/aida-public/AB6AXuAj2WFoj-SiutSyq_rIGy4JuhjSFHnhA8iVFhAZ-7giVYiSR2J7Jk2BVYHaWbpwBOxwr1RKZrJFY_WBjh2tDw4V9lXPBF649AYo962bzYJuZqghjUlBS5CALBDiOO06altqjSJAGrbXL1rKI7hRUuJ_VGW_undHPQEC2O6J9Kpoukl1XvAiTqt-jRRw4yaajsNtzilBkJ4185IYt819vsXp6ozsjKz7QfPn4YWRfbsTMKA_0tAYXVrc"/>
+<div class="absolute inset-0 bg-black/80 project-overlay opacity-0 flex items-center justify-center p-4 text-center">
+<h4 class="text-lg font-bold text-primary">Restaurant Menu Design</h4>
+</div>
+</div>
+<div class="relative rounded-xl overflow-hidden aspect-square project-card group cursor-pointer border border-white/5">
+<img alt="Graphic Project" class="absolute inset-0 w-full h-full object-cover" src="https://lh3.googleusercontent.com/aida-public/AB6AXuBhU1K8bgpOOEH1buGdTkS62D_gUz0eErtyPu9Z39a5qSwIOgwUG_AfPQbfyZdru6rWX6Qy3i8iHuCjGcsourRMbdq0t_PkqtQjGjCeIC5KQG1U3ZUC5ro0eMvBRDjXA9T-s79Rj1duavJU37U_WJeEcFnBjpUfjePR9PRbQ3KikfmZ2o-z95K5-vbfoT_voYTrR9dVp900nLTrjkK4LVRQPb-CJXIjkq0h3p6IL8aQzDEBc_gjHHpe"/>
+<div class="absolute inset-0 bg-black/80 project-overlay opacity-0 flex items-center justify-center p-4 text-center">
+<h4 class="text-lg font-bold text-primary">Apparel Typography</h4>
+</div>
+</div>
+<div class="relative rounded-xl overflow-hidden aspect-square project-card group cursor-pointer border border-white/5">
+<img alt="Graphic Project" class="absolute inset-0 w-full h-full object-cover" src="https://lh3.googleusercontent.com/aida-public/AB6AXuD2Yl0VAibr-2kanP3IbLg81ZCFc5kWHyl07gqXyiXm05bmUaT1NS-NZPvapZuoMeP4QjarcXK2HYgA76zxIWfjU7V8FDwMFdi-SHrg-KBzzJOVjFq1MQsPAC2MgmYsCSODGZNV8IqMpXjPgUfTQr57GsaQ9-scWFS9v_irH5xpkIJj8yjQbOESvfa6eTVZykibVtYJ0Faj6G9y5bln2lFmi14DHn96Xq3hTRbRKhNR9Fnwf4-nIax5"/>
+<div class="absolute inset-0 bg-black/80 project-overlay opacity-0 flex items-center justify-center p-4 text-center">
+<h4 class="text-lg font-bold text-primary">Event Poster Series</h4>
+</div>
+</div>
+</div>
+</div>
+</div>
+</div>
+</section>
+<!-- SECTION 6 (Contact) -->
+<section class="py-section-gap px-gutter bg-surface-container-lowest" id="contact">
+<div class="max-w-container-max mx-auto">
+<div class="grid grid-cols-1 md:grid-cols-2 gap-16 items-start">
+<div>
+<h2 class="font-headline-xl text-headline-xl text-primary mb-6">Let's Talk.</h2>
+<p class="font-body-lg text-body-lg text-on-surface-variant mb-12 max-w-md">Open for new projects and collaborations. Reach out to discuss how we can bring your vision to life.</p>
+<div class="flex flex-col gap-6">
+<a class="flex items-center gap-4 text-on-surface-variant hover:text-primary transition-colors duration-300 w-fit group" href="#">
+<span class="material-symbols-outlined p-4 rounded-full bg-surface-container-low group-hover:bg-surface-container-high transition-colors">camera_alt</span>
+<span class="font-label-md text-lg">Instagram</span>
+</a>
+<a class="flex items-center gap-4 text-on-surface-variant hover:text-primary transition-colors duration-300 w-fit group" href="#">
+<span class="material-symbols-outlined p-4 rounded-full bg-surface-container-low group-hover:bg-surface-container-high transition-colors">work</span>
+<span class="font-label-md text-lg">LinkedIn</span>
+</a>
+<a class="flex items-center gap-4 text-on-surface-variant hover:text-primary transition-colors duration-300 w-fit group" href="#">
+<span class="material-symbols-outlined p-4 rounded-full bg-surface-container-low group-hover:bg-surface-container-high transition-colors">brush</span>
+<span class="font-label-md text-lg">Behance</span>
+</a>
+<a class="flex items-center gap-4 text-on-surface-variant hover:text-primary transition-colors duration-300 w-fit group" href="#">
+<span class="material-symbols-outlined p-4 rounded-full bg-surface-container-low group-hover:bg-surface-container-high transition-colors">movie</span>
+<span class="font-label-md text-lg">Vimeo</span>
+</a>
+</div>
+</div>
+<div class="bg-surface-container p-8 rounded-2xl border border-white/5 inner-glow">
+<form class="flex flex-col gap-6">
+<div>
+<label class="block font-label-md text-on-surface-variant mb-2" for="name">Name</label>
+<input class="w-full bg-surface-container-low border border-outline-variant rounded-lg px-4 py-3 text-primary focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-colors" id="name" placeholder="John Doe" type="text"/>
+</div>
+<div>
+<label class="block font-label-md text-on-surface-variant mb-2" for="email">Email</label>
+<input class="w-full bg-surface-container-low border border-outline-variant rounded-lg px-4 py-3 text-primary focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-colors" id="email" placeholder="john@example.com" type="email"/>
+</div>
+<div>
+<label class="block font-label-md text-on-surface-variant mb-2" for="service">Service Required</label>
+<select class="w-full bg-surface-container-low border border-outline-variant rounded-lg px-4 py-3 text-primary focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-colors" id="service">
+<option>Video Editing</option>
+<option>Website Development</option>
+<option>Graphic Design</option>
+<option>Full Package</option>
+</select>
+</div>
+<div>
+<label class="block font-label-md text-on-surface-variant mb-2" for="message">Project Description</label>
+<textarea class="w-full bg-surface-container-low border border-outline-variant rounded-lg px-4 py-3 text-primary focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-colors" id="message" placeholder="Tell me about your project..." rows="4"></textarea>
+</div>
+<button class="bg-primary text-on-primary font-button text-button px-8 py-4 rounded-full transition-all duration-300 hover:bg-primary/90 mt-4" type="submit">
+                        Let's Build Something Great
+                    </button>
+</form>
+</div>
+</div>
+</div>
+</section>
+<!-- Footer -->
+<footer class="w-full py-stack-lg border-t border-outline-variant bg-background dark:bg-background">
+<div class="max-w-container-max mx-auto px-gutter flex flex-col md:flex-row justify-between items-center gap-stack-md">
+<div class="font-headline-lg text-headline-lg text-primary dark:text-primary">DHRUVA</div>
+<div class="font-body-md text-body-md text-on-surface-variant">© 2024 DHRUVA. Cinematic Excellence.</div>
+<div class="flex gap-4">
+<a class="font-body-md text-body-md text-on-surface-variant hover:text-primary transition-colors duration-300" href="#">Instagram</a>
+<a class="font-body-md text-body-md text-on-surface-variant hover:text-primary transition-colors duration-300" href="#">LinkedIn</a>
+<a class="font-body-md text-body-md text-on-surface-variant hover:text-primary transition-colors duration-300" href="#">Behance</a>
+<a class="font-body-md text-body-md text-on-surface-variant hover:text-primary transition-colors duration-300" href="#">Vimeo</a>
+</div>
+</div>
+</footer>
+</div>
+<script>
+        // Theatre Intro Logic
+        const intro = document.getElementById('theatre-intro');
+        const mainContent = document.getElementById('main-content');
+
+        function startExperience() {
+            if(!intro.classList.contains('fade-out')) {
+                intro.classList.add('fade-out');
+                mainContent.classList.add('fade-in');
+            }
+        }
+
+        // Trigger on click or scroll
+        intro.addEventListener('click', startExperience);
+        window.addEventListener('scroll', () => {
+            if(window.scrollY > 10) startExperience();
+        });
+        
+        // Fallback timeout just in case
+        setTimeout(startExperience, 4000);
+
+        // Face Cycle Logic
+        let currentFace = 1;
+        setInterval(() => {
+            const left1 = document.querySelector('.face-left-1');
+            const left2 = document.querySelector('.face-left-2');
+            const right1 = document.querySelector('.face-right-1');
+            const right2 = document.querySelector('.face-right-2');
+
+            if(left1 && left2 && right1 && right2) {
+                if(currentFace === 1) {
+                    left1.style.opacity = '0';
+                    left2.style.opacity = '1';
+                    right1.style.opacity = '0';
+                    right2.style.opacity = '1';
+                    currentFace = 2;
+                } else {
+                    left1.style.opacity = '1';
+                    left2.style.opacity = '0';
+                    right1.style.opacity = '1';
+                    right2.style.opacity = '0';
+                    currentFace = 1;
+                }
+            }
+        }, 3000);
+    </script>
+</body></html>
