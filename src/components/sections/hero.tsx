@@ -1,18 +1,20 @@
 "use client";
 
-import Image from "next/image";
-
-import { m, useReducedMotion } from "framer-motion";
+import { AnimatePresence, m, useReducedMotion } from "framer-motion";
 
 import { Button } from "@/components/ui/button";
 import { Container } from "@/components/ui/container";
-import { MOTION } from "@/constants";
-import { heroPortraitsLeft, heroPortraitsRight } from "@/data";
+import { EASING_OUT, FACE_CYCLE_INTERVAL_MS, MOTION } from "@/constants";
+import { heroPortraits } from "@/data";
 import { useFaceCycle } from "@/hooks/use-face-cycle";
 import { useSmoothScroll } from "@/hooks/use-smooth-scroll";
 import { cn } from "@/lib/utils";
 import { useTheatreIntro } from "@/providers/theatre-intro-provider";
 import type { HeroPortrait } from "@/types";
+
+const CUTOUT_COUNT = heroPortraits.length;
+/** Right side stays two expressions ahead so both flanks stay different */
+const RIGHT_OFFSET = 2;
 
 function PortraitStack({
   portraits,
@@ -23,37 +25,64 @@ function PortraitStack({
   activeIndex: number;
   side: "left" | "right";
 }) {
+  const prefersReducedMotion = useReducedMotion();
+  const tilt = side === "left" ? -7 : 7;
+  const active = portraits[activeIndex] ?? portraits[0];
+  if (!active) return null;
+
   return (
     <div
       className={cn(
-        "pointer-events-none absolute top-1/2 hidden h-80 w-52 -translate-y-1/2 opacity-30 lg:block lg:h-96 lg:w-64 dark:opacity-70 dark:mix-blend-screen",
-        side === "left" ? "left-0" : "right-0",
+        "pointer-events-none absolute top-1/2 hidden h-[22rem] w-56 -translate-y-1/2 lg:block xl:h-[26rem] xl:w-72",
+        side === "left" ? "left-0 xl:-left-2" : "right-0 xl:-right-2",
       )}
       aria-hidden="true"
+      style={{ isolation: "isolate", mixBlendMode: "normal" }}
     >
-      {portraits.map((portrait, index) => (
-        <Image
-          key={portrait.id}
-          src={portrait.src}
-          alt=""
-          fill
-          sizes="(max-width: 1280px) 208px, 256px"
-          priority={index === 0}
-          className={cn(
-            "rounded-2xl object-cover transition-opacity duration-1000 ease-in-out",
-            activeIndex === index ? "opacity-100" : "opacity-0",
-          )}
-        />
-      ))}
+      <AnimatePresence mode="sync" initial={false}>
+        <m.div
+          key={active.id}
+          className="absolute inset-0"
+          style={{ mixBlendMode: "normal" }}
+          initial={
+            prefersReducedMotion
+              ? false
+              : { opacity: 0, scale: 0.9, rotate: tilt * 1.4, y: 16 }
+          }
+          animate={{ opacity: 1, scale: 1, rotate: tilt, y: 0 }}
+          exit={
+            prefersReducedMotion
+              ? undefined
+              : { opacity: 0, scale: 0.9, rotate: tilt * 1.4, y: -12 }
+          }
+          transition={
+            prefersReducedMotion
+              ? { duration: 0.01 }
+              : { duration: 0.55, ease: EASING_OUT }
+          }
+        >
+          {/* Native img — skip next/image optimizer & CSS filters that wash cutouts on light bg */}
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src={active.src}
+            alt=""
+            draggable={false}
+            className="hero-cutout absolute inset-0 h-full w-full object-contain"
+          />
+        </m.div>
+      </AnimatePresence>
     </div>
   );
 }
 
 export function Hero() {
-  const { index } = useFaceCycle();
+  const { index } = useFaceCycle(CUTOUT_COUNT, FACE_CYCLE_INTERVAL_MS);
   const { scrollTo } = useSmoothScroll();
   const { hasEntered } = useTheatreIntro();
   const prefersReducedMotion = useReducedMotion();
+
+  const leftIndex = index % CUTOUT_COUNT;
+  const rightIndex = (index + RIGHT_OFFSET) % CUTOUT_COUNT;
 
   return (
     <section
@@ -63,8 +92,8 @@ export function Hero() {
     >
       <Container className="relative w-full">
         <PortraitStack
-          portraits={heroPortraitsLeft}
-          activeIndex={index}
+          portraits={heroPortraits}
+          activeIndex={leftIndex}
           side="left"
         />
 
@@ -104,8 +133,8 @@ export function Hero() {
         </m.div>
 
         <PortraitStack
-          portraits={heroPortraitsRight}
-          activeIndex={index}
+          portraits={heroPortraits}
+          activeIndex={rightIndex}
           side="right"
         />
       </Container>

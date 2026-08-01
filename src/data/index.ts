@@ -1,7 +1,6 @@
 export { siteConfig } from "./site";
 export {
-  heroPortraitsLeft,
-  heroPortraitsRight,
+  heroPortraits,
   services,
   videoItems,
   projectRows,

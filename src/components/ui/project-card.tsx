@@ -50,57 +50,25 @@ function ProjectCardComponent({
         }
         priority={priority}
         loading={priority ? "eager" : "lazy"}
-        className="object-cover"
+        className="object-cover transition-transform duration-500 ease-out group-hover:scale-[1.03]"
       />
 
-      {/* Quiet resting meta — keep hierarchy without crowding */}
-      <div className="pointer-events-none absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/55 via-black/15 to-transparent p-4 pt-16 md:p-5">
-        <p className="text-[11px] font-medium tracking-[0.08em] text-white/70 uppercase">
-          {project.category}
-        </p>
-        <h3
-          className={cn(
-            "mt-1 truncate font-semibold tracking-tight text-white",
-            isWebsite ? "text-lg md:text-xl" : "text-base md:text-lg",
-          )}
-        >
-          {project.title}
-        </h3>
-        <div className="mt-2 flex flex-wrap gap-1.5">
-          {project.tags.slice(0, isWebsite ? 3 : 2).map((tag) => (
-            <span
-              key={tag}
-              className="rounded-full border border-white/15 bg-black/25 px-2 py-0.5 text-[10px] tracking-wide text-white/80 backdrop-blur-sm"
-            >
-              {tag}
-            </span>
-          ))}
-        </div>
-      </div>
-
-      {/* Premium hover reveal */}
+      {/* Readability scrim — light enough to keep the poster visible */}
       <div
-        className={cn(
-          "absolute inset-0 flex flex-col justify-end bg-gradient-to-t from-black/80 via-black/45 to-black/10 p-5 md:p-6",
-          "opacity-0 transition-opacity duration-300 ease-out",
-          "group-hover:opacity-100 group-focus-within:opacity-100",
-        )}
-      >
+        className="pointer-events-none absolute inset-x-0 bottom-0 h-1/2 bg-gradient-to-t from-black/70 via-black/20 to-transparent"
+        aria-hidden="true"
+      />
+
+      {/* Title — single source of truth, no hover duplicate */}
+      <div className="pointer-events-none absolute inset-x-0 bottom-0 p-4 md:p-5">
         <h3
           className={cn(
-            "font-semibold tracking-tight text-white",
-            isWebsite ? "text-xl md:text-2xl" : "text-lg",
+            "truncate font-semibold tracking-tight text-white drop-shadow-md",
+            isWebsite ? "text-lg md:text-2xl" : "text-base md:text-lg",
           )}
         >
           {project.title}
         </h3>
-        <p className="mt-2 line-clamp-2 max-w-md text-sm leading-relaxed text-white/80">
-          {project.description}
-        </p>
-        <span className="mt-4 inline-flex items-center gap-1 text-sm font-medium text-white">
-          View Project
-          <span aria-hidden="true">→</span>
-        </span>
       </div>
     </m.a>
   );

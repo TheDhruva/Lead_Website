@@ -23,6 +23,7 @@ import {
 
 export function ContactForm() {
   const [submitted, setSubmitted] = useState(false);
+  const [submissionError, setSubmissionError] = useState<string | null>(null);
   const prefersReducedMotion = useReducedMotion();
 
   const {
@@ -43,9 +44,33 @@ export function ContactForm() {
   });
 
   const onSubmit = async (data: ContactFormValues) => {
-    void data;
-    await new Promise((resolve) => setTimeout(resolve, 500));
-    setSubmitted(true);
+    setSubmissionError(null);
+
+    try {
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 15000);
+
+      let response: Response;
+      try {
+        response = await fetch("/api/contact", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(data),
+          signal: controller.signal,
+        });
+      } finally {
+        clearTimeout(timeoutId);
+      }
+
+      if (!response.ok) {
+        setSubmissionError("Something went wrong. Please try again.");
+        return;
+      }
+
+      setSubmitted(true);
+    } catch {
+      setSubmissionError("Something went wrong. Please try again.");
+    }
   };
 
   return (
@@ -156,6 +181,12 @@ export function ContactForm() {
             error={errors.message?.message}
             {...register("message")}
           />
+
+          {submissionError ? (
+            <p role="alert" aria-live="polite" className="text-sm text-error">
+              {submissionError}
+            </p>
+          ) : null}
 
           <Button
             type="submit"

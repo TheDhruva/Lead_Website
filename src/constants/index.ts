@@ -41,7 +41,8 @@ export const CONTACT_TIMELINES = [
 ] as const;
 
 export const THEATRE_INTRO_TIMEOUT_MS = 5000;
-export const FACE_CYCLE_INTERVAL_MS = 3000;
+/** Beat between paper-cutout expression swaps in the hero */
+export const FACE_CYCLE_INTERVAL_MS = 2400;
 
 /** Navbar clearance so section headings aren't hidden */
 export const NAV_SCROLL_OFFSET = -112;

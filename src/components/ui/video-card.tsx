@@ -1,7 +1,7 @@
 "use client";
 
 import Image from "next/image";
-import { memo, useCallback, useState } from "react";
+import { memo, useCallback, useEffect, useState } from "react";
 
 import { m, useReducedMotion } from "framer-motion";
 
@@ -26,12 +26,47 @@ function VideoCardComponent({
     threshold: 0.35,
   });
   const [videoFailed, setVideoFailed] = useState(false);
+  const [isMuted, setIsMuted] = useState(true);
+  const [isPlaying, setIsPlaying] = useState(false);
   const prefersReducedMotion = useReducedMotion();
   const showVideo = Boolean(video.src) && !videoFailed;
+
+  useEffect(() => {
+    const videoEl = videoRef.current;
+    if (!videoEl) return;
+
+    const handlePlay = () => setIsPlaying(true);
+    const handlePause = () => setIsPlaying(false);
+
+    videoEl.addEventListener("play", handlePlay);
+    videoEl.addEventListener("pause", handlePause);
+    return () => {
+      videoEl.removeEventListener("play", handlePlay);
+      videoEl.removeEventListener("pause", handlePause);
+    };
+  }, [videoRef]);
 
   const handleVideoError = useCallback(() => {
     setVideoFailed(true);
   }, []);
+
+  const handleTogglePlay = useCallback(() => {
+    const videoEl = videoRef.current;
+    if (!videoEl) return;
+    if (videoEl.paused) {
+      void videoEl.play();
+    } else {
+      videoEl.pause();
+    }
+  }, [videoRef]);
+
+  const handleToggleMute = useCallback(() => {
+    const videoEl = videoRef.current;
+    if (!videoEl) return;
+    const nextMuted = !videoEl.muted;
+    videoEl.muted = nextMuted;
+    setIsMuted(nextMuted);
+  }, [videoRef]);
 
   return (
     <m.article
@@ -39,7 +74,7 @@ function VideoCardComponent({
       whileHover={prefersReducedMotion ? undefined : { scale: 1.02 }}
       transition={{ duration: 0.35, ease: [0.4, 0, 0.2, 1] }}
       tabIndex={0}
-      aria-label={`${video.title}, ${video.category}, duration ${video.duration}`}
+      aria-label={`${video.title}, ${video.category}`}
       className={cn(
         "group relative cursor-pointer overflow-hidden rounded-2xl border border-border bg-card shadow-[var(--shadow-sm)] outline-none",
         "transition-shadow duration-[250ms] hover:shadow-[var(--shadow-md)]",
@@ -55,7 +90,7 @@ function VideoCardComponent({
           ref={videoRef}
           className="absolute inset-0 h-full w-full object-cover"
           poster={video.poster}
-          muted
+          muted={isMuted}
           loop
           playsInline
           preload="none"
@@ -81,46 +116,44 @@ function VideoCardComponent({
         />
       )}
 
-      <div
-        className="pointer-events-none absolute inset-x-0 bottom-0 h-1/3 bg-gradient-to-t from-black/45 to-transparent opacity-70"
-        aria-hidden="true"
-      />
-
-      <div
-        className={cn(
-          "absolute inset-0 flex flex-col justify-between bg-gradient-to-t from-black/80 via-black/40 to-black/15 p-5 md:p-6",
-          "opacity-0 transition-opacity duration-300 ease-out",
-          "group-hover:opacity-100 group-focus-within:opacity-100",
-        )}
-      >
-        <div className="flex justify-end">
-          <span className="rounded-full border border-white/20 bg-black/40 px-2.5 py-1 text-xs font-medium tracking-wide text-white/90 backdrop-blur-sm">
-            {video.duration}
-          </span>
-        </div>
-
-        <div className="flex flex-col items-start gap-3">
-          <span
-            className="material-symbols-outlined text-4xl text-white md:text-5xl"
-            aria-hidden="true"
+      {showVideo ? (
+        <div
+          className={cn(
+            "absolute inset-x-0 bottom-0 flex items-center justify-between gap-2 p-3 md:p-4",
+            "bg-gradient-to-t from-black/50 via-black/15 to-transparent",
+            "opacity-0 transition-opacity duration-200 ease-out",
+            "group-hover:opacity-100 group-focus-within:opacity-100",
+          )}
+        >
+          <button
+            type="button"
+            onClick={handleTogglePlay}
+            aria-label={isPlaying ? "Pause video" : "Play video"}
+            className="pointer-events-auto flex h-10 w-10 items-center justify-center rounded-full border border-white/15 bg-black/50 text-white backdrop-blur-sm transition-colors hover:bg-black/70 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/60"
           >
-            play_circle
-          </span>
-          <div className="min-w-0 max-w-full">
-            <h3
-              className={cn(
-                "truncate font-semibold tracking-tight text-white",
-                featured ? "text-lg md:text-xl" : "text-base md:text-lg",
-              )}
+            <span
+              className="material-symbols-outlined text-2xl"
+              aria-hidden="true"
             >
-              {video.title}
-            </h3>
-            <p className="mt-1 truncate text-sm text-white/75">
-              {video.category}
-            </p>
-          </div>
+              {isPlaying ? "pause" : "play_arrow"}
+            </span>
+          </button>
+
+          <button
+            type="button"
+            onClick={handleToggleMute}
+            aria-label={isMuted ? "Unmute video" : "Mute video"}
+            className="pointer-events-auto flex h-10 w-10 items-center justify-center rounded-full border border-white/15 bg-black/50 text-white backdrop-blur-sm transition-colors hover:bg-black/70 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/60"
+          >
+            <span
+              className="material-symbols-outlined text-2xl"
+              aria-hidden="true"
+            >
+              {isMuted ? "volume_off" : "volume_up"}
+            </span>
+          </button>
         </div>
-      </div>
+      ) : null}
     </m.article>
   );
 }

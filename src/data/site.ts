@@ -23,29 +23,27 @@ export const siteConfig: SiteConfig = {
   },
 };
 
-export const heroPortraitsLeft: HeroPortrait[] = [
+/** Paper-cutout faces — cycle through all on both hero sides */
+export const heroPortraits: HeroPortrait[] = [
   {
-    id: "left-1",
-    src: "/images/hero/portrait-left-1.svg",
-    alt: "Cinematic monochrome portrait of a thoughtful creative professional looking towards the center.",
+    id: "person-1",
+    src: "/images/hero/person-1-cutout.png",
+    alt: "Paper-cutout portrait with a confident smirk.",
   },
   {
-    id: "left-2",
-    src: "/images/hero/portrait-left-2.svg",
-    alt: "Cinematic monochrome portrait of a creative professional smiling subtly.",
-  },
-];
-
-export const heroPortraitsRight: HeroPortrait[] = [
-  {
-    id: "right-1",
-    src: "/images/hero/portrait-right-1.svg",
-    alt: "Cinematic monochrome portrait of a professional looking away.",
+    id: "person-2",
+    src: "/images/hero/person-2-cutout.png",
+    alt: "Paper-cutout portrait with a focused expression.",
   },
   {
-    id: "right-2",
-    src: "/images/hero/portrait-right-2.svg",
-    alt: "Cinematic monochrome portrait of a professional looking directly at the camera with intense focus.",
+    id: "person-3",
+    src: "/images/hero/person-3-cutout.png",
+    alt: "Paper-cutout portrait looking confidently ahead.",
+  },
+  {
+    id: "person-4",
+    src: "/images/hero/person-4-cutout.png",
+    alt: "Paper-cutout portrait with an energetic grin.",
   },
 ];
 
@@ -63,7 +61,7 @@ export const services: Service[] = [
       "Platform-ready delivery for ads & social",
     ],
     icon: "movie",
-    image: "/images/services/video-editing.svg",
+    image: "/images/services/video-editing.png",
     imageAlt:
       "Dark, moody cinematic shot of a professional video editing timeline on a glowing monitor.",
   },
@@ -80,7 +78,7 @@ export const services: Service[] = [
       "Conversion-focused UX & SEO foundations",
     ],
     icon: "code",
-    image: "/images/services/web-development.svg",
+    image: "/images/services/web-development.png",
     imageAlt:
       "Abstract minimal composition of sleek glowing code lines floating in dark space.",
   },
@@ -97,7 +95,7 @@ export const services: Service[] = [
       "Assets ready for print, web & campaigns",
     ],
     icon: "design_services",
-    image: "/images/services/graphic-design.svg",
+    image: "/images/services/graphic-design.png",
     imageAlt:
       "Minimalist graphic design workspace showing abstract geometric shapes on a matte screen.",
   },
@@ -110,7 +108,7 @@ export const videoItems: VideoItem[] = [
     category: "Instagram Reel",
     duration: "00:34",
     poster: "/images/videos/video-1.svg",
-    // Enable by setting: src: "/videos/showcase-1.mp4"
+    src: "/videos/showcase-1.mp4",
     aspect: "portrait",
     featured: true,
   },
@@ -120,6 +118,7 @@ export const videoItems: VideoItem[] = [
     category: "Commercial",
     duration: "01:12",
     poster: "/images/videos/video-2.svg",
+    src: "/videos/showcase-2.mp4",
     aspect: "landscape",
   },
   {
@@ -128,6 +127,7 @@ export const videoItems: VideoItem[] = [
     category: "Short Form",
     duration: "00:48",
     poster: "/images/videos/video-3.svg",
+    src: "/videos/showcase-3.mp4",
     aspect: "landscape",
   },
 ];
@@ -136,38 +136,38 @@ export const projectRows: ProjectShowcaseRow[] = [
   {
     id: "row-1",
     website: {
-      id: "ecommerce",
-      title: "E-Commerce Platform",
+      id: "driving-course",
+      title: "Driving Course Website",
       description:
-        "A conversion-focused storefront with cinematic product storytelling.",
+        "A clean, conversion-focused website for a driving school — effortless lesson booking and clear pricing.",
       category: "Website",
-      tags: ["Next.js", "Tailwind CSS", "Framer Motion"],
-      image: "/images/projects/digital/ecommerce.svg",
-      imageAlt: "Team collaborating around monitors on an e-commerce platform.",
+      tags: ["Next.js", "Tailwind CSS", "Booking"],
+      image: "/images/projects/digital/website-1.png",
+      imageAlt: "Driving course website homepage design.",
       variant: "website",
       href: "#contact",
     },
     brands: [
       {
-        id: "tech-startup",
-        title: "Tech Startup Branding",
-        description:
-          "Identity system built for clarity, scale, and investor confidence.",
-        category: "Brand Identity",
-        tags: ["Brand Identity", "Typography"],
-        image: "/images/projects/brand/tech-startup.svg",
-        imageAlt: "Brand identity exploration for a tech startup.",
-        variant: "brand",
-        href: "#contact",
-      },
-      {
-        id: "restaurant",
+        id: "restaurant-menu",
         title: "Restaurant Menu Design",
         description: "Editorial menus and print assets with quiet luxury.",
         category: "Brand Identity",
         tags: ["Print", "Social Design"],
-        image: "/images/projects/brand/restaurant.svg",
-        imageAlt: "Collaborative design session for a restaurant brand.",
+        image: "/images/projects/brand/poster-1.png",
+        imageAlt: "Restaurant menu poster design.",
+        variant: "brand",
+        href: "#contact",
+      },
+      {
+        id: "food-product",
+        title: "Food Product Design",
+        description:
+          "Bold product design that makes food impossible to ignore.",
+        category: "Brand Identity",
+        tags: ["Packaging", "Campaign"],
+        image: "/images/projects/brand/poster-2.png",
+        imageAlt: "Food product packaging and poster design.",
         variant: "brand",
         href: "#contact",
       },
@@ -176,14 +176,14 @@ export const projectRows: ProjectShowcaseRow[] = [
   {
     id: "row-2",
     website: {
-      id: "agency",
-      title: "Creative Agency Portfolio",
+      id: "golf-club",
+      title: "Golf Club Website",
       description:
-        "An immersive studio site engineered for motion and conversion.",
+        "An elegant, immersive website for a private golf club — membership and course storytelling.",
       category: "Website",
-      tags: ["React", "GSAP", "UI/UX"],
-      image: "/images/projects/digital/agency.svg",
-      imageAlt: "Creative studio workspace with multiple screens.",
+      tags: ["Next.js", "UI/UX", "Framer Motion"],
+      image: "/images/projects/digital/website-2.png",
+      imageAlt: "Golf club website homepage design.",
       variant: "website",
       href: "#contact",
     },
@@ -195,19 +195,19 @@ export const projectRows: ProjectShowcaseRow[] = [
           "Type-led campaign system for a contemporary apparel label.",
         category: "Brand Identity",
         tags: ["Typography", "Campaign"],
-        image: "/images/projects/brand/apparel.svg",
+        image: "/images/projects/brand/poster-3.png",
         imageAlt: "Typography work for an apparel brand.",
         variant: "brand",
         href: "#contact",
       },
       {
-        id: "event-poster",
-        title: "Event Poster Series",
+        id: "event-posters",
+        title: "Event Posters",
         description:
           "A cohesive poster language for a multi-night cultural series.",
         category: "Brand Identity",
         tags: ["Poster", "Motion"],
-        image: "/images/projects/brand/event-poster.svg",
+        image: "/images/projects/brand/poster-4.png",
         imageAlt: "Event poster series design presentation.",
         variant: "brand",
         href: "#contact",
