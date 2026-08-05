@@ -1,7 +1,7 @@
 "use client";
 
 import Image from "next/image";
-import { forwardRef, memo } from "react";
+import { type KeyboardEvent, forwardRef, memo } from "react";
 
 import { m, useReducedMotion } from "framer-motion";
 
@@ -19,6 +19,96 @@ interface ServiceCardProps {
   className?: string;
 }
 
+const cardShellClass =
+  "service-card relative flex min-h-0 min-w-0 basis-0 cursor-pointer flex-col overflow-hidden rounded-2xl border border-border bg-card inner-glow outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--background-secondary)]";
+
+function CardBody({
+  service,
+  isExpanded,
+}: {
+  service: Service;
+  isExpanded: boolean;
+}) {
+  return (
+    <>
+      <div className="absolute inset-0 z-0 overflow-hidden">
+        <div
+          className={cn(
+            "service-card__media absolute inset-0",
+            isExpanded && "service-card__media--expanded",
+          )}
+        >
+          <Image
+            src={service.image}
+            alt={service.imageAlt}
+            fill
+            sizes="(max-width: 768px) 100vw, 55vw"
+            className="object-cover"
+          />
+        </div>
+        <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/55 to-black/25" />
+      </div>
+
+      <div className="relative z-10 flex h-full min-h-0 min-w-0 flex-col justify-end overflow-hidden p-5 sm:p-6 md:p-8">
+        <div className="min-w-0 shrink-0">
+          <span
+            className="material-symbols-outlined mb-3 block text-3xl text-white md:text-4xl"
+            aria-hidden="true"
+          >
+            {service.icon}
+          </span>
+          <h3 className="truncate font-headline-lg text-[22px] leading-tight text-white md:text-[26px] lg:text-[28px]">
+            {service.title}
+          </h3>
+        </div>
+
+        <div
+          aria-hidden={!isExpanded}
+          className={cn(
+            "grid min-w-0 overflow-hidden transition-[grid-template-rows,opacity] duration-[420ms] ease-[cubic-bezier(0.22,1,0.36,1)] motion-reduce:transition-none",
+            isExpanded
+              ? "mt-4 grid-rows-[1fr] opacity-100"
+              : "mt-0 grid-rows-[0fr] opacity-0",
+          )}
+        >
+          <div className="min-h-0 min-w-0 overflow-hidden">
+            <p className="mb-3 line-clamp-4 min-w-0 break-words font-body-md text-sm leading-relaxed text-white/90 md:line-clamp-3 md:text-[15px]">
+              {service.approach}
+            </p>
+            <ul className="min-w-0 space-y-2 border-t border-white/20 pt-3">
+              {service.focus.map((item) => (
+                <li
+                  key={item}
+                  className="flex min-w-0 items-start gap-2.5 text-[13px] text-white/85 md:text-sm"
+                >
+                  <span
+                    className="mt-[7px] h-1.5 w-1.5 shrink-0 rounded-full bg-white"
+                    aria-hidden="true"
+                  />
+                  <span className="min-w-0 break-words leading-snug">
+                    {item}
+                  </span>
+                </li>
+              ))}
+            </ul>
+          </div>
+        </div>
+
+        <p
+          className={cn(
+            "mt-2 line-clamp-2 min-w-0 break-words font-body-md text-sm leading-snug text-white/70 transition-opacity duration-300 motion-reduce:transition-none md:text-[15px]",
+            isExpanded
+              ? "pointer-events-none h-0 overflow-hidden opacity-0"
+              : "opacity-100",
+          )}
+        >
+          {service.description}
+        </p>
+      </div>
+    </>
+  );
+}
+
 const ServiceCardComponent = forwardRef<HTMLElement, ServiceCardProps>(
   function ServiceCardComponent(
     {
@@ -32,24 +122,49 @@ const ServiceCardComponent = forwardRef<HTMLElement, ServiceCardProps>(
     ref,
   ) {
     const prefersReducedMotion = useReducedMotion();
+    const useTouchMotion = !enableHoverExpand;
+
+    const interactionProps = {
+      role: "button" as const,
+      tabIndex: 0,
+      "aria-expanded": isExpanded,
+      "aria-label": `${service.title}. ${isExpanded ? "Expanded details" : "Expand for approach details"}`,
+      onMouseEnter: enableHoverExpand ? onActivate : undefined,
+      onFocus: enableHoverExpand ? onActivate : undefined,
+      onClick: onActivate,
+      onKeyDown: (event: KeyboardEvent<HTMLElement>) => {
+        if (event.key === "Enter" || event.key === " ") {
+          event.preventDefault();
+          onActivate();
+        }
+      },
+    };
+
+    if (useTouchMotion) {
+      return (
+        <article
+          ref={ref}
+          data-service-id={service.id}
+          {...interactionProps}
+          className={cn(
+            cardShellClass,
+            "service-card--touch",
+            isExpanded ? "z-10 shadow-[var(--shadow-lg)]" : "z-0",
+            isDimmed && "service-card--dimmed",
+            className,
+          )}
+          style={{ flexGrow: isExpanded ? 2.85 : 1 }}
+        >
+          <CardBody service={service} isExpanded={isExpanded} />
+        </article>
+      );
+    }
 
     return (
       <m.article
         ref={ref}
         data-service-id={service.id}
-        role="button"
-        tabIndex={0}
-        aria-expanded={isExpanded}
-        aria-label={`${service.title}. ${isExpanded ? "Expanded details" : "Expand for approach details"}`}
-        onMouseEnter={enableHoverExpand ? onActivate : undefined}
-        onFocus={enableHoverExpand ? onActivate : undefined}
-        onClick={onActivate}
-        onKeyDown={(event) => {
-          if (event.key === "Enter" || event.key === " ") {
-            event.preventDefault();
-            onActivate();
-          }
-        }}
+        {...interactionProps}
         initial={false}
         animate={{
           flexGrow: isExpanded ? 2.85 : 1,
@@ -64,8 +179,7 @@ const ServiceCardComponent = forwardRef<HTMLElement, ServiceCardProps>(
               }
         }
         className={cn(
-          "service-card relative flex min-h-0 min-w-0 basis-0 cursor-pointer flex-col overflow-hidden rounded-2xl border border-border bg-card inner-glow outline-none",
-          "focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--background-secondary)]",
+          cardShellClass,
           isExpanded ? "z-10 shadow-[var(--shadow-lg)]" : "z-0",
           className,
         )}
@@ -73,7 +187,7 @@ const ServiceCardComponent = forwardRef<HTMLElement, ServiceCardProps>(
       >
         <div className="absolute inset-0 z-0 overflow-hidden">
           <m.div
-            className="absolute inset-0 will-change-transform"
+            className="absolute inset-0"
             initial={false}
             animate={{
               scale: isExpanded ? 1.05 : 1,

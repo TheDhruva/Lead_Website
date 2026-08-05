@@ -9,11 +9,8 @@ import { ServiceCard } from "@/components/ui/service-card";
 import { services } from "@/data";
 import { useMediaQuery } from "@/hooks/use-media-query";
 
-const MOBILE_TAP_LOCK_MS = 900;
-const MOBILE_ANIMATION_LOCK_MS = 700;
-const SCROLL_SETTLE_MS = 200;
-/** Ignore tiny center shifts while a card is expanding */
-const CENTER_SWITCH_BUFFER_PX = 48;
+const MOBILE_TAP_LOCK_MS = 800;
+const MOBILE_ANIMATION_LOCK_MS = 520;
 
 export function Services() {
   const isMobile = useMediaQuery("(max-width: 767px)");
@@ -22,6 +19,7 @@ export function Services() {
   const cardRefs = useRef<Map<string, HTMLElement>>(new Map());
   const activeIdRef = useRef<string | null>(null);
   const userLockUntilRef = useRef(0);
+  const intersectionRatiosRef = useRef<Map<string, number>>(new Map());
 
   const registerCardRef = useCallback(
     (id: string, element: HTMLElement | null) => {
@@ -45,63 +43,48 @@ export function Services() {
     [isMobile],
   );
 
-  const pickCenteredCard = useCallback(() => {
-    if (!isMobile || Date.now() < userLockUntilRef.current) return;
-
-    const viewportCenter = window.innerHeight / 2;
-    let closestId: string | null = null;
-    let closestDistance = Infinity;
-
-    cardRefs.current.forEach((element, id) => {
-      const rect = element.getBoundingClientRect();
-      const cardCenter = rect.top + rect.height / 2;
-      const distance = Math.abs(cardCenter - viewportCenter);
-
-      if (distance < closestDistance) {
-        closestDistance = distance;
-        closestId = id;
-      }
-    });
-
-    if (!closestId || closestDistance >= window.innerHeight * 0.45) return;
-
-    const currentId = activeIdRef.current;
-    if (currentId && currentId !== closestId) {
-      const currentEl = cardRefs.current.get(currentId);
-      if (currentEl) {
-        const currentRect = currentEl.getBoundingClientRect();
-        const currentDistance = Math.abs(
-          currentRect.top + currentRect.height / 2 - viewportCenter,
-        );
-        if (closestDistance > currentDistance - CENTER_SWITCH_BUFFER_PX) return;
-      }
-    }
-
-    setActiveCard(closestId, { lockMs: MOBILE_ANIMATION_LOCK_MS });
-  }, [isMobile, setActiveCard]);
-
   useEffect(() => {
     if (!isMobile) return;
 
-    let debounceTimer: ReturnType<typeof setTimeout> | null = null;
-    let rafId: number | null = null;
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (Date.now() < userLockUntilRef.current) return;
 
-    const schedulePick = () => {
-      if (debounceTimer) clearTimeout(debounceTimer);
-      debounceTimer = setTimeout(() => {
-        rafId = requestAnimationFrame(pickCenteredCard);
-      }, SCROLL_SETTLE_MS);
-    };
+        for (const entry of entries) {
+          const id = entry.target.getAttribute("data-service-id");
+          if (!id) continue;
+          intersectionRatiosRef.current.set(
+            id,
+            entry.isIntersecting ? entry.intersectionRatio : 0,
+          );
+        }
 
-    window.addEventListener("scroll", schedulePick, { passive: true });
-    schedulePick();
+        let bestId: string | null = null;
+        let bestRatio = 0;
 
-    return () => {
-      window.removeEventListener("scroll", schedulePick);
-      if (debounceTimer) clearTimeout(debounceTimer);
-      if (rafId !== null) cancelAnimationFrame(rafId);
-    };
-  }, [isMobile, pickCenteredCard]);
+        intersectionRatiosRef.current.forEach((ratio, id) => {
+          if (ratio > bestRatio) {
+            bestRatio = ratio;
+            bestId = id;
+          }
+        });
+
+        if (bestId && bestRatio >= 0.35) {
+          setActiveCard(bestId, { lockMs: MOBILE_ANIMATION_LOCK_MS });
+        }
+      },
+      {
+        rootMargin: "-28% 0px -28% 0px",
+        threshold: [0, 0.2, 0.4, 0.6, 0.8, 1],
+      },
+    );
+
+    cardRefs.current.forEach((element) => {
+      observer.observe(element);
+    });
+
+    return () => observer.disconnect();
+  }, [isMobile, setActiveCard]);
 
   const handleActivate = useCallback(
     (id: string) => {
