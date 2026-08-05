@@ -9,11 +9,19 @@ import { ServiceCard } from "@/components/ui/service-card";
 import { services } from "@/data";
 import { useMediaQuery } from "@/hooks/use-media-query";
 
+const MOBILE_TAP_LOCK_MS = 900;
+const MOBILE_ANIMATION_LOCK_MS = 700;
+const SCROLL_SETTLE_MS = 200;
+/** Ignore tiny center shifts while a card is expanding */
+const CENTER_SWITCH_BUFFER_PX = 48;
+
 export function Services() {
   const isMobile = useMediaQuery("(max-width: 767px)");
   const [activeId, setActiveId] = useState<string | null>(null);
   const clearTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const cardRefs = useRef<Map<string, HTMLElement>>(new Map());
+  const activeIdRef = useRef<string | null>(null);
+  const userLockUntilRef = useRef(0);
 
   const registerCardRef = useCallback(
     (id: string, element: HTMLElement | null) => {
@@ -23,37 +31,77 @@ export function Services() {
     [],
   );
 
+  const setActiveCard = useCallback(
+    (id: string | null, { lockMs = 0 }: { lockMs?: number } = {}) => {
+      if (activeIdRef.current === id) return;
+
+      activeIdRef.current = id;
+      setActiveId(id);
+
+      if (isMobile && lockMs > 0) {
+        userLockUntilRef.current = Date.now() + lockMs;
+      }
+    },
+    [isMobile],
+  );
+
+  const pickCenteredCard = useCallback(() => {
+    if (!isMobile || Date.now() < userLockUntilRef.current) return;
+
+    const viewportCenter = window.innerHeight / 2;
+    let closestId: string | null = null;
+    let closestDistance = Infinity;
+
+    cardRefs.current.forEach((element, id) => {
+      const rect = element.getBoundingClientRect();
+      const cardCenter = rect.top + rect.height / 2;
+      const distance = Math.abs(cardCenter - viewportCenter);
+
+      if (distance < closestDistance) {
+        closestDistance = distance;
+        closestId = id;
+      }
+    });
+
+    if (!closestId || closestDistance >= window.innerHeight * 0.45) return;
+
+    const currentId = activeIdRef.current;
+    if (currentId && currentId !== closestId) {
+      const currentEl = cardRefs.current.get(currentId);
+      if (currentEl) {
+        const currentRect = currentEl.getBoundingClientRect();
+        const currentDistance = Math.abs(
+          currentRect.top + currentRect.height / 2 - viewportCenter,
+        );
+        if (closestDistance > currentDistance - CENTER_SWITCH_BUFFER_PX) return;
+      }
+    }
+
+    setActiveCard(closestId, { lockMs: MOBILE_ANIMATION_LOCK_MS });
+  }, [isMobile, setActiveCard]);
+
   useEffect(() => {
     if (!isMobile) return;
 
-    const observer = new IntersectionObserver(
-      (entries) => {
-        let bestId: string | null = null;
-        let bestRatio = 0;
+    let debounceTimer: ReturnType<typeof setTimeout> | null = null;
+    let rafId: number | null = null;
 
-        for (const entry of entries) {
-          if (!entry.isIntersecting) continue;
-          const id = entry.target.getAttribute("data-service-id");
-          if (id && entry.intersectionRatio > bestRatio) {
-            bestRatio = entry.intersectionRatio;
-            bestId = id;
-          }
-        }
+    const schedulePick = () => {
+      if (debounceTimer) clearTimeout(debounceTimer);
+      debounceTimer = setTimeout(() => {
+        rafId = requestAnimationFrame(pickCenteredCard);
+      }, SCROLL_SETTLE_MS);
+    };
 
-        if (bestId) setActiveId(bestId);
-      },
-      {
-        rootMargin: "-32% 0px -32% 0px",
-        threshold: [0, 0.1, 0.25, 0.5, 0.75, 1],
-      },
-    );
+    window.addEventListener("scroll", schedulePick, { passive: true });
+    schedulePick();
 
-    cardRefs.current.forEach((element) => {
-      observer.observe(element);
-    });
-
-    return () => observer.disconnect();
-  }, [isMobile]);
+    return () => {
+      window.removeEventListener("scroll", schedulePick);
+      if (debounceTimer) clearTimeout(debounceTimer);
+      if (rafId !== null) cancelAnimationFrame(rafId);
+    };
+  }, [isMobile, pickCenteredCard]);
 
   const handleActivate = useCallback(
     (id: string) => {
@@ -62,7 +110,7 @@ export function Services() {
         clearTimeoutRef.current = null;
       }
 
-      setActiveId(id);
+      setActiveCard(id, { lockMs: MOBILE_TAP_LOCK_MS });
 
       if (isMobile) {
         cardRefs.current.get(id)?.scrollIntoView({
@@ -71,7 +119,7 @@ export function Services() {
         });
       }
     },
-    [isMobile],
+    [isMobile, setActiveCard],
   );
 
   const handleClear = useCallback(() => {
@@ -81,10 +129,10 @@ export function Services() {
       clearTimeout(clearTimeoutRef.current);
     }
     clearTimeoutRef.current = setTimeout(() => {
-      setActiveId(null);
+      setActiveCard(null);
       clearTimeoutRef.current = null;
     }, 120);
-  }, [isMobile]);
+  }, [isMobile, setActiveCard]);
 
   useEffect(() => {
     return () => {

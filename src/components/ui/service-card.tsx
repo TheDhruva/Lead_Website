@@ -42,7 +42,7 @@ const ServiceCardComponent = forwardRef<HTMLElement, ServiceCardProps>(
         aria-expanded={isExpanded}
         aria-label={`${service.title}. ${isExpanded ? "Expanded details" : "Expand for approach details"}`}
         onMouseEnter={enableHoverExpand ? onActivate : undefined}
-        onFocus={onActivate}
+        onFocus={enableHoverExpand ? onActivate : undefined}
         onClick={onActivate}
         onKeyDown={(event) => {
           if (event.key === "Enter" || event.key === " ") {
