@@ -33,6 +33,9 @@ export function SmoothScrollProvider({ children }: SmoothScrollProviderProps) {
   useEffect(() => {
     if (prefersReducedMotion) return;
 
+    const isCoarsePointer = window.matchMedia("(pointer: coarse)").matches;
+    if (isCoarsePointer) return;
+
     let instance: Lenis | null = null;
     let cancelled = false;
 
@@ -80,7 +83,12 @@ export function SmoothScrollProvider({ children }: SmoothScrollProviderProps) {
       };
     }
 
-    if (!lenis) return;
+    if (!lenis) {
+      document.documentElement.style.overflow = hasEntered ? "" : "hidden";
+      return () => {
+        document.documentElement.style.overflow = "";
+      };
+    }
 
     if (!hasEntered) {
       lenis.stop();

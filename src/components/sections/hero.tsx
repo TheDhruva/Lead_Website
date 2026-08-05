@@ -7,6 +7,7 @@ import { Container } from "@/components/ui/container";
 import { EASING_OUT, FACE_CYCLE_INTERVAL_MS, MOTION } from "@/constants";
 import { heroPortraits } from "@/data";
 import { useFaceCycle } from "@/hooks/use-face-cycle";
+import { useMediaQuery } from "@/hooks/use-media-query";
 import { useSmoothScroll } from "@/hooks/use-smooth-scroll";
 import { cn } from "@/lib/utils";
 import { useTheatreIntro } from "@/providers/theatre-intro-provider";
@@ -27,7 +28,8 @@ function PortraitStack({
 }) {
   const prefersReducedMotion = useReducedMotion();
   const tilt = side === "left" ? -7 : 7;
-  const active = portraits[activeIndex] ?? portraits[0];
+  const active = portraits[activeIndex] ?? portraits[0]!;
+
   if (!active) return null;
 
   return (
@@ -76,7 +78,11 @@ function PortraitStack({
 }
 
 export function Hero() {
-  const { index } = useFaceCycle(CUTOUT_COUNT, FACE_CYCLE_INTERVAL_MS);
+  const isDesktop = useMediaQuery("(min-width: 1024px)");
+  const { index } = useFaceCycle(
+    isDesktop ? CUTOUT_COUNT : 1,
+    FACE_CYCLE_INTERVAL_MS,
+  );
   const { scrollTo } = useSmoothScroll();
   const { hasEntered } = useTheatreIntro();
   const prefersReducedMotion = useReducedMotion();
@@ -87,7 +93,7 @@ export function Hero() {
   return (
     <section
       id="work"
-      className="relative flex min-h-[min(100svh,880px)] items-center justify-center px-gutter pt-28 pb-16 md:pt-32 md:pb-20 lg:pb-24"
+      className="relative flex items-center justify-center px-gutter pt-28 pb-12 md:pt-32 md:pb-16 lg:min-h-[min(100svh,880px)] lg:pb-24"
       aria-labelledby="hero-heading"
     >
       <Container className="relative w-full">
@@ -127,9 +133,18 @@ export function Hero() {
             brand impossible to ignore. A cinematic approach to digital
             presence.
           </p>
-          <Button size="lg" onClick={() => scrollTo("#contact")}>
-            I&apos;m Ready To Grow
-          </Button>
+          <div className="flex flex-col items-center justify-center gap-4 sm:flex-row">
+            <Button size="lg" onClick={() => scrollTo("#contact")}>
+              I&apos;m Ready To Grow
+            </Button>
+            <Button
+              size="lg"
+              variant="ghost"
+              onClick={() => scrollTo("#projects")}
+            >
+              View Work
+            </Button>
+          </div>
         </m.div>
 
         <PortraitStack

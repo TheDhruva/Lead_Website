@@ -7,10 +7,20 @@ import { Container } from "@/components/ui/container";
 import { SectionTitle } from "@/components/ui/section-title";
 import { ServiceCard } from "@/components/ui/service-card";
 import { services } from "@/data";
+import { useMediaQuery } from "@/hooks/use-media-query";
 
 export function Services() {
+  const isMobile = useMediaQuery("(max-width: 767px)");
   const [activeId, setActiveId] = useState<string | null>(null);
   const clearTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const mobileDefaultSet = useRef(false);
+
+  useEffect(() => {
+    if (isMobile && !mobileDefaultSet.current && services[0]) {
+      mobileDefaultSet.current = true;
+      setActiveId(services[0].id);
+    }
+  }, [isMobile]);
 
   const handleActivate = useCallback((id: string) => {
     if (clearTimeoutRef.current) {

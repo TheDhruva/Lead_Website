@@ -5,6 +5,7 @@ export const SITE_NAME = "DHRUVA";
 export const NAV_ITEMS: NavItem[] = [
   { label: "Work", href: "#work" },
   { label: "Services", href: "#services" },
+  { label: "Videos", href: "#video" },
   { label: "Projects", href: "#projects" },
   { label: "Contact", href: "#contact" },
 ];
@@ -13,6 +14,7 @@ export const SECTION_IDS = {
   theatreIntro: "theatre-intro",
   work: "work",
   services: "services",
+  video: "video",
   projects: "projects",
   contact: "contact",
 } as const;

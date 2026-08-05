@@ -14,6 +14,7 @@ import { cn } from "@/lib/utils";
 const SECTION_LIST = [
   SECTION_IDS.work,
   SECTION_IDS.services,
+  SECTION_IDS.video,
   SECTION_IDS.projects,
   SECTION_IDS.contact,
 ] as const;

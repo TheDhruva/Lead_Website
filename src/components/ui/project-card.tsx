@@ -61,6 +61,9 @@ function ProjectCardComponent({
 
       {/* Title — single source of truth, no hover duplicate */}
       <div className="pointer-events-none absolute inset-x-0 bottom-0 p-4 md:p-5">
+        <p className="mb-0.5 truncate text-[11px] font-medium tracking-wide text-white/65 uppercase md:text-xs">
+          {project.category}
+        </p>
         <h3
           className={cn(
             "truncate font-semibold tracking-tight text-white drop-shadow-md",

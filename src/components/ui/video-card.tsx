@@ -23,7 +23,8 @@ function VideoCardComponent({
   featured = false,
 }: VideoCardProps) {
   const { containerRef, videoRef, isInView } = useAutoplayVideo({
-    threshold: 0.35,
+    threshold: 0.12,
+    rootMargin: "120px 0px",
   });
   const [videoFailed, setVideoFailed] = useState(false);
   const [isMuted, setIsMuted] = useState(true);
@@ -54,6 +55,9 @@ function VideoCardComponent({
     const videoEl = videoRef.current;
     if (!videoEl) return;
     if (videoEl.paused) {
+      if (videoEl.readyState === HTMLMediaElement.HAVE_NOTHING) {
+        videoEl.load();
+      }
       void videoEl.play();
     } else {
       videoEl.pause();
@@ -89,6 +93,7 @@ function VideoCardComponent({
         <video
           ref={videoRef}
           className="absolute inset-0 h-full w-full object-cover"
+          src={isInView ? video.src : undefined}
           poster={video.poster}
           muted={isMuted}
           loop
@@ -96,11 +101,7 @@ function VideoCardComponent({
           preload="none"
           aria-hidden="true"
           onError={handleVideoError}
-        >
-          {isInView && video.src ? (
-            <source src={video.src} type="video/mp4" />
-          ) : null}
-        </video>
+        />
       ) : (
         <Image
           src={video.poster}
@@ -116,44 +117,53 @@ function VideoCardComponent({
         />
       )}
 
-      {showVideo ? (
-        <div
+      <div className="absolute inset-x-0 bottom-0 flex items-end justify-between gap-3 bg-gradient-to-t from-black/70 via-black/25 to-transparent p-3 md:p-4">
+        <p
           className={cn(
-            "absolute inset-x-0 bottom-0 flex items-center justify-between gap-2 p-3 md:p-4",
-            "bg-gradient-to-t from-black/50 via-black/15 to-transparent",
-            "opacity-0 transition-opacity duration-200 ease-out",
-            "group-hover:opacity-100 group-focus-within:opacity-100",
+            "pointer-events-none min-w-0 flex-1 truncate font-semibold text-white drop-shadow-md",
+            featured ? "text-sm md:text-base" : "text-xs md:text-sm",
           )}
         >
-          <button
-            type="button"
-            onClick={handleTogglePlay}
-            aria-label={isPlaying ? "Pause video" : "Play video"}
-            className="pointer-events-auto flex h-10 w-10 items-center justify-center rounded-full border border-white/15 bg-black/50 text-white backdrop-blur-sm transition-colors hover:bg-black/70 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/60"
-          >
-            <span
-              className="material-symbols-outlined text-2xl"
-              aria-hidden="true"
-            >
-              {isPlaying ? "pause" : "play_arrow"}
-            </span>
-          </button>
+          {video.title}
+        </p>
 
-          <button
-            type="button"
-            onClick={handleToggleMute}
-            aria-label={isMuted ? "Unmute video" : "Mute video"}
-            className="pointer-events-auto flex h-10 w-10 items-center justify-center rounded-full border border-white/15 bg-black/50 text-white backdrop-blur-sm transition-colors hover:bg-black/70 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/60"
+        {showVideo ? (
+          <div
+            className={cn(
+              "flex shrink-0 items-center gap-2 opacity-100 transition-opacity duration-200 ease-out",
+              "[@media(hover:hover)]:opacity-0 [@media(hover:hover)]:group-hover:opacity-100 [@media(hover:hover)]:group-focus-within:opacity-100",
+            )}
           >
-            <span
-              className="material-symbols-outlined text-2xl"
-              aria-hidden="true"
+            <button
+              type="button"
+              onClick={handleTogglePlay}
+              aria-label={isPlaying ? "Pause video" : "Play video"}
+              className="pointer-events-auto flex h-9 w-9 items-center justify-center rounded-full border border-white/15 bg-black/50 text-white backdrop-blur-sm transition-colors hover:bg-black/70 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/60 md:h-10 md:w-10"
             >
-              {isMuted ? "volume_off" : "volume_up"}
-            </span>
-          </button>
-        </div>
-      ) : null}
+              <span
+                className="material-symbols-outlined text-xl md:text-2xl"
+                aria-hidden="true"
+              >
+                {isPlaying ? "pause" : "play_arrow"}
+              </span>
+            </button>
+
+            <button
+              type="button"
+              onClick={handleToggleMute}
+              aria-label={isMuted ? "Unmute video" : "Mute video"}
+              className="pointer-events-auto flex h-9 w-9 items-center justify-center rounded-full border border-white/15 bg-black/50 text-white backdrop-blur-sm transition-colors hover:bg-black/70 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/60 md:h-10 md:w-10"
+            >
+              <span
+                className="material-symbols-outlined text-xl md:text-2xl"
+                aria-hidden="true"
+              >
+                {isMuted ? "volume_off" : "volume_up"}
+              </span>
+            </button>
+          </div>
+        ) : null}
+      </div>
     </m.article>
   );
 }
