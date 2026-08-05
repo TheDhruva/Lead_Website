@@ -73,11 +73,13 @@ export function Navbar() {
     <nav
       aria-label="Primary"
       className={cn(
-        "fixed left-1/2 z-50 flex w-[90%] max-w-container-max -translate-x-1/2 items-center justify-between rounded-full border border-border bg-nav px-gutter shadow-2xl",
+        "fixed left-1/2 z-50 flex w-[90%] max-w-container-max -translate-x-1/2 items-center justify-between rounded-full border border-border px-gutter shadow-2xl",
         "transition-[top,padding,background-color,border-color,box-shadow,backdrop-filter] duration-300 ease-[cubic-bezier(0.16,1,0.3,1)]",
+        "max-md:bg-background max-md:backdrop-blur-none",
+        "md:bg-nav",
         scrolled
-          ? "top-4 py-2.5 backdrop-blur-2xl"
-          : "top-6 py-4 backdrop-blur-xl",
+          ? "top-4 py-2.5 md:backdrop-blur-2xl"
+          : "top-6 py-4 md:backdrop-blur-xl",
       )}
     >
       <a
@@ -150,7 +152,7 @@ export function Navbar() {
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -8 }}
             transition={{ duration: 0.22, ease: MOTION.hover.ease }}
-            className="absolute top-[calc(100%+12px)] right-0 left-0 rounded-2xl border border-border bg-nav p-6 shadow-2xl backdrop-blur-xl md:hidden"
+            className="absolute top-[calc(100%+12px)] right-0 left-0 rounded-2xl border border-border bg-background p-6 shadow-2xl md:hidden"
           >
             <div className="flex flex-col gap-4">
               {NAV_ITEMS.map((item) => {
