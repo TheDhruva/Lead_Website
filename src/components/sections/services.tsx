@@ -13,24 +13,70 @@ export function Services() {
   const isMobile = useMediaQuery("(max-width: 767px)");
   const [activeId, setActiveId] = useState<string | null>(null);
   const clearTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const mobileDefaultSet = useRef(false);
+  const cardRefs = useRef<Map<string, HTMLElement>>(new Map());
+
+  const registerCardRef = useCallback(
+    (id: string, element: HTMLElement | null) => {
+      if (element) cardRefs.current.set(id, element);
+      else cardRefs.current.delete(id);
+    },
+    [],
+  );
 
   useEffect(() => {
-    if (isMobile && !mobileDefaultSet.current && services[0]) {
-      mobileDefaultSet.current = true;
-      setActiveId(services[0].id);
-    }
+    if (!isMobile) return;
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        let bestId: string | null = null;
+        let bestRatio = 0;
+
+        for (const entry of entries) {
+          if (!entry.isIntersecting) continue;
+          const id = entry.target.getAttribute("data-service-id");
+          if (id && entry.intersectionRatio > bestRatio) {
+            bestRatio = entry.intersectionRatio;
+            bestId = id;
+          }
+        }
+
+        if (bestId) setActiveId(bestId);
+      },
+      {
+        rootMargin: "-32% 0px -32% 0px",
+        threshold: [0, 0.1, 0.25, 0.5, 0.75, 1],
+      },
+    );
+
+    cardRefs.current.forEach((element) => {
+      observer.observe(element);
+    });
+
+    return () => observer.disconnect();
   }, [isMobile]);
 
-  const handleActivate = useCallback((id: string) => {
-    if (clearTimeoutRef.current) {
-      clearTimeout(clearTimeoutRef.current);
-      clearTimeoutRef.current = null;
-    }
-    setActiveId(id);
-  }, []);
+  const handleActivate = useCallback(
+    (id: string) => {
+      if (clearTimeoutRef.current) {
+        clearTimeout(clearTimeoutRef.current);
+        clearTimeoutRef.current = null;
+      }
+
+      setActiveId(id);
+
+      if (isMobile) {
+        cardRefs.current.get(id)?.scrollIntoView({
+          behavior: "smooth",
+          block: "center",
+        });
+      }
+    },
+    [isMobile],
+  );
 
   const handleClear = useCallback(() => {
+    if (isMobile) return;
+
     if (clearTimeoutRef.current) {
       clearTimeout(clearTimeoutRef.current);
     }
@@ -38,7 +84,7 @@ export function Services() {
       setActiveId(null);
       clearTimeoutRef.current = null;
     }, 120);
-  }, []);
+  }, [isMobile]);
 
   useEffect(() => {
     return () => {
@@ -72,9 +118,11 @@ export function Services() {
               return (
                 <ServiceCard
                   key={service.id}
+                  ref={(element) => registerCardRef(service.id, element)}
                   service={service}
                   isExpanded={isExpanded}
                   isDimmed={isDimmed}
+                  enableHoverExpand={!isMobile}
                   onActivate={() => handleActivate(service.id)}
                 />
               );
