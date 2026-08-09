@@ -59,10 +59,7 @@ export function Projects() {
               >
                 {/* Website hero */}
                 <div className={cn("min-h-0 min-w-0", reverse && "lg:order-2")}>
-                  <ProjectCard
-                    project={row.website}
-                    priority={rowIndex === 0}
-                  />
+                  <ProjectCard project={row.website} />
                 </div>
 
                 {/* Brand identity stack */}

@@ -12,7 +12,6 @@ import {
 import type Lenis from "lenis";
 
 import { useReducedMotion } from "@/hooks/use-reduced-motion";
-import { useTheatreIntro } from "@/providers/theatre-intro-provider";
 
 const LenisContext = createContext<Lenis | null>(null);
 
@@ -26,7 +25,6 @@ interface SmoothScrollProviderProps {
 
 export function SmoothScrollProvider({ children }: SmoothScrollProviderProps) {
   const prefersReducedMotion = useReducedMotion();
-  const { hasEntered } = useTheatreIntro();
   const [lenis, setLenis] = useState<Lenis | null>(null);
   const rafIdRef = useRef<number | null>(null);
 
@@ -74,34 +72,6 @@ export function SmoothScrollProvider({ children }: SmoothScrollProviderProps) {
       setLenis(null);
     };
   }, [prefersReducedMotion]);
-
-  useEffect(() => {
-    if (prefersReducedMotion) {
-      document.documentElement.style.overflow = hasEntered ? "" : "hidden";
-      return () => {
-        document.documentElement.style.overflow = "";
-      };
-    }
-
-    if (!lenis) {
-      document.documentElement.style.overflow = hasEntered ? "" : "hidden";
-      return () => {
-        document.documentElement.style.overflow = "";
-      };
-    }
-
-    if (!hasEntered) {
-      lenis.stop();
-      document.documentElement.style.overflow = "hidden";
-    } else {
-      lenis.start();
-      document.documentElement.style.overflow = "";
-    }
-
-    return () => {
-      document.documentElement.style.overflow = "";
-    };
-  }, [hasEntered, lenis, prefersReducedMotion]);
 
   return (
     <LenisContext.Provider value={prefersReducedMotion ? null : lenis}>

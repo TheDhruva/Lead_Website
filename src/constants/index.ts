@@ -42,7 +42,7 @@ export const CONTACT_TIMELINES = [
   "Flexible",
 ] as const;
 
-export const THEATRE_INTRO_TIMEOUT_MS = 5000;
+export const THEATRE_INTRO_TIMEOUT_MS = 1200;
 /** Beat between paper-cutout expression swaps in the hero */
 export const FACE_CYCLE_INTERVAL_MS = 2400;
 

@@ -102,12 +102,12 @@ function VideoCardComponent({
         <video
           ref={videoRef}
           className="absolute inset-0 h-full w-full object-cover"
-          src={isInView ? resolvedSrc : undefined}
+          src={featured || isInView ? resolvedSrc : undefined}
           poster={video.poster}
           muted={isMuted}
           loop
           playsInline
-          preload="none"
+          preload={featured ? "metadata" : "none"}
           aria-hidden="true"
           onError={handleVideoError}
         />
