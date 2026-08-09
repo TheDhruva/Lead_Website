@@ -4,13 +4,12 @@ import { AnimatePresence, m, useReducedMotion } from "framer-motion";
 
 import { Button } from "@/components/ui/button";
 import { Container } from "@/components/ui/container";
-import { EASING_OUT, FACE_CYCLE_INTERVAL_MS, MOTION } from "@/constants";
+import { EASING_OUT, FACE_CYCLE_INTERVAL_MS } from "@/constants";
 import { heroPortraits } from "@/data";
 import { useFaceCycle } from "@/hooks/use-face-cycle";
 import { useMediaQuery } from "@/hooks/use-media-query";
 import { useSmoothScroll } from "@/hooks/use-smooth-scroll";
 import { cn } from "@/lib/utils";
-import { useTheatreIntro } from "@/providers/theatre-intro-provider";
 import type { HeroPortrait } from "@/types";
 
 const CUTOUT_COUNT = heroPortraits.length;
@@ -69,6 +68,7 @@ function PortraitStack({
             src={active.src}
             alt=""
             draggable={false}
+            loading={side === "left" && activeIndex === 0 ? "eager" : "lazy"}
             fetchPriority={
               side === "left" && activeIndex === 0 ? "high" : "low"
             }
@@ -88,8 +88,6 @@ export function Hero() {
     FACE_CYCLE_INTERVAL_MS,
   );
   const { scrollTo } = useSmoothScroll();
-  const { hasEntered } = useTheatreIntro();
-  const prefersReducedMotion = useReducedMotion();
 
   const leftIndex = index % CUTOUT_COUNT;
   const rightIndex = (index + RIGHT_OFFSET) % CUTOUT_COUNT;
@@ -109,19 +107,7 @@ export function Hero() {
 
         <m.div
           className="relative z-10 mx-auto flex max-w-4xl flex-col items-center px-2 text-center sm:px-0"
-          initial={
-            prefersReducedMotion ? false : { opacity: 0, y: 20, scale: 0.99 }
-          }
-          animate={
-            hasEntered
-              ? { opacity: 1, y: 0, scale: 1 }
-              : { opacity: 0, y: 20, scale: 0.99 }
-          }
-          transition={{
-            duration: MOTION.pageEnter.duration,
-            delay: prefersReducedMotion ? 0 : 0.2,
-            ease: MOTION.pageEnter.ease,
-          }}
+          initial={false}
         >
           <h1
             id="hero-heading"

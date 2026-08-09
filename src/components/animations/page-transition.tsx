@@ -2,54 +2,24 @@
 
 import { type ReactNode, memo } from "react";
 
-import { m, useReducedMotion } from "framer-motion";
-
-import { MOTION } from "@/constants";
-
 interface PageTransitionProps {
   children: ReactNode;
   className?: string;
-  visible: boolean;
 }
 
-function PageTransitionComponent({
-  children,
-  className,
-  visible,
-}: PageTransitionProps) {
-  const prefersReducedMotion = useReducedMotion();
-
-  if (prefersReducedMotion) {
-    return (
-      <div
-        className={className}
-        style={{ opacity: visible ? 1 : 0 }}
-        aria-hidden={!visible}
-      >
-        {children}
-      </div>
-    );
-  }
-
-  return (
-    <m.div
-      className={className}
-      initial={{ opacity: 0, y: 28, scale: 0.985 }}
-      animate={
-        visible
-          ? { opacity: 1, y: 0, scale: 1 }
-          : { opacity: 0, y: 28, scale: 0.985 }
-      }
-      transition={{
-        duration: MOTION.pageEnter.duration,
-        delay: visible ? MOTION.pageEnter.delay : 0,
-        ease: MOTION.pageEnter.ease,
-      }}
-      style={{ transformOrigin: "50% 20%" }}
-    >
-      {children}
-    </m.div>
-  );
+/**
+ * Renders page content fully visible from the very first paint.
+ *
+ * The page used to render at `opacity: 0` and only fade in after the JS
+ * bundle hydrated and the intro timer fired — so users on slow connections
+ * saw a blank screen (or a soft-failed load) until ~300KB of JS had loaded.
+ *
+ * The intro overlay is the only hidden layer: it is client-only and covers
+ * the whole viewport during the first visit, so no opacity gate is needed
+ * here. If JS is slow or never loads, the site is still readable.
+ */
+function PageTransitionComponent({ children, className }: PageTransitionProps) {
+  return <div className={className}>{children}</div>;
 }
 
 export const PageTransition = memo(PageTransitionComponent);

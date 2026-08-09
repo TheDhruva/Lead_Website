@@ -7,9 +7,8 @@ import { Footer } from "@/components/layout/footer";
 import { Navbar } from "@/components/layout/navbar";
 import { Contact } from "@/components/sections/contact";
 import { Hero } from "@/components/sections/hero";
-import { Projects } from "@/components/sections/projects";
-import { Services } from "@/components/sections/services";
-import { useTheatreIntro } from "@/providers/theatre-intro-provider";
+import { LazySection } from "@/components/ui/lazy-section";
+import { SECTION_IDS } from "@/constants";
 
 const TheatreIntro = dynamic(
   () =>
@@ -19,28 +18,29 @@ const TheatreIntro = dynamic(
   { ssr: false },
 );
 
+const Services = dynamic(
+  () => import("@/components/sections/services").then((mod) => mod.Services),
+  { ssr: false },
+);
+
 const VideoShowcase = dynamic(
   () =>
     import("@/components/sections/video-showcase").then(
       (mod) => mod.VideoShowcase,
     ),
-  {
-    loading: () => (
-      <section
-        className="bg-surface-container-lowest px-gutter py-16 md:py-20 lg:py-24"
-        aria-hidden="true"
-      />
-    ),
-  },
+  { ssr: false },
+);
+
+const Projects = dynamic(
+  () => import("@/components/sections/projects").then((mod) => mod.Projects),
+  { ssr: false },
 );
 
 export function HomePage() {
-  const { hasEntered } = useTheatreIntro();
-
   return (
     <>
       <TheatreIntro />
-      <PageTransition visible={hasEntered} className="relative">
+      <PageTransition className="relative">
         <a
           href="#work"
           className="sr-only focus:not-sr-only focus:absolute focus:top-4 focus:left-4 focus:z-[110] focus:rounded-full focus:bg-primary focus:px-4 focus:py-2 focus:text-primary-foreground"
@@ -50,9 +50,27 @@ export function HomePage() {
         <Navbar />
         <main id="main-content">
           <Hero />
-          <Services />
-          <VideoShowcase />
-          <Projects />
+          <LazySection
+            id={SECTION_IDS.services}
+            className="bg-background"
+            minHeight="min(58svh, 620px)"
+          >
+            <Services />
+          </LazySection>
+          <LazySection
+            id={SECTION_IDS.video}
+            className="bg-surface-container-lowest"
+            minHeight="min(68svh, 720px)"
+          >
+            <VideoShowcase />
+          </LazySection>
+          <LazySection
+            id={SECTION_IDS.projects}
+            className="bg-background"
+            minHeight="min(130svh, 1500px)"
+          >
+            <Projects />
+          </LazySection>
           <Contact />
         </main>
         <Footer />
