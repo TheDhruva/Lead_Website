@@ -4,11 +4,29 @@ import Image from "next/image";
 import { type KeyboardEvent, forwardRef, memo } from "react";
 
 import { m, useReducedMotion } from "framer-motion";
+import { Code2, Film, type LucideIcon, PenTool } from "lucide-react";
 
 import { cn } from "@/lib/utils";
-import type { Service } from "@/types";
+import type { Service, ServiceIcon } from "@/types";
 
 const EXPAND_EASE = [0.22, 1, 0.36, 1] as const;
+
+const SERVICE_ICONS: Record<ServiceIcon, LucideIcon> = {
+  movie: Film,
+  code: Code2,
+  design_services: PenTool,
+};
+
+function ServiceIcon({
+  icon,
+  className,
+}: {
+  icon: ServiceIcon;
+  className?: string;
+}) {
+  const Icon = SERVICE_ICONS[icon] ?? Film;
+  return <Icon aria-hidden="true" strokeWidth={1.5} className={className} />;
+}
 
 interface ServiceCardProps {
   service: Service;
@@ -51,12 +69,10 @@ function CardBody({
 
       <div className="relative z-10 flex h-full min-h-0 min-w-0 flex-col justify-end overflow-hidden p-5 sm:p-6 md:p-8">
         <div className="min-w-0 shrink-0">
-          <span
-            className="material-symbols-outlined mb-3 block text-3xl text-white md:text-4xl"
-            aria-hidden="true"
-          >
-            {service.icon}
-          </span>
+          <ServiceIcon
+            icon={service.icon}
+            className="mb-3 block text-3xl text-white md:text-4xl"
+          />
           <h3 className="truncate font-headline-lg text-[22px] leading-tight text-white md:text-[26px] lg:text-[28px]">
             {service.title}
           </h3>
@@ -212,12 +228,10 @@ const ServiceCardComponent = forwardRef<HTMLElement, ServiceCardProps>(
 
         <div className="relative z-10 flex h-full min-h-0 min-w-0 flex-col justify-end overflow-hidden p-5 sm:p-6 md:p-8">
           <div className="min-w-0 shrink-0">
-            <span
-              className="material-symbols-outlined mb-3 block text-3xl text-white md:text-4xl"
-              aria-hidden="true"
-            >
-              {service.icon}
-            </span>
+            <ServiceIcon
+              icon={service.icon}
+              className="mb-3 block text-3xl text-white md:text-4xl"
+            />
             <h3 className="truncate font-headline-lg text-[22px] leading-tight text-white md:text-[26px] lg:text-[28px]">
               {service.title}
             </h3>

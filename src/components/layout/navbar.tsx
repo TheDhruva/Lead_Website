@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useId, useState } from "react";
 
 import { AnimatePresence, m } from "framer-motion";
+import { Menu, X } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { ThemeToggle } from "@/components/ui/theme-toggle";
@@ -138,9 +139,11 @@ export function Navbar() {
           aria-label={menuOpen ? "Close menu" : "Open menu"}
           onClick={() => setMenuOpen((open) => !open)}
         >
-          <span className="material-symbols-outlined" aria-hidden="true">
-            {menuOpen ? "close" : "menu"}
-          </span>
+          {menuOpen ? (
+            <X className="h-6 w-6" aria-hidden="true" strokeWidth={2} />
+          ) : (
+            <Menu className="h-6 w-6" aria-hidden="true" strokeWidth={2} />
+          )}
         </button>
       </div>
 

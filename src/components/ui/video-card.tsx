@@ -1,9 +1,10 @@
 "use client";
 
 import Image from "next/image";
-import { memo, useCallback, useEffect, useState } from "react";
+import { memo, useCallback, useEffect, useMemo, useState } from "react";
 
 import { m, useReducedMotion } from "framer-motion";
+import { Pause, Play, Volume2, VolumeX } from "lucide-react";
 
 import { useAutoplayVideo } from "@/hooks/use-autoplay-video";
 import { cn } from "@/lib/utils";
@@ -31,6 +32,14 @@ function VideoCardComponent({
   const [isPlaying, setIsPlaying] = useState(false);
   const prefersReducedMotion = useReducedMotion();
   const showVideo = Boolean(video.src) && !videoFailed;
+  const resolvedSrc = useMemo(() => {
+    if (typeof window === "undefined" || !video.hevcSrc) return video.src;
+    return document
+      .createElement("video")
+      .canPlayType('video/mp4; codecs="hvc1"')
+      ? video.hevcSrc
+      : video.src;
+  }, [video.hevcSrc, video.src]);
 
   useEffect(() => {
     const videoEl = videoRef.current;
@@ -93,7 +102,7 @@ function VideoCardComponent({
         <video
           ref={videoRef}
           className="absolute inset-0 h-full w-full object-cover"
-          src={isInView ? video.src : undefined}
+          src={isInView ? resolvedSrc : undefined}
           poster={video.poster}
           muted={isMuted}
           loop
@@ -140,12 +149,19 @@ function VideoCardComponent({
               aria-label={isPlaying ? "Pause video" : "Play video"}
               className="pointer-events-auto flex h-9 w-9 items-center justify-center rounded-full border border-white/15 bg-black/50 text-white backdrop-blur-sm transition-colors hover:bg-black/70 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/60 md:h-10 md:w-10"
             >
-              <span
-                className="material-symbols-outlined text-xl md:text-2xl"
-                aria-hidden="true"
-              >
-                {isPlaying ? "pause" : "play_arrow"}
-              </span>
+              {isPlaying ? (
+                <Pause
+                  className="h-5 w-5 md:h-6 md:w-6"
+                  aria-hidden="true"
+                  strokeWidth={2}
+                />
+              ) : (
+                <Play
+                  className="h-5 w-5 md:h-6 md:w-6"
+                  aria-hidden="true"
+                  strokeWidth={2}
+                />
+              )}
             </button>
 
             <button
@@ -154,12 +170,19 @@ function VideoCardComponent({
               aria-label={isMuted ? "Unmute video" : "Mute video"}
               className="pointer-events-auto flex h-9 w-9 items-center justify-center rounded-full border border-white/15 bg-black/50 text-white backdrop-blur-sm transition-colors hover:bg-black/70 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/60 md:h-10 md:w-10"
             >
-              <span
-                className="material-symbols-outlined text-xl md:text-2xl"
-                aria-hidden="true"
-              >
-                {isMuted ? "volume_off" : "volume_up"}
-              </span>
+              {isMuted ? (
+                <VolumeX
+                  className="h-5 w-5 md:h-6 md:w-6"
+                  aria-hidden="true"
+                  strokeWidth={2}
+                />
+              ) : (
+                <Volume2
+                  className="h-5 w-5 md:h-6 md:w-6"
+                  aria-hidden="true"
+                  strokeWidth={2}
+                />
+              )}
             </button>
           </div>
         ) : null}

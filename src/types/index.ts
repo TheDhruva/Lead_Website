@@ -38,6 +38,7 @@ export interface VideoItem {
   duration: string;
   poster: string;
   src?: string;
+  hevcSrc?: string;
   aspect: "portrait" | "landscape";
   featured?: boolean;
 }

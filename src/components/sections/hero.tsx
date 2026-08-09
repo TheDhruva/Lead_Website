@@ -69,6 +69,10 @@ function PortraitStack({
             src={active.src}
             alt=""
             draggable={false}
+            fetchPriority={
+              side === "left" && activeIndex === 0 ? "high" : "low"
+            }
+            decoding="async"
             className="hero-cutout absolute inset-0 h-full w-full object-contain"
           />
         </m.div>

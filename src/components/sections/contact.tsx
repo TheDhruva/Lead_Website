@@ -1,5 +1,7 @@
 "use client";
 
+import dynamic from "next/dynamic";
+
 import { m, useReducedMotion } from "framer-motion";
 
 import { Card } from "@/components/ui/card";
@@ -7,8 +9,26 @@ import { Container } from "@/components/ui/container";
 import { SocialIcon } from "@/components/ui/social-icon";
 import { EASING_CINEMATIC } from "@/constants";
 import { socialLinks } from "@/data";
+import { useIntersectionObserver } from "@/hooks/use-intersection-observer";
 
-import { ContactForm } from "./contact-form";
+const ContactForm = dynamic(
+  () => import("./contact-form").then((mod) => mod.ContactForm),
+  { ssr: false },
+);
+
+function ContactFormLazy() {
+  const { ref, isInView } = useIntersectionObserver<HTMLDivElement>({
+    threshold: 0,
+    rootMargin: "400px 0px",
+    triggerOnce: true,
+  });
+
+  return (
+    <div ref={ref} className="min-h-[420px]">
+      {isInView ? <ContactForm /> : null}
+    </div>
+  );
+}
 
 export function Contact() {
   const prefersReducedMotion = useReducedMotion();
@@ -53,7 +73,7 @@ export function Contact() {
             }}
           >
             <Card className="p-6 md:p-8" innerGlow>
-              <ContactForm />
+              <ContactFormLazy />
             </Card>
           </m.div>
         </div>
