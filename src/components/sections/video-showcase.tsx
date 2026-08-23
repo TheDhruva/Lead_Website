@@ -3,10 +3,10 @@
 import { m, useReducedMotion } from "framer-motion";
 
 import { Container } from "@/components/ui/container";
-import { SectionTitle } from "@/components/ui/section-title";
 import { VideoCard } from "@/components/ui/video-card";
 import { EASING_CINEMATIC } from "@/constants";
 import { videoItems } from "@/data";
+import { cn } from "@/lib/utils";
 
 const featuredVideo = videoItems.find((item) => item.featured) ?? videoItems[0];
 const supportingVideos = videoItems.filter((item) => !item.featured);
@@ -21,28 +21,34 @@ export function VideoShowcase() {
       aria-labelledby="video-heading"
     >
       <Container>
-        <m.div
+        <m.header
+          className="mb-10 text-center md:mb-12"
           initial={prefersReducedMotion ? false : { opacity: 0, y: 20 }}
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true, amount: 0.25 }}
           transition={{ duration: 0.6, ease: EASING_CINEMATIC }}
         >
-          <SectionTitle as="h2" id="video-heading" className="mb-10 md:mb-12">
-            Video Showcase
-          </SectionTitle>
-        </m.div>
+          <h2
+            id="video-heading"
+            className="font-headline-lg text-headline-lg text-foreground"
+          >
+            <span className="mb-2 block font-label-md text-label-md font-semibold tracking-[0.18em] text-muted-foreground uppercase">
+              Video
+            </span>
+            <span className="block">Selected Work</span>
+          </h2>
+        </m.header>
 
         <div
-          className={[
-            "grid grid-cols-1 gap-6 md:gap-7",
-            // Desktop editorial: ~40% featured | ~60% stacked landscapes
-            "lg:grid-cols-[minmax(0,2fr)_minmax(0,3fr)] lg:grid-rows-2",
-            "lg:h-[min(620px,calc(100svh-13.5rem))] lg:gap-8",
-          ].join(" ")}
+          className={cn(
+            "grid grid-cols-1 gap-5 md:gap-6",
+            "lg:grid-cols-[minmax(0,1fr)_minmax(0,1.12fr)] lg:grid-rows-3",
+            "lg:h-[min(48rem,calc(100svh-10rem))] lg:gap-6",
+          )}
         >
           {featuredVideo ? (
             <m.div
-              className="flex min-h-0 min-w-0 justify-center lg:row-span-2 lg:justify-start"
+              className="relative min-h-0 min-w-0 lg:row-span-3 lg:h-full"
               initial={prefersReducedMotion ? false : { opacity: 0, y: 18 }}
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true, amount: 0.2 }}
@@ -52,14 +58,19 @@ export function VideoShowcase() {
                 ease: EASING_CINEMATIC,
               }}
             >
-              <VideoCard video={featuredVideo} featured priority />
+              <VideoCard
+                video={featuredVideo}
+                featured
+                priority
+                className="lg:absolute lg:inset-0"
+              />
             </m.div>
           ) : null}
 
           {supportingVideos.map((video, index) => (
             <m.div
               key={video.id}
-              className="min-h-0 min-w-0"
+              className="relative min-h-0 min-w-0 lg:h-full"
               initial={prefersReducedMotion ? false : { opacity: 0, y: 18 }}
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true, amount: 0.2 }}
@@ -69,7 +80,7 @@ export function VideoShowcase() {
                 ease: EASING_CINEMATIC,
               }}
             >
-              <VideoCard video={video} />
+              <VideoCard video={video} className="lg:absolute lg:inset-0" />
             </m.div>
           ))}
         </div>

@@ -35,6 +35,8 @@ export interface VideoItem {
   id: string;
   title: string;
   category: string;
+  /** Supporting credit line shown under the title, e.g. "Editing · Color · Sound Design". */
+  meta: string;
   duration: string;
   poster: string;
   src?: string;

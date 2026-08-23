@@ -60,7 +60,7 @@ export function HomePage() {
           <LazySection
             id={SECTION_IDS.video}
             className="bg-surface-container-lowest"
-            minHeight="min(68svh, 720px)"
+            minHeight="min(78svh, 920px)"
           >
             <VideoShowcase />
           </LazySection>
