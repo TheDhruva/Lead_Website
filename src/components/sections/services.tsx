@@ -15,6 +15,7 @@ const MOBILE_ANIMATION_LOCK_MS = 520;
 export function Services() {
   const isMobile = useMediaQuery("(max-width: 767px)");
   const [activeId, setActiveId] = useState<string | null>(null);
+  const [loadedImageIds, setLoadedImageIds] = useState(() => new Set<string>());
   const clearTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const cardRefs = useRef<Map<string, HTMLElement>>(new Map());
   const activeIdRef = useRef<string | null>(null);
@@ -35,6 +36,15 @@ export function Services() {
 
       activeIdRef.current = id;
       setActiveId(id);
+
+      if (id) {
+        setLoadedImageIds((prev) => {
+          if (prev.has(id)) return prev;
+          const next = new Set(prev);
+          next.add(id);
+          return next;
+        });
+      }
 
       if (isMobile && lockMs > 0) {
         userLockUntilRef.current = Date.now() + lockMs;
@@ -142,7 +152,7 @@ export function Services() {
             className="services-container flex h-[min(680px,72svh)] flex-col gap-3 md:h-[min(560px,68svh)] md:flex-row md:gap-4 lg:gap-5"
             onMouseLeave={handleClear}
           >
-            {services.map((service) => {
+            {services.map((service, index) => {
               const isExpanded = activeId === service.id;
               const isDimmed = activeId !== null && !isExpanded;
 
@@ -154,6 +164,11 @@ export function Services() {
                   isExpanded={isExpanded}
                   isDimmed={isDimmed}
                   enableHoverExpand={!isMobile}
+                  loadImage={
+                    loadedImageIds.has(service.id) ||
+                    isExpanded ||
+                    (!isMobile && index === 0)
+                  }
                   onActivate={() => handleActivate(service.id)}
                 />
               );

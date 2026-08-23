@@ -41,6 +41,7 @@ export interface VideoItem {
   poster: string;
   src?: string;
   hevcSrc?: string;
+  webmSrc?: string;
   aspect: "portrait" | "landscape";
   featured?: boolean;
 }

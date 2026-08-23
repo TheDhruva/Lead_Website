@@ -34,37 +34,91 @@ interface ServiceCardProps {
   isDimmed: boolean;
   onActivate: () => void;
   enableHoverExpand?: boolean;
+  loadImage?: boolean;
   className?: string;
 }
 
 const cardShellClass =
   "service-card relative flex min-h-0 min-w-0 basis-0 cursor-pointer flex-col overflow-hidden rounded-2xl border border-border bg-card inner-glow outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--background-secondary)]";
 
-function CardBody({
+function ServiceCardMedia({
   service,
   isExpanded,
+  loadImage,
+  useMotion,
 }: {
   service: Service;
   isExpanded: boolean;
+  loadImage: boolean;
+  useMotion?: boolean;
+}) {
+  const prefersReducedMotion = useReducedMotion();
+
+  const image = loadImage ? (
+    <Image
+      src={service.image}
+      alt={service.imageAlt}
+      fill
+      sizes="(max-width: 768px) 100vw, 55vw"
+      loading="lazy"
+      className="object-cover"
+    />
+  ) : (
+    <div className="absolute inset-0 bg-muted" aria-hidden="true" />
+  );
+
+  const mediaInner = useMotion ? (
+    <m.div
+      className="absolute inset-0"
+      initial={false}
+      animate={{
+        scale: isExpanded ? 1.05 : 1,
+        opacity: isExpanded ? 0.78 : 0.4,
+      }}
+      transition={
+        prefersReducedMotion
+          ? { duration: 0.01 }
+          : { duration: 0.7, ease: EXPAND_EASE }
+      }
+    >
+      {image}
+    </m.div>
+  ) : (
+    <div
+      className={cn(
+        "service-card__media absolute inset-0",
+        isExpanded && "service-card__media--expanded",
+      )}
+    >
+      {image}
+    </div>
+  );
+
+  return (
+    <>
+      {mediaInner}
+      <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/55 to-black/25" />
+    </>
+  );
+}
+
+function CardBody({
+  service,
+  isExpanded,
+  loadImage,
+}: {
+  service: Service;
+  isExpanded: boolean;
+  loadImage: boolean;
 }) {
   return (
     <>
       <div className="absolute inset-0 z-0 overflow-hidden">
-        <div
-          className={cn(
-            "service-card__media absolute inset-0",
-            isExpanded && "service-card__media--expanded",
-          )}
-        >
-          <Image
-            src={service.image}
-            alt={service.imageAlt}
-            fill
-            sizes="(max-width: 768px) 100vw, 55vw"
-            className="object-cover"
-          />
-        </div>
-        <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/55 to-black/25" />
+        <ServiceCardMedia
+          service={service}
+          isExpanded={isExpanded}
+          loadImage={loadImage}
+        />
       </div>
 
       <div className="relative z-10 flex h-full min-h-0 min-w-0 flex-col justify-end overflow-hidden p-5 sm:p-6 md:p-8">
@@ -133,6 +187,7 @@ const ServiceCardComponent = forwardRef<HTMLElement, ServiceCardProps>(
       isDimmed,
       onActivate,
       enableHoverExpand = true,
+      loadImage = false,
       className,
     },
     ref,
@@ -171,7 +226,11 @@ const ServiceCardComponent = forwardRef<HTMLElement, ServiceCardProps>(
           )}
           style={{ flexGrow: isExpanded ? 2.85 : 1 }}
         >
-          <CardBody service={service} isExpanded={isExpanded} />
+          <CardBody
+            service={service}
+            isExpanded={isExpanded}
+            loadImage={loadImage}
+          />
         </article>
       );
     }
@@ -202,28 +261,12 @@ const ServiceCardComponent = forwardRef<HTMLElement, ServiceCardProps>(
         style={{ flexBasis: 0 }}
       >
         <div className="absolute inset-0 z-0 overflow-hidden">
-          <m.div
-            className="absolute inset-0"
-            initial={false}
-            animate={{
-              scale: isExpanded ? 1.05 : 1,
-              opacity: isExpanded ? 0.78 : 0.4,
-            }}
-            transition={
-              prefersReducedMotion
-                ? { duration: 0.01 }
-                : { duration: 0.7, ease: EXPAND_EASE }
-            }
-          >
-            <Image
-              src={service.image}
-              alt={service.imageAlt}
-              fill
-              sizes="(max-width: 768px) 100vw, 55vw"
-              className="object-cover"
-            />
-          </m.div>
-          <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/55 to-black/25" />
+          <ServiceCardMedia
+            service={service}
+            isExpanded={isExpanded}
+            loadImage={loadImage}
+            useMotion
+          />
         </div>
 
         <div className="relative z-10 flex h-full min-h-0 min-w-0 flex-col justify-end overflow-hidden p-5 sm:p-6 md:p-8">

@@ -10,6 +10,7 @@
     "format": "prettier --write .",
     "format:check": "prettier --check .",
     "typecheck": "tsc --noEmit",
+    "optimize:videos": "node scripts/optimize-videos.mjs",
     "prepare": "husky"
   },
   "lint-staged": {

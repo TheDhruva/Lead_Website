@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from "next";
 import type { ReactNode } from "react";
 
 import { siteConfig } from "@/data";
+import { heroPortraits } from "@/data";
 import { inter } from "@/lib/fonts";
 import { cn } from "@/lib/utils";
 import {
@@ -90,12 +91,25 @@ interface RootLayoutProps {
 }
 
 export default function RootLayout({ children }: RootLayoutProps) {
+  const heroPreload = heroPortraits[0]?.src;
+
   return (
     <html
       lang="en"
       className={cn(inter.variable, "h-full")}
       suppressHydrationWarning
     >
+      <head>
+        {heroPreload ? (
+          <link
+            rel="preload"
+            href={heroPreload}
+            as="image"
+            type="image/webp"
+            fetchPriority="high"
+          />
+        ) : null}
+      </head>
       <body className="flex min-h-full flex-col antialiased">
         <ThemeProvider>
           <AnimationProvider>

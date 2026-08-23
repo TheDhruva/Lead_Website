@@ -16,6 +16,7 @@ import { Pause, Play, Volume2, VolumeX } from "lucide-react";
 
 import { useAutoplayVideo } from "@/hooks/use-autoplay-video";
 import { cn } from "@/lib/utils";
+import { getVideoSources } from "@/lib/video-source";
 import type { VideoItem } from "@/types";
 
 interface VideoCardProps {
@@ -40,14 +41,14 @@ function VideoCardComponent({
   const [isPlaying, setIsPlaying] = useState(false);
   const prefersReducedMotion = useReducedMotion();
   const showVideo = Boolean(video.src) && !videoFailed;
-  const resolvedSrc = useMemo(() => {
-    if (typeof window === "undefined" || !video.hevcSrc) return video.src;
-    return document
-      .createElement("video")
-      .canPlayType('video/mp4; codecs="hvc1"')
-      ? video.hevcSrc
-      : video.src;
-  }, [video.hevcSrc, video.src]);
+  const shouldLoadMedia = isInView;
+  const videoSources = useMemo(() => getVideoSources(video), [video]);
+
+  useEffect(() => {
+    const videoEl = videoRef.current;
+    if (!videoEl || !shouldLoadMedia) return;
+    videoEl.load();
+  }, [shouldLoadMedia, videoRef, videoSources]);
 
   useEffect(() => {
     const videoEl = videoRef.current;
@@ -133,15 +134,20 @@ function VideoCardComponent({
         <video
           ref={videoRef}
           className={cn("absolute inset-0 h-full w-full", mediaMotionClassName)}
-          src={featured || isInView ? resolvedSrc : undefined}
           poster={video.poster}
           muted={isMuted}
           loop
           playsInline
-          preload={featured ? "metadata" : "none"}
+          preload={shouldLoadMedia ? "metadata" : "none"}
           aria-hidden="true"
           onError={handleVideoError}
-        />
+        >
+          {shouldLoadMedia
+            ? videoSources.map((source) => (
+                <source key={source.src} src={source.src} type={source.type} />
+              ))
+            : null}
+        </video>
       ) : (
         <Image
           src={video.poster}
