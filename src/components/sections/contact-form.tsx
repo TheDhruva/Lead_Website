@@ -86,17 +86,34 @@ export function ContactForm() {
           transition={{ duration: 0.55, ease: EASING_CINEMATIC }}
           className="flex min-h-[420px] flex-col justify-center py-4"
         >
-          <p className="font-headline-lg text-2xl text-foreground md:text-[28px]">
-            ✓ Message Received
+          <div
+            className="mb-6 flex h-12 w-12 items-center justify-center rounded-full border border-border bg-card shadow-[var(--shadow-sm)]"
+            aria-hidden="true"
+          >
+            <svg
+              viewBox="0 0 24 24"
+              className="h-5 w-5 text-foreground"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="1.75"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            >
+              <path d="M5 13l4 4L19 7" />
+            </svg>
+          </div>
+          <p className="font-headline-lg text-2xl tracking-[-0.03em] text-foreground md:text-[28px]">
+            Message received
           </p>
-          <p className="mt-4 max-w-sm font-body-md text-body-md text-foreground-secondary">
+          <div className="mt-5 h-px w-12 bg-border" aria-hidden="true" />
+          <p className="mt-5 max-w-sm font-body-md text-body-md leading-[1.7] text-foreground-secondary">
             I&apos;ll personally review your project and get back to you as soon
             as possible.
           </p>
           <p className="mt-8 font-body-md text-body-md text-foreground-secondary">
             Talk soon.
           </p>
-          <p className="mt-2 font-label-md text-label-md text-foreground">
+          <p className="mt-2 font-label-md text-label-md tracking-[0.08em] text-foreground uppercase">
             — Dhruva
           </p>
         </m.div>
@@ -195,7 +212,18 @@ export function ContactForm() {
             disabled={isSubmitting}
             className="mt-2 hover:-translate-y-0.5 hover:shadow-[var(--shadow-md)]"
           >
-            {isSubmitting ? "Sending..." : "Let's Build Something Great"}
+            {isSubmitting ? (
+              <span className="inline-flex items-center gap-2.5">
+                <span
+                  className="h-4 w-4 rounded-full border border-primary-foreground/30 border-t-primary-foreground animate-spin"
+                  style={{ animationDuration: "0.85s" }}
+                  aria-hidden="true"
+                />
+                Sending
+              </span>
+            ) : (
+              "Let's Build Something Great"
+            )}
           </Button>
         </m.form>
       )}

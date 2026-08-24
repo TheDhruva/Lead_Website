@@ -52,6 +52,7 @@ export function ChipGroup({
               onClick={() => onChange(option)}
               className={cn(
                 "rounded-full border px-3.5 py-2 font-label-md text-sm transition-all duration-[250ms] ease-out",
+                "active:scale-[0.985] motion-reduce:active:scale-100",
                 "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--background)]",
                 selected
                   ? "border-primary bg-primary text-primary-foreground shadow-[var(--shadow-sm)]"

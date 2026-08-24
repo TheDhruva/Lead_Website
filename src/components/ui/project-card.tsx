@@ -5,6 +5,7 @@ import { memo } from "react";
 
 import { m, useReducedMotion } from "framer-motion";
 
+import { MOTION } from "@/constants";
 import { cn } from "@/lib/utils";
 import type { Project } from "@/types";
 
@@ -27,6 +28,9 @@ function ProjectCardComponent({
     <m.a
       href={href}
       whileHover={prefersReducedMotion ? undefined : { scale: 1.02 }}
+      whileTap={
+        prefersReducedMotion ? undefined : { scale: MOTION.press.scale }
+      }
       transition={{ duration: 0.35, ease: [0.4, 0, 0.2, 1] }}
       aria-label={`${project.title} — ${project.category}. View project`}
       className={cn(

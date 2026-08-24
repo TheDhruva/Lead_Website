@@ -133,7 +133,7 @@ export function Navbar() {
 
         <button
           type="button"
-          className="inline-flex items-center justify-center rounded-full border border-border p-2 text-foreground transition-all duration-[250ms] hover:bg-card-hover active:scale-95 md:hidden"
+          className="inline-flex items-center justify-center rounded-full border border-border p-2 text-foreground transition-all duration-[250ms] hover:bg-card-hover active:scale-[0.985] motion-reduce:active:scale-100 md:hidden"
           aria-expanded={menuOpen}
           aria-controls={menuId}
           aria-label={menuOpen ? "Close menu" : "Open menu"}

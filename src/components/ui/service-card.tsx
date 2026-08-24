@@ -35,11 +35,13 @@ interface ServiceCardProps {
   onActivate: () => void;
   enableHoverExpand?: boolean;
   loadImage?: boolean;
+  /** Mobile scroll spotlight 0–1; drives continuous flex grow when set */
+  expandAmount?: number;
   className?: string;
 }
 
 const cardShellClass =
-  "service-card relative flex min-h-0 min-w-0 basis-0 cursor-pointer flex-col overflow-hidden rounded-2xl border border-border bg-card inner-glow outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--background-secondary)]";
+  "service-card relative flex min-h-0 min-w-0 basis-0 cursor-pointer flex-col overflow-hidden rounded-2xl border border-border bg-card inner-glow outline-none transition-transform duration-[140ms] ease-[cubic-bezier(0.4,0,0.2,1)] active:scale-[0.985] motion-reduce:active:scale-100 focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--background-secondary)]";
 
 function ServiceCardMedia({
   service,
@@ -188,12 +190,25 @@ const ServiceCardComponent = forwardRef<HTMLElement, ServiceCardProps>(
       onActivate,
       enableHoverExpand = true,
       loadImage = false,
+      expandAmount,
       className,
     },
     ref,
   ) {
     const prefersReducedMotion = useReducedMotion();
     const useTouchMotion = !enableHoverExpand;
+    const touchGrow =
+      expandAmount !== undefined
+        ? 1 + expandAmount * 1.15
+        : isExpanded
+          ? 2.05
+          : 1;
+    const touchOpacity =
+      expandAmount !== undefined
+        ? 0.48 + expandAmount * 0.52
+        : isDimmed
+          ? 0.45
+          : 1;
 
     const interactionProps = {
       role: "button" as const,
@@ -224,7 +239,10 @@ const ServiceCardComponent = forwardRef<HTMLElement, ServiceCardProps>(
             isDimmed && "service-card--dimmed",
             className,
           )}
-          style={{ flexGrow: isExpanded ? 2.85 : 1 }}
+          style={{
+            flexGrow: touchGrow,
+            opacity: touchOpacity,
+          }}
         >
           <CardBody
             service={service}

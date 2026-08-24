@@ -12,6 +12,7 @@ import {
 import type Lenis from "lenis";
 
 import { useReducedMotion } from "@/hooks/use-reduced-motion";
+import { useTheatreIntro } from "@/providers/theatre-intro-provider";
 
 const LenisContext = createContext<Lenis | null>(null);
 
@@ -25,6 +26,7 @@ interface SmoothScrollProviderProps {
 
 export function SmoothScrollProvider({ children }: SmoothScrollProviderProps) {
   const prefersReducedMotion = useReducedMotion();
+  const { hasEntered } = useTheatreIntro();
   const [lenis, setLenis] = useState<Lenis | null>(null);
   const rafIdRef = useRef<number | null>(null);
 
@@ -51,6 +53,10 @@ export function SmoothScrollProvider({ children }: SmoothScrollProviderProps) {
         syncTouch: false,
       });
 
+      if (!document.documentElement.classList.contains("theatre-done")) {
+        instance.stop();
+      }
+
       setLenis(instance);
 
       function raf(time: number) {
@@ -72,6 +78,16 @@ export function SmoothScrollProvider({ children }: SmoothScrollProviderProps) {
       setLenis(null);
     };
   }, [prefersReducedMotion]);
+
+  useEffect(() => {
+    if (!lenis) return;
+    if (hasEntered) {
+      lenis.start();
+    } else {
+      lenis.stop();
+      lenis.scrollTo(0, { immediate: true });
+    }
+  }, [hasEntered, lenis]);
 
   return (
     <LenisContext.Provider value={prefersReducedMotion ? null : lenis}>

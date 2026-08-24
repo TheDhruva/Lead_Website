@@ -60,6 +60,12 @@ export const metadata: Metadata = {
         height: 630,
         alt: "DHRUVA — Cinematic Portfolio",
       },
+      {
+        url: "/images/og-dark.svg",
+        width: 1200,
+        height: 630,
+        alt: "DHRUVA — Cinematic Portfolio",
+      },
     ],
   },
   twitter: {
@@ -80,8 +86,21 @@ export const metadata: Metadata = {
     },
   },
   icons: {
-    icon: [{ url: "/favicon.png" }],
-    shortcut: ["/favicon.png"],
+    icon: [
+      {
+        url: "/favicon-light.svg",
+        type: "image/svg+xml",
+        media: "(prefers-color-scheme: light)",
+      },
+      {
+        url: "/favicon-dark.svg",
+        type: "image/svg+xml",
+        media: "(prefers-color-scheme: dark)",
+      },
+      { url: "/favicon.svg", type: "image/svg+xml" },
+      { url: "/favicon.png" },
+    ],
+    shortcut: ["/favicon.svg"],
     apple: [{ url: "/apple-touch-icon.png" }],
   },
 };
@@ -111,6 +130,16 @@ export default function RootLayout({ children }: RootLayoutProps) {
         ) : null}
       </head>
       <body className="flex min-h-full flex-col antialiased">
+        <div id="theatre-boot" className="theatre-boot" aria-hidden="true">
+          <div className="letterbox letterbox-top theatre-boot__bar" />
+          <p className="theatre-boot__title">DHRUVA</p>
+          <div className="letterbox letterbox-bottom theatre-boot__bar" />
+        </div>
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `(function(){try{if(window.matchMedia('(prefers-reduced-motion: reduce)').matches){document.documentElement.classList.add('theatre-skip');var b=document.getElementById('theatre-boot');if(b)b.remove();}}catch(e){}})();`,
+          }}
+        />
         <ThemeProvider>
           <AnimationProvider>
             <TheatreIntroProvider>

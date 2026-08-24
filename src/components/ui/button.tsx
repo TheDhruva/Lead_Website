@@ -13,9 +13,9 @@ export interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
 
 const variantClasses: Record<ButtonVariant, string> = {
   primary:
-    "bg-primary text-primary-foreground shadow-[var(--shadow-sm)] hover:-translate-y-0.5 hover:shadow-[var(--shadow-md)] hover:opacity-95 active:translate-y-0 active:scale-[0.98] focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--background)]",
+    "bg-primary text-primary-foreground shadow-[var(--shadow-sm)] hover:-translate-y-0.5 hover:shadow-[var(--shadow-md)] hover:opacity-95 active:translate-y-0 active:scale-[0.985] focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--background)]",
   ghost:
-    "bg-transparent text-foreground border border-border hover:-translate-y-0.5 hover:bg-card-hover hover:border-border-hover active:translate-y-0 active:scale-[0.98]",
+    "bg-transparent text-foreground border border-border hover:-translate-y-0.5 hover:bg-card-hover hover:border-border-hover active:translate-y-0 active:scale-[0.985]",
 };
 
 const sizeClasses: Record<ButtonSize, string> = {

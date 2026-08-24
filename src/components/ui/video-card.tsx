@@ -32,21 +32,32 @@ function VideoCardComponent({
   priority,
   featured = false,
 }: VideoCardProps) {
-  const { containerRef, videoRef, isInView } = useAutoplayVideo({
-    threshold: 0.12,
-    rootMargin: "120px 0px",
-  });
+  const { containerRef, videoRef, isInView, markUserPaused } = useAutoplayVideo(
+    {
+      threshold: 0.08,
+      rootMargin: "160px 0px",
+    },
+  );
   const [videoFailed, setVideoFailed] = useState(false);
   const [isMuted, setIsMuted] = useState(true);
   const [isPlaying, setIsPlaying] = useState(false);
+  const [isBuffering, setIsBuffering] = useState(false);
+  const [hasLoadedSources, setHasLoadedSources] = useState(false);
   const prefersReducedMotion = useReducedMotion();
   const showVideo = Boolean(video.src) && !videoFailed;
-  const shouldLoadMedia = isInView;
+
+  if (isInView && !hasLoadedSources) {
+    setHasLoadedSources(true);
+  }
+
+  const shouldLoadMedia = hasLoadedSources || isInView;
   const videoSources = useMemo(() => getVideoSources(video), [video]);
 
   useEffect(() => {
     const videoEl = videoRef.current;
     if (!videoEl || !shouldLoadMedia) return;
+
+    // Remounted <source> children need an explicit load to start fetching.
     videoEl.load();
   }, [shouldLoadMedia, videoRef, videoSources]);
 
@@ -56,31 +67,52 @@ function VideoCardComponent({
 
     const handlePlay = () => setIsPlaying(true);
     const handlePause = () => setIsPlaying(false);
+    const handleWaiting = () => setIsBuffering(true);
+    const handlePlaying = () => {
+      setIsPlaying(true);
+      setIsBuffering(false);
+    };
+    const handleCanPlay = () => setIsBuffering(false);
+    const handleStalled = () => setIsBuffering(true);
 
     videoEl.addEventListener("play", handlePlay);
     videoEl.addEventListener("pause", handlePause);
+    videoEl.addEventListener("waiting", handleWaiting);
+    videoEl.addEventListener("playing", handlePlaying);
+    videoEl.addEventListener("canplay", handleCanPlay);
+    videoEl.addEventListener("stalled", handleStalled);
     return () => {
       videoEl.removeEventListener("play", handlePlay);
       videoEl.removeEventListener("pause", handlePause);
+      videoEl.removeEventListener("waiting", handleWaiting);
+      videoEl.removeEventListener("playing", handlePlaying);
+      videoEl.removeEventListener("canplay", handleCanPlay);
+      videoEl.removeEventListener("stalled", handleStalled);
     };
   }, [videoRef]);
 
   const handleVideoError = useCallback(() => {
     setVideoFailed(true);
+    setIsBuffering(false);
   }, []);
 
   const handleTogglePlay = useCallback(() => {
     const videoEl = videoRef.current;
     if (!videoEl) return;
     if (videoEl.paused) {
+      markUserPaused(false);
       if (videoEl.readyState === HTMLMediaElement.HAVE_NOTHING) {
         videoEl.load();
       }
+      if (videoEl.readyState < HTMLMediaElement.HAVE_FUTURE_DATA) {
+        setIsBuffering(true);
+      }
       void videoEl.play();
     } else {
+      markUserPaused(true);
       videoEl.pause();
     }
-  }, [videoRef]);
+  }, [markUserPaused, videoRef]);
 
   const handleToggleMute = useCallback(
     (event: MouseEvent<HTMLButtonElement>) => {
@@ -110,6 +142,8 @@ function VideoCardComponent({
       "group-hover:scale-[1.02] group-focus-visible:scale-[1.02]",
   );
 
+  const showBuffering = showVideo && isBuffering && shouldLoadMedia;
+
   return (
     <article
       ref={containerRef}
@@ -119,10 +153,12 @@ function VideoCardComponent({
       aria-label={`${video.title}. ${video.meta}. ${
         showVideo ? (isPlaying ? "Pause video" : "Play video") : ""
       }`.trim()}
+      aria-busy={showBuffering || undefined}
       className={cn(
         "group relative cursor-pointer overflow-hidden rounded-2xl bg-black outline-none",
         "ring-1 ring-inset ring-white/[0.08]",
-        "transition-[box-shadow] duration-[350ms] ease-[cubic-bezier(0.4,0,0.2,1)]",
+        "transition-[box-shadow,transform] duration-[350ms] ease-[cubic-bezier(0.4,0,0.2,1)]",
+        "active:scale-[0.985] motion-reduce:active:scale-100",
         "focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--background)]",
         featured
           ? "aspect-[9/16] h-auto w-full lg:aspect-auto lg:h-full"
@@ -138,7 +174,8 @@ function VideoCardComponent({
           muted={isMuted}
           loop
           playsInline
-          preload={shouldLoadMedia ? "metadata" : "none"}
+          autoPlay={shouldLoadMedia}
+          preload={shouldLoadMedia ? "auto" : "none"}
           aria-hidden="true"
           onError={handleVideoError}
         >
@@ -172,7 +209,26 @@ function VideoCardComponent({
         aria-hidden="true"
       />
 
-      {showVideo ? (
+      {showBuffering ? (
+        <div
+          className="pointer-events-none absolute inset-0 z-[5] flex items-center justify-center bg-black/25"
+          aria-hidden="true"
+        >
+          <span className="relative flex h-11 w-11 items-center justify-center">
+            <span
+              className={cn(
+                "absolute inset-0 rounded-full border border-white/15",
+                "border-t-white/80",
+                !prefersReducedMotion && "animate-spin",
+              )}
+              style={{ animationDuration: "0.9s" }}
+            />
+            <span className="h-1.5 w-1.5 rounded-full bg-white/90" />
+          </span>
+        </div>
+      ) : null}
+
+      {showVideo && !showBuffering ? (
         <div
           className={cn(
             "pointer-events-none absolute inset-0 flex items-center justify-center",
@@ -215,8 +271,9 @@ function VideoCardComponent({
           className={cn(
             "absolute top-3 right-3 z-10 flex h-8 w-8 items-center justify-center rounded-full",
             "border border-white/20 bg-black/40 text-white",
-            "opacity-100 transition-opacity duration-[350ms] ease-[cubic-bezier(0.4,0,0.2,1)]",
-            "hover:bg-black/55 focus-visible:opacity-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/60",
+            "opacity-100 transition-all duration-[350ms] ease-[cubic-bezier(0.4,0,0.2,1)]",
+            "hover:bg-black/55 active:scale-[0.985] motion-reduce:active:scale-100",
+            "focus-visible:opacity-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/60",
             "[@media(hover:hover)]:opacity-0 [@media(hover:hover)]:group-hover:opacity-100 [@media(hover:hover)]:group-focus-within:opacity-100",
           )}
         >

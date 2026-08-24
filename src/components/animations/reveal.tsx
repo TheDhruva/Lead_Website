@@ -10,7 +10,10 @@ import { cn } from "@/lib/utils";
 interface RevealProps {
   children: ReactNode;
   className?: string;
+  /** Extra delay on top of shared rhythm (seconds) */
   delay?: number;
+  /** Stagger index within a section — multiplies MOTION.stagger */
+  index?: number;
   y?: number;
   once?: boolean;
 }
@@ -19,10 +22,14 @@ function RevealComponent({
   children,
   className,
   delay = 0,
+  index = 0,
   y = MOTION.reveal.y,
   once = true,
 }: RevealProps) {
   const prefersReducedMotion = useReducedMotion();
+  const totalDelay =
+    delay +
+    (index > 0 ? MOTION.itemBaseDelay + (index - 1) * MOTION.stagger : 0);
 
   if (prefersReducedMotion) {
     return <div className={className}>{children}</div>;
@@ -33,10 +40,10 @@ function RevealComponent({
       className={cn(className)}
       initial={{ opacity: 0, y }}
       whileInView={{ opacity: 1, y: 0 }}
-      viewport={{ once, amount: 0.18, margin: "0px 0px -8% 0px" }}
+      viewport={{ once, amount: 0.2, margin: "0px 0px -6% 0px" }}
       transition={{
         duration: MOTION.reveal.duration,
-        delay,
+        delay: totalDelay,
         ease: MOTION.reveal.ease,
       }}
     >

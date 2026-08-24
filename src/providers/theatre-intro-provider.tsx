@@ -11,11 +11,11 @@ import {
   useSyncExternalStore,
 } from "react";
 
-import { THEATRE_INTRO_TIMEOUT_MS } from "@/constants";
 import { useReducedMotion } from "@/hooks/use-reduced-motion";
 
 interface TheatreIntroContextValue {
   hasEntered: boolean;
+  isReturning: boolean;
   enter: () => void;
 }
 
@@ -45,17 +45,25 @@ function readIntroSeen() {
   }
 }
 
+function setTheatreLock(locked: boolean) {
+  document.documentElement.classList.toggle("theatre-locked", locked);
+  document.body.style.overflow = locked ? "hidden" : "";
+}
+
 export function TheatreIntroProvider({ children }: TheatreIntroProviderProps) {
   const prefersReducedMotion = useReducedMotion();
-  const [manuallyEntered, setManuallyEntered] = useState(false);
-  const introPreviouslySeen = useSyncExternalStore(
+  const [hasEntered, setHasEntered] = useState(false);
+  const isReturning = useSyncExternalStore(
     () => () => {},
     readIntroSeen,
     () => false,
   );
 
   const enter = useCallback(() => {
-    setManuallyEntered(true);
+    setHasEntered(true);
+    setTheatreLock(false);
+    document.documentElement.classList.add("theatre-done");
+    document.getElementById("theatre-boot")?.remove();
     try {
       localStorage.setItem(INTRO_SEEN_KEY, "1");
     } catch {
@@ -63,25 +71,43 @@ export function TheatreIntroProvider({ children }: TheatreIntroProviderProps) {
     }
   }, []);
 
+  const entered = Boolean(prefersReducedMotion) || hasEntered;
+
   useEffect(() => {
-    if (prefersReducedMotion || manuallyEntered || introPreviouslySeen) return;
+    if (prefersReducedMotion) {
+      document.documentElement.classList.add("theatre-skip");
+      document.getElementById("theatre-boot")?.remove();
+      return;
+    }
 
-    const timeout = window.setTimeout(() => {
-      setManuallyEntered(true);
-    }, THEATRE_INTRO_TIMEOUT_MS);
+    if (entered) {
+      setTheatreLock(false);
+      return;
+    }
 
-    return () => window.clearTimeout(timeout);
-  }, [prefersReducedMotion, manuallyEntered, introPreviouslySeen]);
+    setTheatreLock(true);
 
-  const hasEntered =
-    prefersReducedMotion || manuallyEntered || introPreviouslySeen;
+    const blockScroll = (event: Event) => {
+      event.preventDefault();
+    };
+
+    window.addEventListener("wheel", blockScroll, { passive: false });
+    window.addEventListener("touchmove", blockScroll, { passive: false });
+
+    return () => {
+      window.removeEventListener("wheel", blockScroll);
+      window.removeEventListener("touchmove", blockScroll);
+      setTheatreLock(false);
+    };
+  }, [entered, prefersReducedMotion]);
 
   const value = useMemo(
     () => ({
-      hasEntered,
+      hasEntered: entered,
+      isReturning,
       enter,
     }),
-    [hasEntered, enter],
+    [entered, isReturning, enter],
   );
 
   return (

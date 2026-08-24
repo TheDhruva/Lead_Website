@@ -5,16 +5,9 @@ import dynamic from "next/dynamic";
 import { PageTransition } from "@/components/animations/page-transition";
 import { Navbar } from "@/components/layout/navbar";
 import { Hero } from "@/components/sections/hero";
+import { TheatreIntro } from "@/components/sections/theatre-intro";
 import { LazySection } from "@/components/ui/lazy-section";
 import { SECTION_IDS } from "@/constants";
-
-const TheatreIntro = dynamic(
-  () =>
-    import("@/components/sections/theatre-intro").then(
-      (mod) => mod.TheatreIntro,
-    ),
-  { ssr: false },
-);
 
 const Services = dynamic(
   () => import("@/components/sections/services").then((mod) => mod.Services),

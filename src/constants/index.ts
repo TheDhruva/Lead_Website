@@ -42,7 +42,9 @@ export const CONTACT_TIMELINES = [
   "Flexible",
 ] as const;
 
-export const THEATRE_INTRO_TIMEOUT_MS = 1200;
+export const THEATRE_INTRO_TIMEOUT_MS = 2400;
+/** Faster auto-enter on return visits (intro still plays every time) */
+export const THEATRE_INTRO_RETURN_TIMEOUT_MS = 780;
 /** Beat between paper-cutout expression swaps in the hero */
 export const FACE_CYCLE_INTERVAL_MS = 2400;
 
@@ -55,12 +57,17 @@ export const EASING_IN_OUT = [0.45, 0, 0.55, 1] as const;
 export const EASING_OUT = [0.16, 1, 0.3, 1] as const;
 
 export const MOTION = {
-  theatreExit: { duration: 1.05, ease: EASING_IN_OUT },
+  theatreExit: { duration: 1.35, ease: EASING_IN_OUT },
+  theatreExitReturn: { duration: 0.72, ease: EASING_IN_OUT },
+  /** Quiet beat after intro curtain clears before interaction unlocks */
+  theatreSettleMs: 140,
   pageEnter: { duration: 1.05, ease: EASING_IN_OUT, delay: 0.08 },
-  reveal: { duration: 0.6, ease: EASING_CINEMATIC, y: 20 },
-  stagger: 0.08,
+  /** Shared film rhythm for Services → Video → Projects */
+  reveal: { duration: 0.65, ease: EASING_CINEMATIC, y: 22 },
+  stagger: 0.09,
+  itemBaseDelay: 0.1,
   hover: { duration: 0.18, ease: EASING_OUT },
-  press: { duration: 0.12, ease: EASING_CINEMATIC },
+  press: { duration: 0.14, ease: EASING_CINEMATIC, scale: 0.985 },
   theme: { duration: 0.3 },
   imageFade: { duration: 0.45, ease: EASING_CINEMATIC },
 } as const;
