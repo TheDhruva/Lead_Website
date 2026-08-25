@@ -6,6 +6,7 @@ import { PageTransition } from "@/components/animations/page-transition";
 import { Navbar } from "@/components/layout/navbar";
 import { Hero } from "@/components/sections/hero";
 import { TheatreIntro } from "@/components/sections/theatre-intro";
+import { InkOverlay } from "@/components/ui/ink-overlay";
 import { LazySection } from "@/components/ui/lazy-section";
 import { SECTION_IDS } from "@/constants";
 
@@ -36,6 +37,7 @@ export function HomePageContent() {
   return (
     <>
       <TheatreIntro />
+      <InkOverlay />
       <PageTransition className="relative">
         <a
           href="#work"

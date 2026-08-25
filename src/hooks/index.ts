@@ -6,3 +6,5 @@ export { useLenis, useIsMounted } from "./use-lenis";
 export { useFaceCycle } from "./use-face-cycle";
 export { useAutoplayVideo } from "./use-autoplay-video";
 export { useSmoothScroll } from "./use-smooth-scroll";
+export { useCanPointerReact } from "./use-can-pointer-react";
+export { useSmoothPointer, useElementPointerVars } from "./use-smooth-pointer";

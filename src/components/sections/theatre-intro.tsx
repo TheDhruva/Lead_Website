@@ -1,18 +1,17 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 
 import { AnimatePresence, m, useReducedMotion } from "framer-motion";
 
 import { MOTION } from "@/constants";
 import { useIsMounted } from "@/hooks/use-lenis";
+import { useInk } from "@/providers/ink-provider";
 import { useTheatreIntro } from "@/providers/theatre-intro-provider";
 
 /** Zoom multiplier on exit — type stays vector-sharp while filling the frame */
 const TITLE_EXIT_SCALE = 10;
 const TITLE_EXIT_SCALE_RETURN = 8;
-/** Accumulated pointer travel (px) before the intro dismisses */
-const CURSOR_EXIT_DISTANCE_PX = 220;
 
 const chromeFade = {
   duration: 0.28,
@@ -21,11 +20,10 @@ const chromeFade = {
 
 export function TheatreIntro() {
   const { isReturning, enter } = useTheatreIntro();
+  const { onEnterReady } = useInk();
   const prefersReducedMotion = useReducedMotion();
   const mounted = useIsMounted();
   const [phase, setPhase] = useState<"idle" | "exiting" | "gone">("idle");
-  const travelRef = useRef(0);
-  const lastPointerRef = useRef<{ x: number; y: number } | null>(null);
 
   useEffect(() => {
     document.documentElement.classList.add("theatre-active");
@@ -36,26 +34,24 @@ export function TheatreIntro() {
     setPhase((current) => (current === "idle" ? "exiting" : current));
   }, []);
 
+  useEffect(() => onEnterReady(beginExit), [onEnterReady, beginExit]);
+
   useEffect(() => {
     if (prefersReducedMotion || phase !== "idle") return;
 
-    const onPointerMove = (event: PointerEvent) => {
-      const point = { x: event.clientX, y: event.clientY };
-      const last = lastPointerRef.current;
-      lastPointerRef.current = point;
-      if (!last) return;
-
-      const dx = point.x - last.x;
-      const dy = point.y - last.y;
-      travelRef.current += Math.hypot(dx, dy);
-
-      if (travelRef.current >= CURSOR_EXIT_DISTANCE_PX) {
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (
+        event.key === "Enter" ||
+        event.key === " " ||
+        event.key === "Escape"
+      ) {
+        event.preventDefault();
         beginExit();
       }
     };
 
-    window.addEventListener("pointermove", onPointerMove, { passive: true });
-    return () => window.removeEventListener("pointermove", onPointerMove);
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
   }, [prefersReducedMotion, phase, beginExit]);
 
   const exitDuration = isReturning
@@ -75,7 +71,7 @@ export function TheatreIntro() {
           id="theatre-intro"
           role="dialog"
           aria-modal="true"
-          aria-label="Welcome to DHRUVA"
+          aria-label="Welcome to DHRUVA. Click or draw to enter."
           className="theatre-intro theatre-stage fixed inset-0 z-[100] cursor-pointer overflow-hidden"
           onClick={beginExit}
           onKeyDown={(event) => {
@@ -171,7 +167,9 @@ export function TheatreIntro() {
             transition={chromeFade}
           >
             <span>
-              {mounted && isReturning ? "Welcome back" : "Enter experience"}
+              {mounted && isReturning
+                ? "Click or draw to continue"
+                : "Click or draw to enter"}
             </span>
             <svg
               className="theatre-stage__chevron"

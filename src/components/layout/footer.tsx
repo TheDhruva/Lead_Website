@@ -1,4 +1,7 @@
+"use client";
+
 import { Container } from "@/components/ui/container";
+import { MagneticText } from "@/components/ui/magnetic-text";
 import { footerLinks } from "@/data";
 
 export function Footer() {
@@ -7,7 +10,7 @@ export function Footer() {
       <Container className="flex flex-col items-start justify-between gap-6 px-gutter py-8 sm:flex-row sm:items-center sm:gap-8 md:py-10">
         <div className="flex flex-wrap items-center gap-x-6 gap-y-2">
           <span className="font-label-md text-sm font-semibold tracking-[0.12em] text-foreground uppercase">
-            DHRUVA
+            <MagneticText text="DHRUVA" strength={7} radius={100} />
           </span>
           <span className="font-body-md text-sm text-muted-foreground">
             © 2026

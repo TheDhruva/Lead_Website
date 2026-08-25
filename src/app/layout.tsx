@@ -7,6 +7,7 @@ import { inter } from "@/lib/fonts";
 import { cn } from "@/lib/utils";
 import {
   AnimationProvider,
+  InkProvider,
   SmoothScrollProvider,
   TheatreIntroProvider,
   ThemeProvider,
@@ -153,7 +154,7 @@ export default function RootLayout({ children }: RootLayoutProps) {
             </p>
           </div>
           <div className="theatre-stage__enter">
-            <span>Enter experience</span>
+            <span>Click or draw to enter</span>
             <svg
               className="theatre-stage__chevron"
               viewBox="0 0 16 10"
@@ -177,7 +178,9 @@ export default function RootLayout({ children }: RootLayoutProps) {
         <ThemeProvider>
           <AnimationProvider>
             <TheatreIntroProvider>
-              <SmoothScrollProvider>{children}</SmoothScrollProvider>
+              <SmoothScrollProvider>
+                <InkProvider>{children}</InkProvider>
+              </SmoothScrollProvider>
             </TheatreIntroProvider>
           </AnimationProvider>
         </ThemeProvider>

@@ -6,6 +6,8 @@ import { AnimatePresence, m } from "framer-motion";
 import { Menu, X } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
+import { Magnetic } from "@/components/ui/magnetic";
+import { MagneticText } from "@/components/ui/magnetic-text";
 import { ThemeToggle } from "@/components/ui/theme-toggle";
 import { MOTION, NAV_ITEMS, SECTION_IDS } from "@/constants";
 import { useActiveSection } from "@/hooks/use-active-section";
@@ -91,7 +93,7 @@ export function Navbar() {
         }}
         className="font-display-lg text-display-lg-mobile tracking-tighter text-foreground transition-opacity duration-200 hover:opacity-80 md:text-display-lg"
       >
-        DHRUVA
+        <MagneticText text="DHRUVA" strength={9} radius={130} />
       </a>
 
       <div className="hidden items-center gap-8 md:flex">
@@ -123,13 +125,11 @@ export function Navbar() {
 
       <div className="flex items-center gap-3">
         <ThemeToggle className="hidden md:inline-flex" />
-        <Button
-          size="md"
-          className="hidden sm:inline-flex"
-          onClick={() => handleNavClick("#contact")}
-        >
-          Hire Me
-        </Button>
+        <Magnetic className="hidden sm:inline-flex" strength={16} radius={160}>
+          <Button size="md" onClick={() => handleNavClick("#contact")}>
+            Hire Me
+          </Button>
+        </Magnetic>
 
         <button
           type="button"

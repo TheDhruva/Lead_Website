@@ -8,3 +8,4 @@ export {
   TheatreIntroProvider,
   useTheatreIntro,
 } from "./theatre-intro-provider";
+export { InkProvider, useInk } from "./ink-provider";
