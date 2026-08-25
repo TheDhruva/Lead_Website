@@ -315,69 +315,199 @@ html.theme-ready *::after {
 
   .theatre-intro {
     isolation: isolate;
-    background: #fafafa;
-    color: #111111;
-  }
-
-  .theatre-intro__curtain {
-    background: #fafafa;
-  }
-
-  .theatre-intro__bar {
-    background: #111111;
   }
 
   .theatre-intro__title--cutout {
     mix-blend-mode: destination-out;
-    color: #111111;
-  }
-
-  .theatre-intro__title-svg {
-    display: block;
-    width: min(82vw, 720px);
-    height: auto;
-    overflow: visible;
-    color: inherit;
-  }
-
-  .theatre-intro__title-text {
-    font-family: var(--font-inter), ui-sans-serif, system-ui, sans-serif;
-    font-size: 168px;
-    font-weight: 800;
-    letter-spacing: -0.05em;
-  }
-
-  .theatre-intro__prompt {
-    bottom: calc(7vh + 1.75rem);
-    color: rgb(17 17 17 / 0.55);
-  }
-
-  @media (min-width: 768px) {
-    .theatre-intro__title-svg {
-      width: min(68vw, 760px);
-    }
+    color: #1a1a1b;
   }
 }
 
-.dark .theatre-intro {
-  background: #0a0a0a;
-  color: #ffffff;
+/* Editorial paper stage — intro + first-paint boot share these */
+.theatre-stage {
+  color: #1a1a1b;
+  user-select: none;
 }
 
-.dark .theatre-intro__curtain {
-  background: #0a0a0a;
+.theatre-stage__paper,
+.theatre-stage__vignette,
+.theatre-stage__grain {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
 }
 
-.dark .theatre-intro__bar {
-  background: #ffffff;
+.theatre-stage__paper {
+  z-index: 0;
+  background: #f3f3f2;
+}
+
+.theatre-stage__vignette {
+  z-index: 1;
+  background: radial-gradient(
+    ellipse 68% 58% at 50% 46%,
+    rgb(243 243 242 / 0) 35%,
+    rgb(26 26 27 / 0.09) 100%
+  );
+}
+
+.theatre-stage__grain {
+  z-index: 2;
+  opacity: 0.22;
+  mix-blend-mode: multiply;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n' x='0' y='0'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  background-size: 180px 180px;
+}
+
+.theatre-stage__chrome,
+.theatre-stage__center,
+.theatre-stage__enter {
+  position: relative;
+  z-index: 20;
+}
+
+.theatre-stage__chrome {
+  position: absolute;
+  top: 0;
+  right: 0;
+  left: 0;
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  padding: clamp(1.35rem, 3.2vw, 2.35rem) clamp(1.25rem, 3.6vw, 2.75rem);
+  font-family: var(--font-inter), ui-sans-serif, system-ui, sans-serif;
+  font-size: 0.6875rem;
+  font-weight: 500;
+  letter-spacing: 0.28em;
+  line-height: 1;
+  text-transform: uppercase;
+  color: rgb(26 26 27 / 0.55);
+}
+
+.theatre-stage__center {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  overflow: visible;
+  padding: 0 1.25rem;
+  text-align: center;
+}
+
+.theatre-stage__title {
+  margin: 0;
+  color: #1a1a1b;
+  font-family: var(--font-inter), ui-sans-serif, system-ui, sans-serif;
+  font-size: clamp(2.35rem, 9.5vw, 8.5rem);
+  font-weight: 800;
+  letter-spacing: -0.055em;
+  line-height: 0.86;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.theatre-stage__tagline {
+  margin: clamp(1.1rem, 2.4vw, 1.75rem) 0 0;
+  max-width: 28rem;
+  color: #666666;
+  font-family: var(--font-inter), ui-sans-serif, system-ui, sans-serif;
+  font-size: clamp(0.58rem, 1.15vw, 0.72rem);
+  font-weight: 500;
+  letter-spacing: 0.32em;
+  line-height: 1.85;
+  text-transform: uppercase;
+}
+
+@media (max-width: 480px) {
+  .theatre-stage__chrome {
+    letter-spacing: 0.16em;
+    font-size: 0.58rem;
+    padding: 1.15rem 1rem;
+  }
+
+  .theatre-stage__tagline {
+    letter-spacing: 0.18em;
+  }
+}
+
+.theatre-stage__enter {
+  position: absolute;
+  bottom: clamp(1.5rem, 4.2vh, 2.6rem);
+  left: 50%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.55rem;
+  color: rgb(26 26 27 / 0.5);
+  font-family: var(--font-inter), ui-sans-serif, system-ui, sans-serif;
+  font-size: 0.625rem;
+  font-weight: 500;
+  letter-spacing: 0.34em;
+  line-height: 1;
+  text-transform: uppercase;
+  transform: translateX(-50%);
+}
+
+.theatre-stage__chevron {
+  width: 14px;
+  height: 9px;
+  animation: theatre-chevron 1.8s ease-in-out infinite;
+}
+
+@keyframes theatre-chevron {
+  0%,
+  100% {
+    transform: translateY(0);
+    opacity: 0.45;
+  }
+  50% {
+    transform: translateY(4px);
+    opacity: 1;
+  }
+}
+
+.dark .theatre-intro,
+.dark .theatre-stage {
+  color: #f3f3f2;
+}
+
+.dark .theatre-stage__paper {
+  background: #0c0c0c;
+}
+
+.dark .theatre-stage__vignette {
+  background: radial-gradient(
+    ellipse 68% 58% at 50% 46%,
+    rgb(12 12 12 / 0) 35%,
+    rgb(0 0 0 / 0.55) 100%
+  );
+}
+
+.dark .theatre-stage__grain {
+  opacity: 0.16;
+  mix-blend-mode: overlay;
+}
+
+.dark .theatre-stage__chrome {
+  color: rgb(243 243 242 / 0.48);
+}
+
+.dark .theatre-stage__title {
+  color: #f3f3f2;
 }
 
 .dark .theatre-intro__title--cutout {
-  color: #ffffff;
+  color: #f3f3f2;
 }
 
-.dark .theatre-intro__prompt {
-  color: rgb(255 255 255 / 0.55);
+.dark .theatre-stage__tagline {
+  color: #8a8a8a;
+}
+
+.dark .theatre-stage__enter {
+  color: rgb(243 243 242 / 0.48);
 }
 
 /* Instant first-paint curtain — prevents hero flash before React hydrates */
@@ -385,38 +515,13 @@ html.theme-ready *::after {
   position: fixed;
   inset: 0;
   z-index: 200;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background: #fafafa;
   pointer-events: none;
 }
 
-.theatre-boot__bar {
-  background: #111111;
-}
-
-.theatre-boot__title {
-  margin: 0;
-  color: #111111;
-  font-family: var(--font-inter), ui-sans-serif, system-ui, sans-serif;
-  font-size: clamp(2.75rem, 11vw, 4.75rem);
-  font-weight: 800;
-  letter-spacing: -0.05em;
-  line-height: 1;
-  text-align: center;
-}
-
-.dark .theatre-boot {
-  background: #0a0a0a;
-}
-
-.dark .theatre-boot__bar {
-  background: #ffffff;
-}
-
-.dark .theatre-boot__title {
-  color: #ffffff;
+@media (prefers-reduced-motion: reduce) {
+  .theatre-stage__chevron {
+    animation: none;
+  }
 }
 
 html.theatre-skip .theatre-boot,

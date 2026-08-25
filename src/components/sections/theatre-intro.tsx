@@ -8,11 +8,16 @@ import { MOTION } from "@/constants";
 import { useIsMounted } from "@/hooks/use-lenis";
 import { useTheatreIntro } from "@/providers/theatre-intro-provider";
 
-/** Zoom multiplier on exit — SVG stays vector-sharp while filling the frame */
-const TITLE_EXIT_SCALE = 18;
-const TITLE_EXIT_SCALE_RETURN = 14;
+/** Zoom multiplier on exit — type stays vector-sharp while filling the frame */
+const TITLE_EXIT_SCALE = 10;
+const TITLE_EXIT_SCALE_RETURN = 8;
 /** Accumulated pointer travel (px) before the intro dismisses */
 const CURSOR_EXIT_DISTANCE_PX = 220;
+
+const chromeFade = {
+  duration: 0.28,
+  ease: [0.4, 0, 1, 1] as const,
+};
 
 export function TheatreIntro() {
   const { isReturning, enter } = useTheatreIntro();
@@ -59,6 +64,7 @@ export function TheatreIntro() {
   const exitEase = isReturning
     ? MOTION.theatreExitReturn.ease
     : MOTION.theatreExit.ease;
+  const exiting = phase === "exiting";
 
   if (prefersReducedMotion) return null;
 
@@ -70,7 +76,7 @@ export function TheatreIntro() {
           role="dialog"
           aria-modal="true"
           aria-label="Welcome to DHRUVA"
-          className="theatre-intro fixed inset-0 z-[100] cursor-pointer overflow-hidden"
+          className="theatre-intro theatre-stage fixed inset-0 z-[100] cursor-pointer overflow-hidden"
           onClick={beginExit}
           onKeyDown={(event) => {
             if (
@@ -84,11 +90,9 @@ export function TheatreIntro() {
           }}
           tabIndex={0}
           initial={{ opacity: 1 }}
-          animate={
-            phase === "exiting" ? { opacity: [1, 1, 0] } : { opacity: 1 }
-          }
+          animate={exiting ? { opacity: [1, 1, 0] } : { opacity: 1 }}
           transition={
-            phase === "exiting"
+            exiting
               ? {
                   duration: exitDuration,
                   times: [0, 0.82, 1],
@@ -109,88 +113,81 @@ export function TheatreIntro() {
             }, 420);
           }}
         >
-          <div
-            className="theatre-intro__curtain absolute inset-0"
-            aria-hidden="true"
-          />
+          <div className="theatre-stage__paper" aria-hidden="true" />
+          <div className="theatre-stage__vignette" aria-hidden="true" />
+          <div className="theatre-stage__grain" aria-hidden="true" />
 
-          <m.div
-            className="letterbox letterbox-top theatre-intro__bar"
-            aria-hidden="true"
-            initial={{ scaleY: 1 }}
-            animate={
-              phase === "exiting"
-                ? { scaleY: 0, opacity: 0 }
-                : { scaleY: 1, opacity: 1 }
-            }
-            style={{ transformOrigin: "top center" }}
-            transition={{ duration: exitDuration * 0.8, ease: exitEase }}
-          />
+          <m.header
+            className="theatre-stage__chrome"
+            initial={{ opacity: 1 }}
+            animate={exiting ? { opacity: 0 } : { opacity: 1 }}
+            transition={chromeFade}
+          >
+            <span>Creative Portfolio</span>
+            <span>Vol. 2026</span>
+          </m.header>
 
-          <div className="theatre-intro__title-stage absolute inset-0 z-20 flex items-center justify-center overflow-visible px-6">
+          <div className="theatre-stage__center">
             <m.div
               className={[
                 "theatre-intro__title-scaler origin-center will-change-transform",
-                phase === "exiting" ? "theatre-intro__title--cutout" : "",
+                exiting ? "theatre-intro__title--cutout" : "",
               ].join(" ")}
               initial={{ scale: 1 }}
               animate={{
-                scale:
-                  phase === "exiting"
-                    ? isReturning
-                      ? TITLE_EXIT_SCALE_RETURN
-                      : TITLE_EXIT_SCALE
-                    : 1,
+                scale: exiting
+                  ? isReturning
+                    ? TITLE_EXIT_SCALE_RETURN
+                    : TITLE_EXIT_SCALE
+                  : 1,
               }}
               transition={
-                phase === "exiting"
+                exiting
                   ? { duration: exitDuration, ease: exitEase }
                   : { duration: 0 }
               }
             >
-              <h1 className="sr-only">DHRUVA</h1>
-              <svg
-                className="theatre-intro__title-svg"
-                viewBox="0 0 900 220"
-                role="presentation"
-                aria-hidden="true"
-              >
-                <text
-                  x="450"
-                  y="168"
-                  textAnchor="middle"
-                  fill="currentColor"
-                  className="theatre-intro__title-text"
-                >
-                  DHRUVA
-                </text>
-              </svg>
+              <h1 className="theatre-stage__title">The Dhruva</h1>
             </m.div>
+
+            <m.p
+              className="theatre-stage__tagline"
+              initial={{ opacity: 1 }}
+              animate={exiting ? { opacity: 0 } : { opacity: 1 }}
+              transition={chromeFade}
+            >
+              Curating high-performance
+              <br />
+              digital environments for the
+              <br />
+              avant-garde
+            </m.p>
           </div>
 
-          <m.p
-            className="theatre-intro__prompt absolute left-1/2 z-20 -translate-x-1/2 font-body-md text-body-md whitespace-nowrap"
-            initial={{ opacity: 1 }}
-            animate={phase === "exiting" ? { opacity: 0 } : { opacity: 1 }}
-            transition={{ duration: 0.22 }}
-          >
-            {mounted && isReturning
-              ? "Welcome back · Move or click to enter"
-              : "Move or click to enter"}
-          </m.p>
-
           <m.div
-            className="letterbox letterbox-bottom theatre-intro__bar"
-            aria-hidden="true"
-            initial={{ scaleY: 1 }}
-            animate={
-              phase === "exiting"
-                ? { scaleY: 0, opacity: 0 }
-                : { scaleY: 1, opacity: 1 }
-            }
-            style={{ transformOrigin: "bottom center" }}
-            transition={{ duration: exitDuration * 0.8, ease: exitEase }}
-          />
+            className="theatre-stage__enter"
+            initial={{ opacity: 1 }}
+            animate={exiting ? { opacity: 0 } : { opacity: 1 }}
+            transition={chromeFade}
+          >
+            <span>
+              {mounted && isReturning ? "Welcome back" : "Enter experience"}
+            </span>
+            <svg
+              className="theatre-stage__chevron"
+              viewBox="0 0 16 10"
+              fill="none"
+              aria-hidden="true"
+            >
+              <path
+                d="M1.5 1.5L8 8.5L14.5 1.5"
+                stroke="currentColor"
+                strokeWidth="1.15"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              />
+            </svg>
+          </m.div>
         </m.div>
       ) : null}
     </AnimatePresence>
