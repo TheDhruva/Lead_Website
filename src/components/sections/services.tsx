@@ -207,9 +207,14 @@ export function Services() {
           if (cardId === id) {
             element.style.setProperty("--spot-grow", "2.15");
             element.style.setProperty("--spot-opacity", "1");
+            element.style.setProperty("--spot-scale", "0.985");
+            window.setTimeout(() => {
+              element.style.setProperty("--spot-scale", "1");
+            }, 200);
           } else {
             element.style.setProperty("--spot-grow", "1");
             element.style.setProperty("--spot-opacity", "0.58");
+            element.style.setProperty("--spot-scale", "1");
           }
         });
         return;

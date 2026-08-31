@@ -40,7 +40,6 @@ function ProjectCardComponent({
       >
         <a
           href={href}
-          data-cursor="view"
           aria-label={`${project.title} — ${project.category}. View project`}
           className={cn(
             "media-card group relative block h-full w-full cursor-pointer overflow-hidden rounded-2xl border border-border bg-card shadow-[var(--shadow-sm)] outline-none",

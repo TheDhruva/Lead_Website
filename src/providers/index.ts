@@ -1,4 +1,5 @@
 export { AnimationProvider } from "./animation-provider";
+export { AudioProvider, useAudio } from "./audio-provider";
 export { PointerEngineProvider } from "./pointer-engine-provider";
 export {
   SmoothScrollProvider,

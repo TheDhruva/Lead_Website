@@ -49,7 +49,7 @@ export function ThemeToggle({ variant = "icon", className }: ThemeToggleProps) {
         onClick={toggle}
         aria-label={isDark ? "Switch to light mode" : "Switch to dark mode"}
         className={cn(
-          "flex w-full items-center justify-between gap-3 rounded-lg border border-border px-4 py-3 text-foreground transition-all duration-[250ms] hover:bg-card-hover active:scale-[0.985] motion-reduce:active:scale-100",
+          "flex w-full items-center justify-between gap-3 rounded-lg border border-border px-4 py-3 text-foreground transition-all duration-[250ms] hover:bg-card-hover active:scale-[0.985] motion-reduce:active:scale-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
           className,
         )}
       >

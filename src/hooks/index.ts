@@ -1,3 +1,5 @@
+export { useSfxHandlers } from "./use-sfx-handlers";
+export { useHashScroll } from "./use-hash-scroll";
 export { useIntersectionObserver } from "./use-intersection-observer";
 export { useMediaQuery } from "./use-media-query";
 export { useReducedMotion } from "./use-reduced-motion";

@@ -6,6 +6,7 @@ import { FileText } from "lucide-react";
 
 import { Reveal } from "@/components/animations/reveal";
 import { SiteFooter } from "@/components/layout/footer";
+import { ContactFormSkeleton } from "@/components/ui/contact-form-skeleton";
 import { Container } from "@/components/ui/container";
 import { SocialIcon } from "@/components/ui/social-icon";
 import { resumeLink, socialLinks } from "@/data";
@@ -24,8 +25,8 @@ function ContactFormLazy() {
   });
 
   return (
-    <div ref={ref} className="min-h-[220px]">
-      {isInView ? <ContactForm /> : null}
+    <div ref={ref} className="min-h-[420px]">
+      {isInView ? <ContactForm /> : <ContactFormSkeleton />}
     </div>
   );
 }
@@ -53,7 +54,6 @@ export function Contact() {
                 href={resumeLink.href}
                 target="_blank"
                 rel="noopener noreferrer"
-                data-cursor="link"
                 className="group inline-flex min-h-11 w-fit items-center gap-3 text-foreground-secondary transition-all duration-[280ms] ease-[cubic-bezier(0.22,1,0.36,1)] hover:-translate-y-0.5 hover:text-foreground active:scale-[0.985] motion-reduce:active:scale-100 focus-visible:rounded-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--background)]"
               >
                 <FileText

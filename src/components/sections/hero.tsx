@@ -174,6 +174,19 @@ export function Hero() {
             delay: prefersReducedMotion ? 0 : 0.12,
           }}
         >
+          <div
+            className="pointer-events-none mb-5 flex justify-center lg:hidden"
+            aria-hidden="true"
+          >
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src={heroPortraits[0]?.src}
+              alt=""
+              draggable={false}
+              decoding="async"
+              className="hero-cutout h-[7.5rem] w-[5.5rem] object-contain opacity-85 sm:h-32 sm:w-24"
+            />
+          </div>
           <h1
             id="hero-heading"
             className="mb-5 font-headline-xl text-headline-xl font-extrabold tracking-tighter text-foreground md:mb-6 md:text-[68px] md:leading-[1.08] lg:text-[72px]"
@@ -189,12 +202,13 @@ export function Hero() {
             presence.
           </p>
           <div className="flex flex-col items-center justify-center gap-4 sm:flex-row">
-            <Button size="lg" onClick={() => scrollTo("#contact")}>
+            <Button size="lg" sfx onClick={() => scrollTo("#contact")}>
               I&apos;m Ready To Grow
             </Button>
             <Button
               size="lg"
               variant="ghost"
+              sfx
               onClick={() => scrollTo("#projects")}
             >
               View Work

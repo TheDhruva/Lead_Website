@@ -14,7 +14,7 @@ export function VideoShowcase() {
     <section
       id="video"
       data-snap-frame
-      className="section-frame section-tone-videos overflow-visible"
+      className="section-frame section-tone-videos overflow-hidden"
       aria-labelledby="video-heading"
     >
       <Container className="relative z-0">
@@ -57,7 +57,11 @@ export function VideoShowcase() {
               index={index + 2}
               className="relative z-0 min-h-0 min-w-0 overflow-visible lg:h-full"
             >
-              <VideoCard video={video} className="lg:absolute lg:inset-0" />
+              <VideoCard
+                video={video}
+                loadDelay={(index + 1) * 220}
+                className="lg:absolute lg:inset-0"
+              />
             </Reveal>
           ))}
         </div>

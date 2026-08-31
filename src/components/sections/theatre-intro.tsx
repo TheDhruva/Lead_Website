@@ -11,6 +11,7 @@ import {
 } from "@/constants";
 import { useIsMounted } from "@/hooks/use-lenis";
 import { useReducedMotion } from "@/hooks/use-reduced-motion";
+import { useAudio } from "@/providers/audio-provider";
 import { useTheatreIntro } from "@/providers/theatre-intro-provider";
 
 /** Zoom multiplier on exit — type stays vector-sharp while filling the frame */
@@ -67,6 +68,7 @@ function titleEntranceMotion(skip: boolean) {
 
 export function TheatreIntro() {
   const { isReturning, enter } = useTheatreIntro();
+  const { unlockAudio, play } = useAudio();
   const prefersReducedMotion = useReducedMotion();
   const mounted = useIsMounted();
   const skipEntrance = isReturning;
@@ -75,15 +77,23 @@ export function TheatreIntro() {
   );
 
   useEffect(() => {
+    if (isReturning) return;
     document.documentElement.classList.add("theatre-active");
     document.getElementById("theatre-boot")?.remove();
-  }, []);
+  }, [isReturning]);
 
-  const beginExit = useCallback(() => {
-    setPhase((current) =>
-      current === "entering" || current === "hold" ? "exiting" : current,
-    );
-  }, []);
+  const beginExit = useCallback(
+    (withAudio = false) => {
+      if (withAudio) {
+        unlockAudio();
+        requestAnimationFrame(() => play("elementAppear"));
+      }
+      setPhase((current) =>
+        current === "entering" || current === "hold" ? "exiting" : current,
+      );
+    },
+    [unlockAudio, play],
+  );
 
   useEffect(() => {
     if (prefersReducedMotion || phase !== "entering" || skipEntrance) return;
@@ -103,7 +113,7 @@ export function TheatreIntro() {
     const holdMs = isReturning
       ? THEATRE_INTRO_RETURN_TIMEOUT_MS
       : THEATRE_INTRO_TIMEOUT_MS;
-    const timer = window.setTimeout(beginExit, holdMs);
+    const timer = window.setTimeout(() => beginExit(false), holdMs);
 
     return () => window.clearTimeout(timer);
   }, [prefersReducedMotion, phase, isReturning, beginExit]);
@@ -120,7 +130,7 @@ export function TheatreIntro() {
         event.key === "Escape"
       ) {
         event.preventDefault();
-        beginExit();
+        beginExit(true);
       }
     };
 
@@ -137,7 +147,7 @@ export function TheatreIntro() {
   const exiting = phase === "exiting";
   const enterReady = phase === "hold";
 
-  if (prefersReducedMotion) return null;
+  if (prefersReducedMotion || isReturning) return null;
 
   const {
     chrome,
@@ -172,7 +182,7 @@ export function TheatreIntro() {
           aria-modal="true"
           aria-label="Welcome to DHRUVA"
           className="theatre-intro theatre-stage fixed inset-0 z-[100] cursor-pointer overflow-hidden"
-          onClick={beginExit}
+          onClick={() => beginExit(true)}
           onKeyDown={(event) => {
             if (
               event.key === "Enter" ||
@@ -180,7 +190,7 @@ export function TheatreIntro() {
               event.key === "Escape"
             ) {
               event.preventDefault();
-              beginExit();
+              beginExit(true);
             }
           }}
           tabIndex={0}
@@ -211,6 +221,20 @@ export function TheatreIntro() {
           <div className="theatre-stage__paper" aria-hidden="true" />
           <div className="theatre-stage__vignette" aria-hidden="true" />
           <div className="theatre-stage__grain" aria-hidden="true" />
+
+          <m.button
+            type="button"
+            className="theatre-stage__skip"
+            initial={chromeMotion.initial}
+            animate={exiting ? { opacity: 0 } : chromeMotion.animate}
+            transition={exiting ? chromeFade : chromeMotion.transition}
+            onClick={(event) => {
+              event.stopPropagation();
+              beginExit(true);
+            }}
+          >
+            Skip
+          </m.button>
 
           <m.header
             className="theatre-stage__chrome"
@@ -247,7 +271,7 @@ export function TheatreIntro() {
                     : titleMotion.transition
                 }
               >
-                <h1 className="theatre-stage__title">THE DHRUVA</h1>
+                <p className="theatre-stage__title">THE DHRUVA</p>
               </m.div>
 
               <m.p

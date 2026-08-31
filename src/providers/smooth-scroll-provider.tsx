@@ -74,6 +74,7 @@ export function SmoothScrollProvider({ children }: SmoothScrollProviderProps) {
 
       registerLenis(instance);
       setLenis(instance);
+      instance.scrollTo(wrapper.scrollTop, { immediate: true });
 
       function raf(time: number) {
         instance?.raf(time);

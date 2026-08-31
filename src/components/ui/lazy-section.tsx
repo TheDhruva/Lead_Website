@@ -56,6 +56,7 @@ export function LazySection({
         className={cn("min-h-0", className)}
         style={{ minHeight }}
         aria-hidden="true"
+        aria-busy="true"
         tabIndex={-1}
       />
     );

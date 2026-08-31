@@ -47,7 +47,6 @@ export function SiteFooter({
               href={link.href}
               target={isExternal || isResume ? "_blank" : undefined}
               rel={isExternal || isResume ? "noopener noreferrer" : undefined}
-              data-cursor="link"
               className={cn(
                 "font-body-md text-sm transition-colors duration-[250ms]",
                 isDark

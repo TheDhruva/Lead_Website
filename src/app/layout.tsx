@@ -10,6 +10,7 @@ import { inter } from "@/lib/fonts";
 import { cn } from "@/lib/utils";
 import {
   AnimationProvider,
+  AudioProvider,
   PointerEngineProvider,
   SmoothScrollProvider,
   TheatreIntroProvider,
@@ -173,15 +174,17 @@ export default function RootLayout({ children }: RootLayoutProps) {
         </div>
         <script
           dangerouslySetInnerHTML={{
-            __html: `(function(){try{if(window.matchMedia('(prefers-reduced-motion: reduce)').matches){document.documentElement.classList.add('theatre-skip');var b=document.getElementById('theatre-boot');if(b)b.remove();}}catch(e){}})();`,
+            __html: `(function(){try{if(window.matchMedia('(prefers-reduced-motion: reduce)').matches){document.documentElement.classList.add('theatre-skip');var b=document.getElementById('theatre-boot');if(b)b.remove();return;}if(localStorage.getItem('dhruva-intro-seen')==='1'){document.documentElement.classList.add('theatre-done','theatre-skip');var b2=document.getElementById('theatre-boot');if(b2)b2.remove();}}catch(e){}})();`,
           }}
         />
         <ThemeProvider>
           <AnimationProvider>
             <TheatreIntroProvider>
-              <SmoothScrollProvider>
-                <PointerEngineProvider>{children}</PointerEngineProvider>
-              </SmoothScrollProvider>
+              <AudioProvider>
+                <SmoothScrollProvider>
+                  <PointerEngineProvider>{children}</PointerEngineProvider>
+                </SmoothScrollProvider>
+              </AudioProvider>
             </TheatreIntroProvider>
           </AnimationProvider>
         </ThemeProvider>

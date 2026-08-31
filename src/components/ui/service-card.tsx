@@ -202,7 +202,6 @@ const ServiceCardComponent = forwardRef<HTMLElement, ServiceCardProps>(
           isDimmed && "service-card--dimmed",
           className,
         )}
-        data-cursor="view"
         style={
           useTouchSpotlight
             ? undefined

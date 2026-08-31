@@ -3,16 +3,26 @@
 import dynamic from "next/dynamic";
 
 import { PageTransition } from "@/components/animations/page-transition";
+import { AudioGestureUnlock } from "@/components/audio-gesture-unlock";
 import { Navbar } from "@/components/layout/navbar";
 import { Hero } from "@/components/sections/hero";
 import { TheatreIntro } from "@/components/sections/theatre-intro";
 import { LazySection } from "@/components/ui/lazy-section";
+import { MuteButton } from "@/components/ui/mute-button";
+import { SectionSkeleton } from "@/components/ui/section-skeleton";
 import { SECTION_IDS } from "@/constants";
+import { useHashScroll } from "@/hooks/use-hash-scroll";
 import { SCROLL_CONTAINER_ID } from "@/lib/scroll-container";
+import { useTheatreIntro } from "@/providers/theatre-intro-provider";
 
 const Services = dynamic(
   () => import("@/components/sections/services").then((mod) => mod.Services),
-  { ssr: false },
+  {
+    ssr: false,
+    loading: () => (
+      <SectionSkeleton tone="services" id={SECTION_IDS.services} />
+    ),
+  },
 );
 
 const VideoShowcase = dynamic(
@@ -20,12 +30,20 @@ const VideoShowcase = dynamic(
     import("@/components/sections/video-showcase").then(
       (mod) => mod.VideoShowcase,
     ),
-  { ssr: false },
+  {
+    ssr: false,
+    loading: () => <SectionSkeleton tone="videos" id={SECTION_IDS.video} />,
+  },
 );
 
 const Projects = dynamic(
   () => import("@/components/sections/projects").then((mod) => mod.Projects),
-  { ssr: false },
+  {
+    ssr: false,
+    loading: () => (
+      <SectionSkeleton tone="projects" id={SECTION_IDS.projects} />
+    ),
+  },
 );
 
 const Contact = dynamic(
@@ -33,13 +51,23 @@ const Contact = dynamic(
   { ssr: false },
 );
 
+function HashScrollSync() {
+  useHashScroll();
+  return null;
+}
+
 export function HomePageContent() {
+  const { hasEntered } = useTheatreIntro();
+
   return (
     <>
       <TheatreIntro />
+      <HashScrollSync />
+      <AudioGestureUnlock />
+      {hasEntered ? <MuteButton /> : null}
       <PageTransition className="relative h-[100svh]">
         <a
-          href="#work"
+          href="#main-content"
           className="sr-only focus:not-sr-only focus:absolute focus:top-4 focus:left-4 focus:z-[110] focus:rounded-full focus:bg-primary focus:px-4 focus:py-2 focus:text-primary-foreground"
         >
           Skip to content

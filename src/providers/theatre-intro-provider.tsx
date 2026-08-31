@@ -45,6 +45,13 @@ function readIntroSeen() {
   }
 }
 
+function applyTheatreDone() {
+  setTheatreLock(false);
+  document.documentElement.classList.add("theatre-done");
+  document.documentElement.classList.remove("theatre-active");
+  document.getElementById("theatre-boot")?.remove();
+}
+
 function setTheatreLock(locked: boolean) {
   document.documentElement.classList.toggle("theatre-locked", locked);
   document.body.style.overflow = locked ? "hidden" : "";
@@ -59,11 +66,12 @@ export function TheatreIntroProvider({ children }: TheatreIntroProviderProps) {
     () => false,
   );
 
+  const skipIntro = prefersReducedMotion || isReturning;
+  const entered = skipIntro || hasEntered;
+
   const enter = useCallback(() => {
     setHasEntered(true);
-    setTheatreLock(false);
-    document.documentElement.classList.add("theatre-done");
-    document.getElementById("theatre-boot")?.remove();
+    applyTheatreDone();
     try {
       localStorage.setItem(INTRO_SEEN_KEY, "1");
     } catch {
@@ -71,19 +79,13 @@ export function TheatreIntroProvider({ children }: TheatreIntroProviderProps) {
     }
   }, []);
 
-  const entered = Boolean(prefersReducedMotion) || hasEntered;
+  useEffect(() => {
+    if (!skipIntro) return;
+    applyTheatreDone();
+  }, [skipIntro]);
 
   useEffect(() => {
-    if (prefersReducedMotion) {
-      document.documentElement.classList.add("theatre-skip");
-      document.getElementById("theatre-boot")?.remove();
-      return;
-    }
-
-    if (entered) {
-      setTheatreLock(false);
-      return;
-    }
+    if (entered) return;
 
     setTheatreLock(true);
 
@@ -99,7 +101,7 @@ export function TheatreIntroProvider({ children }: TheatreIntroProviderProps) {
       window.removeEventListener("touchmove", blockScroll);
       setTheatreLock(false);
     };
-  }, [entered, prefersReducedMotion]);
+  }, [entered]);
 
   const value = useMemo(
     () => ({

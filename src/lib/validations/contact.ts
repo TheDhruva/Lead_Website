@@ -6,6 +6,8 @@ import {
   CONTACT_TIMELINES,
 } from "@/constants";
 
+export const CONTACT_MESSAGE_MAX = 2000;
+
 export const contactFormSchema = z.object({
   name: z
     .string()
@@ -20,7 +22,10 @@ export const contactFormSchema = z.object({
     .string()
     .trim()
     .min(10, "Description must be at least 10 characters")
-    .max(2000, "Description must be under 2000 characters"),
+    .max(
+      CONTACT_MESSAGE_MAX,
+      `Description must be under ${CONTACT_MESSAGE_MAX} characters`,
+    ),
 });
 
 export type ContactFormValues = z.infer<typeof contactFormSchema>;

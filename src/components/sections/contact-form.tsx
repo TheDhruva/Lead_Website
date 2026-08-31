@@ -4,7 +4,12 @@ import { useState } from "react";
 
 import { zodResolver } from "@hookform/resolvers/zod";
 import { AnimatePresence, m } from "framer-motion";
-import { Controller, useForm } from "react-hook-form";
+import {
+  Controller,
+  type FieldErrors,
+  useForm,
+  useWatch,
+} from "react-hook-form";
 
 import { Button } from "@/components/ui/button";
 import { ChipGroup } from "@/components/ui/chip-group";
@@ -17,32 +22,52 @@ import {
   EASING_OUT,
 } from "@/constants";
 import { useReducedMotion } from "@/hooks/use-reduced-motion";
+import { useSfxHandlers } from "@/hooks/use-sfx-handlers";
 import {
+  CONTACT_MESSAGE_MAX,
   type ContactFormValues,
   contactFormSchema,
 } from "@/lib/validations/contact";
+import { useAudio } from "@/providers/audio-provider";
+
+const defaultValues: ContactFormValues = {
+  name: "",
+  email: "",
+  service: "Website",
+  budget: "Let's Discuss",
+  timeline: "Flexible",
+  message: "",
+};
 
 export function ContactForm() {
   const [submitted, setSubmitted] = useState(false);
   const [submissionError, setSubmissionError] = useState<string | null>(null);
   const prefersReducedMotion = useReducedMotion();
+  const { play } = useAudio();
+  const { onFocus: playInputFocus } = useSfxHandlers();
 
   const {
     register,
     handleSubmit,
     control,
+    setError,
+    reset,
+    setFocus,
     formState: { errors, isSubmitting },
   } = useForm<ContactFormValues>({
     resolver: zodResolver(contactFormSchema),
-    defaultValues: {
-      name: "",
-      email: "",
-      service: "Website",
-      budget: "Let's Discuss",
-      timeline: "Flexible",
-      message: "",
-    },
+    mode: "onTouched",
+    defaultValues,
   });
+
+  const messageValue = useWatch({ control, name: "message" });
+  const messageLength = messageValue?.length ?? 0;
+
+  const onInvalid = (fieldErrors: FieldErrors<ContactFormValues>) => {
+    const firstKey = Object.keys(fieldErrors)[0] as
+      keyof ContactFormValues | undefined;
+    if (firstKey) setFocus(firstKey);
+  };
 
   const onSubmit = async (data: ContactFormValues) => {
     setSubmissionError(null);
@@ -63,16 +88,52 @@ export function ContactForm() {
         clearTimeout(timeoutId);
       }
 
+      const payload = (await response.json().catch(() => null)) as {
+        error?: string;
+        fields?: Partial<Record<keyof ContactFormValues, string>>;
+      } | null;
+
       if (!response.ok) {
-        setSubmissionError("Something went wrong. Please try again.");
+        if (payload?.fields) {
+          for (const [key, message] of Object.entries(payload.fields)) {
+            if (message) {
+              setError(key as keyof ContactFormValues, { message });
+            }
+          }
+        }
+
+        setSubmissionError(
+          payload?.error ??
+            (response.status === 413
+              ? "Your message is too long. Please shorten it and try again."
+              : "Something went wrong. Please try again."),
+        );
         return;
       }
 
       setSubmitted(true);
-    } catch {
+      play("submitSuccess");
+    } catch (error) {
+      if (error instanceof DOMException && error.name === "AbortError") {
+        setSubmissionError(
+          "Request timed out. Please check your connection and try again.",
+        );
+        return;
+      }
+
       setSubmissionError("Something went wrong. Please try again.");
     }
   };
+
+  const handleSendAnother = () => {
+    reset(defaultValues);
+    setSubmissionError(null);
+    setSubmitted(false);
+  };
+
+  const nameField = register("name");
+  const emailField = register("email");
+  const messageField = register("message");
 
   return (
     <AnimatePresence mode="wait">
@@ -117,12 +178,21 @@ export function ContactForm() {
           <p className="mt-2 font-label-md text-label-md tracking-[0.08em] text-foreground uppercase">
             — Dhruva
           </p>
+          <Button
+            type="button"
+            variant="ghost"
+            size="md"
+            className="mt-8 w-fit"
+            onClick={handleSendAnother}
+          >
+            Send another message
+          </Button>
         </m.div>
       ) : (
         <m.form
           key="form"
           className="flex flex-col gap-3.5"
-          onSubmit={handleSubmit(onSubmit)}
+          onSubmit={handleSubmit(onSubmit, onInvalid)}
           noValidate
           aria-label="Contact form"
           initial={false}
@@ -135,7 +205,8 @@ export function ContactForm() {
               placeholder="Jane Doe"
               autoComplete="name"
               error={errors.name?.message}
-              {...register("name")}
+              {...nameField}
+              onFocus={() => playInputFocus()}
             />
             <Input
               label="Email"
@@ -143,7 +214,8 @@ export function ContactForm() {
               placeholder="jane@example.com"
               autoComplete="email"
               error={errors.email?.message}
-              {...register("email")}
+              {...emailField}
+              onFocus={() => playInputFocus()}
             />
           </div>
 
@@ -197,13 +269,23 @@ export function ContactForm() {
             />
           </div>
 
-          <Textarea
-            label="Project Description"
-            placeholder="Tell me about your project, goals, and anything you'd like me to know..."
-            rows={3}
-            error={errors.message?.message}
-            {...register("message")}
-          />
+          <div>
+            <Textarea
+              label="Project Description"
+              placeholder="Tell me about your project, goals, and anything you'd like me to know..."
+              rows={3}
+              maxLength={CONTACT_MESSAGE_MAX}
+              error={errors.message?.message}
+              {...messageField}
+              onFocus={() => playInputFocus()}
+            />
+            <p
+              className="mt-1.5 text-right text-xs text-foreground-secondary"
+              aria-live="polite"
+            >
+              {messageLength}/{CONTACT_MESSAGE_MAX}
+            </p>
+          </div>
 
           {submissionError ? (
             <p role="alert" aria-live="polite" className="text-sm text-error">
@@ -215,6 +297,7 @@ export function ContactForm() {
             type="submit"
             size="lg"
             fullWidth
+            sfx
             disabled={isSubmitting}
             className="mt-1 hover:-translate-y-0.5 hover:shadow-[var(--shadow-md)]"
           >

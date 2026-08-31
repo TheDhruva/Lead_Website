@@ -34,6 +34,8 @@ interface VideoCardProps {
   className?: string;
   priority?: boolean;
   featured?: boolean;
+  /** Stagger media loading within a grid (ms) */
+  loadDelay?: number;
 }
 
 function VideoCardComponent({
@@ -41,6 +43,7 @@ function VideoCardComponent({
   className,
   priority,
   featured = false,
+  loadDelay = 0,
 }: VideoCardProps) {
   const { containerRef, videoRef, isInView, markUserPaused } = useAutoplayVideo(
     {
@@ -52,13 +55,20 @@ function VideoCardComponent({
   const [isMuted, setIsMuted] = useState(true);
   const [isPlaying, setIsPlaying] = useState(false);
   const [isBuffering, setIsBuffering] = useState(false);
+  const [loadReady, setLoadReady] = useState(loadDelay <= 0);
   const prefersReducedMotion = useReducedMotion();
   const canPointerReact = useCanPointerReact();
   const showVideo = Boolean(video.src) && !videoFailed;
   const isPortrait = featured || video.aspect === "portrait";
 
-  const shouldLoadMedia = isInView;
+  const shouldLoadMedia = isInView && loadReady;
   const videoSources = useMemo(() => getVideoSources(video), [video]);
+
+  useEffect(() => {
+    if (loadDelay <= 0) return;
+    const timer = window.setTimeout(() => setLoadReady(true), loadDelay);
+    return () => window.clearTimeout(timer);
+  }, [loadDelay]);
 
   useEffect(() => {
     const videoEl = videoRef.current;
@@ -180,6 +190,16 @@ function VideoCardComponent({
 
   const showBuffering = showVideo && isBuffering && shouldLoadMedia;
 
+  const playbackLabel = showVideo
+    ? isPlaying
+      ? "Pause video"
+      : "Play video"
+    : "";
+  const muteLabel = showVideo ? (isMuted ? "Muted" : "Unmuted") : "";
+  const ariaLabel = [video.title, video.meta, playbackLabel, muteLabel]
+    .filter(Boolean)
+    .join(". ");
+
   return (
     <div
       className={cn(
@@ -198,12 +218,9 @@ function VideoCardComponent({
         <article
           ref={containerRef}
           tabIndex={0}
-          data-cursor="play"
           onClick={showVideo ? handleTogglePlay : undefined}
           onKeyDown={showVideo ? handleCardKeyDown : undefined}
-          aria-label={`${video.title}. ${video.meta}. ${
-            showVideo ? (isPlaying ? "Pause video" : "Play video") : ""
-          }`.trim()}
+          aria-label={ariaLabel}
           aria-busy={showBuffering || undefined}
           className={cn(
             "media-card group relative h-full w-full cursor-pointer overflow-hidden rounded-2xl bg-black outline-none",
@@ -221,7 +238,13 @@ function VideoCardComponent({
               loop
               playsInline
               autoPlay={shouldLoadMedia}
-              preload={shouldLoadMedia ? "auto" : "none"}
+              preload={
+                shouldLoadMedia
+                  ? featured || priority
+                    ? "auto"
+                    : "metadata"
+                  : "none"
+              }
               aria-hidden="true"
               onError={handleVideoError}
             >
