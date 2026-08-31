@@ -8,8 +8,6 @@ export { Textarea } from "./textarea";
 export { Select } from "./select";
 export { SocialIcon } from "./social-icon";
 export { ThemeToggle } from "./theme-toggle";
-export { InkOverlay } from "./ink-overlay";
-export { InkCatIcon } from "./ink-cat-icon";
 export { MagneticText } from "./magnetic-text";
 export { Magnetic } from "./magnetic";
 export { CursorSpotlight } from "./cursor-spotlight";

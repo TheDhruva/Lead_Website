@@ -16,7 +16,7 @@ import path from "node:path";
 const root = process.cwd();
 const videosDir = path.join(root, "public", "videos");
 const postersDir = path.join(root, "public", "images", "videos");
-const backupDir = path.join(root, "public", "videos", ".originals");
+const backupDir = path.join(root, "assets", "videos", "originals");
 
 /** @type {{ id: number; aspect: "portrait" | "landscape" }[]} */
 const items = [
@@ -134,7 +134,7 @@ function main() {
     optimizeItem(item);
   }
 
-  console.log("\n✓ Done. Originals saved in public/videos/.originals/");
+  console.log("\n✓ Done. Originals saved in assets/videos/originals/");
 }
 
 main();

@@ -13,35 +13,34 @@ export function VideoShowcase() {
   return (
     <section
       id="video"
-      className="bg-surface-container-lowest px-gutter py-16 md:py-20 lg:py-24"
+      data-snap-frame
+      className="section-frame section-tone-videos overflow-visible"
       aria-labelledby="video-heading"
     >
-      <Container>
+      <Container className="relative z-0">
         <Reveal>
-          <header className="mb-10 text-center md:mb-12">
+          <header className="mb-5 text-center md:mb-7 lg:mb-8">
             <h2
               id="video-heading"
-              className="font-headline-lg text-headline-lg tracking-[-0.03em] text-foreground"
+              className="font-headline-lg text-headline-lg tracking-[-0.03em] text-foreground md:text-[34px] lg:text-[36px]"
             >
-              <span className="mb-2 block font-label-md text-label-md font-semibold tracking-[0.18em] text-muted-foreground uppercase">
-                Video
-              </span>
-              <span className="block">Selected Work</span>
+              Videos
             </h2>
           </header>
         </Reveal>
 
         <div
           className={cn(
-            "grid grid-cols-1 gap-5 md:gap-6",
+            "relative z-0 grid grid-cols-1 gap-4 md:grid-cols-2 md:gap-5",
+            "max-md:mx-auto max-md:max-w-lg",
             "lg:grid-cols-[minmax(0,1fr)_minmax(0,1.12fr)] lg:grid-rows-3",
-            "lg:h-[min(48rem,calc(100svh-10rem))] lg:gap-6",
+            "lg:h-[min(36rem,calc(100svh-var(--nav-safe-top)-5rem))]",
           )}
         >
           {featuredVideo ? (
             <Reveal
               index={1}
-              className="relative min-h-0 min-w-0 lg:row-span-3 lg:h-full"
+              className="relative z-0 min-h-0 min-w-0 overflow-visible md:col-span-2 lg:col-span-1 lg:row-span-3 lg:h-full"
             >
               <VideoCard
                 video={featuredVideo}
@@ -56,7 +55,7 @@ export function VideoShowcase() {
             <Reveal
               key={video.id}
               index={index + 2}
-              className="relative min-h-0 min-w-0 lg:h-full"
+              className="relative z-0 min-h-0 min-w-0 overflow-visible lg:h-full"
             >
               <VideoCard video={video} className="lg:absolute lg:inset-0" />
             </Reveal>

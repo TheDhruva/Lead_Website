@@ -2,11 +2,15 @@
 
 import { useCallback, useEffect, useState } from "react";
 
-import { AnimatePresence, m, useReducedMotion } from "framer-motion";
+import { AnimatePresence, m } from "framer-motion";
 
-import { MOTION } from "@/constants";
+import {
+  MOTION,
+  THEATRE_INTRO_RETURN_TIMEOUT_MS,
+  THEATRE_INTRO_TIMEOUT_MS,
+} from "@/constants";
 import { useIsMounted } from "@/hooks/use-lenis";
-import { useInk } from "@/providers/ink-provider";
+import { useReducedMotion } from "@/hooks/use-reduced-motion";
 import { useTheatreIntro } from "@/providers/theatre-intro-provider";
 
 /** Zoom multiplier on exit — type stays vector-sharp while filling the frame */
@@ -18,12 +22,57 @@ const chromeFade = {
   ease: [0.4, 0, 1, 1] as const,
 };
 
+const ENTRANCE_EASE = [0.16, 1, 0.3, 1] as const;
+
+type IntroPhase = "entering" | "hold" | "exiting" | "gone";
+
+function entranceMotion(
+  delay: number,
+  duration: number,
+  skip: boolean,
+  y = 14,
+) {
+  if (skip) {
+    return {
+      initial: false as const,
+      animate: { opacity: 1, y: 0 },
+      transition: { duration: 0 },
+    };
+  }
+
+  return {
+    initial: { opacity: 0, y },
+    animate: { opacity: 1, y: 0 },
+    transition: { delay, duration, ease: ENTRANCE_EASE },
+  };
+}
+
+function titleEntranceMotion(skip: boolean) {
+  const { delay, duration } = MOTION.theatreEntrance.title;
+
+  if (skip) {
+    return {
+      initial: false as const,
+      animate: { opacity: 1, y: 0, scale: 1 },
+      transition: { duration: 0 },
+    };
+  }
+
+  return {
+    initial: { opacity: 0, y: 16, scale: 0.98 },
+    animate: { opacity: 1, y: 0, scale: 1 },
+    transition: { delay, duration, ease: ENTRANCE_EASE },
+  };
+}
+
 export function TheatreIntro() {
   const { isReturning, enter } = useTheatreIntro();
-  const { onEnterReady } = useInk();
   const prefersReducedMotion = useReducedMotion();
   const mounted = useIsMounted();
-  const [phase, setPhase] = useState<"idle" | "exiting" | "gone">("idle");
+  const skipEntrance = isReturning;
+  const [phase, setPhase] = useState<IntroPhase>(
+    skipEntrance ? "hold" : "entering",
+  );
 
   useEffect(() => {
     document.documentElement.classList.add("theatre-active");
@@ -31,13 +80,38 @@ export function TheatreIntro() {
   }, []);
 
   const beginExit = useCallback(() => {
-    setPhase((current) => (current === "idle" ? "exiting" : current));
+    setPhase((current) =>
+      current === "entering" || current === "hold" ? "exiting" : current,
+    );
   }, []);
 
-  useEffect(() => onEnterReady(beginExit), [onEnterReady, beginExit]);
+  useEffect(() => {
+    if (prefersReducedMotion || phase !== "entering" || skipEntrance) return;
+
+    const { delay, duration } = MOTION.theatreEntrance.enter;
+    const entranceMs = (delay + duration) * 1000 + 60;
+    const timer = window.setTimeout(() => {
+      setPhase("hold");
+    }, entranceMs);
+
+    return () => window.clearTimeout(timer);
+  }, [prefersReducedMotion, phase, skipEntrance]);
 
   useEffect(() => {
-    if (prefersReducedMotion || phase !== "idle") return;
+    if (prefersReducedMotion || phase !== "hold") return;
+
+    const holdMs = isReturning
+      ? THEATRE_INTRO_RETURN_TIMEOUT_MS
+      : THEATRE_INTRO_TIMEOUT_MS;
+    const timer = window.setTimeout(beginExit, holdMs);
+
+    return () => window.clearTimeout(timer);
+  }, [prefersReducedMotion, phase, isReturning, beginExit]);
+
+  useEffect(() => {
+    if (prefersReducedMotion || (phase !== "entering" && phase !== "hold")) {
+      return;
+    }
 
     const onKeyDown = (event: KeyboardEvent) => {
       if (
@@ -61,8 +135,33 @@ export function TheatreIntro() {
     ? MOTION.theatreExitReturn.ease
     : MOTION.theatreExit.ease;
   const exiting = phase === "exiting";
+  const enterReady = phase === "hold";
 
   if (prefersReducedMotion) return null;
+
+  const {
+    chrome,
+    subtitle: tagline,
+    enter: enterMotion,
+  } = MOTION.theatreEntrance;
+  const chromeMotion = entranceMotion(
+    chrome.delay,
+    chrome.duration,
+    skipEntrance,
+    10,
+  );
+  const taglineMotion = entranceMotion(
+    tagline.delay,
+    tagline.duration,
+    skipEntrance,
+  );
+  const enterHintMotion = entranceMotion(
+    enterMotion.delay,
+    enterMotion.duration,
+    skipEntrance,
+    8,
+  );
+  const titleMotion = titleEntranceMotion(skipEntrance);
 
   return (
     <AnimatePresence>
@@ -71,7 +170,7 @@ export function TheatreIntro() {
           id="theatre-intro"
           role="dialog"
           aria-modal="true"
-          aria-label="Welcome to DHRUVA. Click or draw to enter."
+          aria-label="Welcome to DHRUVA"
           className="theatre-intro theatre-stage fixed inset-0 z-[100] cursor-pointer overflow-hidden"
           onClick={beginExit}
           onKeyDown={(event) => {
@@ -115,61 +214,68 @@ export function TheatreIntro() {
 
           <m.header
             className="theatre-stage__chrome"
-            initial={{ opacity: 1 }}
-            animate={exiting ? { opacity: 0 } : { opacity: 1 }}
-            transition={chromeFade}
+            initial={chromeMotion.initial}
+            animate={exiting ? { opacity: 0, y: 0 } : chromeMotion.animate}
+            transition={exiting ? chromeFade : chromeMotion.transition}
           >
             <span>Creative Portfolio</span>
-            <span>Vol. 2026</span>
+            <span>VOL 2026</span>
           </m.header>
 
           <div className="theatre-stage__center">
-            <m.div
-              className={[
-                "theatre-intro__title-scaler origin-center will-change-transform",
-                exiting ? "theatre-intro__title--cutout" : "",
-              ].join(" ")}
-              initial={{ scale: 1 }}
-              animate={{
-                scale: exiting
-                  ? isReturning
-                    ? TITLE_EXIT_SCALE_RETURN
-                    : TITLE_EXIT_SCALE
-                  : 1,
-              }}
-              transition={
-                exiting
-                  ? { duration: exitDuration, ease: exitEase }
-                  : { duration: 0 }
-              }
-            >
-              <h1 className="theatre-stage__title">The Dhruva</h1>
-            </m.div>
+            <div className="theatre-stage__brand">
+              <m.div
+                className={[
+                  "theatre-intro__title-scaler origin-center will-change-transform",
+                  exiting ? "theatre-intro__title--cutout" : "",
+                ].join(" ")}
+                initial={titleMotion.initial}
+                animate={
+                  exiting
+                    ? {
+                        opacity: 1,
+                        y: 0,
+                        scale: isReturning
+                          ? TITLE_EXIT_SCALE_RETURN
+                          : TITLE_EXIT_SCALE,
+                      }
+                    : titleMotion.animate
+                }
+                transition={
+                  exiting
+                    ? { duration: exitDuration, ease: exitEase }
+                    : titleMotion.transition
+                }
+              >
+                <h1 className="theatre-stage__title">THE DHRUVA</h1>
+              </m.div>
 
-            <m.p
-              className="theatre-stage__tagline"
-              initial={{ opacity: 1 }}
-              animate={exiting ? { opacity: 0 } : { opacity: 1 }}
-              transition={chromeFade}
-            >
-              Curating high-performance
-              <br />
-              digital environments for the
-              <br />
-              avant-garde
-            </m.p>
+              <m.p
+                className="theatre-stage__tagline"
+                initial={taglineMotion.initial}
+                animate={exiting ? { opacity: 0, y: 0 } : taglineMotion.animate}
+                transition={exiting ? chromeFade : taglineMotion.transition}
+              >
+                Curating high-performance
+                <br />
+                digital environments for the
+                <br />
+                avant-garde
+              </m.p>
+            </div>
           </div>
 
           <m.div
-            className="theatre-stage__enter"
-            initial={{ opacity: 1 }}
-            animate={exiting ? { opacity: 0 } : { opacity: 1 }}
-            transition={chromeFade}
+            className={[
+              "theatre-stage__enter",
+              enterReady ? "theatre-stage__enter--ready" : "",
+            ].join(" ")}
+            initial={enterHintMotion.initial}
+            animate={exiting ? { opacity: 0, y: 0 } : enterHintMotion.animate}
+            transition={exiting ? chromeFade : enterHintMotion.transition}
           >
-            <span>
-              {mounted && isReturning
-                ? "Click or draw to continue"
-                : "Click or draw to enter"}
+            <span className="theatre-stage__enter-text">
+              {mounted && isReturning ? "Welcome back" : "Enter Experience"}
             </span>
             <svg
               className="theatre-stage__chevron"

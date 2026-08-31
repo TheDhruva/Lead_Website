@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useState } from "react";
 
 import { useSmoothScroll } from "@/hooks/use-smooth-scroll";
+import { getScrollContainer } from "@/lib/scroll-container";
 
 export function useActiveSection(sectionIds: readonly string[]) {
   const [activeId, setActiveId] = useState<string>(sectionIds[0] ?? "");
@@ -14,6 +15,8 @@ export function useActiveSection(sectionIds: readonly string[]) {
       .filter((el): el is HTMLElement => Boolean(el));
 
     if (elements.length === 0) return;
+
+    const root = getScrollContainer();
 
     const observer = new IntersectionObserver(
       (entries) => {
@@ -27,6 +30,7 @@ export function useActiveSection(sectionIds: readonly string[]) {
         }
       },
       {
+        root,
         rootMargin: "-35% 0px -45% 0px",
         threshold: [0, 0.2, 0.4, 0.6, 0.8, 1],
       },

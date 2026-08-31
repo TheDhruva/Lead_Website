@@ -6,5 +6,8 @@ export { useLenis, useIsMounted } from "./use-lenis";
 export { useFaceCycle } from "./use-face-cycle";
 export { useAutoplayVideo } from "./use-autoplay-video";
 export { useSmoothScroll } from "./use-smooth-scroll";
+export { useNavMetrics } from "./use-nav-metrics";
 export { useCanPointerReact } from "./use-can-pointer-react";
 export { useSmoothPointer, useElementPointerVars } from "./use-smooth-pointer";
+export { usePointerSubscription } from "./use-pointer-subscription";
+export type { PointerFrame } from "./use-pointer-subscription";

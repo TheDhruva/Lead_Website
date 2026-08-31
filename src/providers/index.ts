@@ -1,4 +1,5 @@
 export { AnimationProvider } from "./animation-provider";
+export { PointerEngineProvider } from "./pointer-engine-provider";
 export {
   SmoothScrollProvider,
   useLenisContext,
@@ -8,4 +9,3 @@ export {
   TheatreIntroProvider,
   useTheatreIntro,
 } from "./theatre-intro-provider";
-export { InkProvider, useInk } from "./ink-provider";

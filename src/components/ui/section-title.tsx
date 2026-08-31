@@ -21,7 +21,7 @@ export function SectionTitle({
     <Tag
       id={id}
       className={cn(
-        "mb-16 font-headline-lg text-headline-lg tracking-[-0.03em] text-foreground",
+        "mb-6 font-headline-lg text-headline-lg tracking-[-0.03em] text-foreground md:mb-8 md:text-[34px] lg:text-[36px]",
         align === "center" && "text-center",
         className,
       )}

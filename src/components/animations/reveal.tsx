@@ -2,9 +2,10 @@
 
 import { type ReactNode, memo } from "react";
 
-import { m, useReducedMotion } from "framer-motion";
+import { m } from "framer-motion";
 
 import { MOTION } from "@/constants";
+import { useReducedMotion } from "@/hooks/use-reduced-motion";
 import { cn } from "@/lib/utils";
 
 interface RevealProps {
@@ -15,6 +16,7 @@ interface RevealProps {
   /** Stagger index within a section — multiplies MOTION.stagger */
   index?: number;
   y?: number;
+  scale?: number;
   once?: boolean;
 }
 
@@ -24,6 +26,7 @@ function RevealComponent({
   delay = 0,
   index = 0,
   y = MOTION.reveal.y,
+  scale = MOTION.reveal.scale,
   once = true,
 }: RevealProps) {
   const prefersReducedMotion = useReducedMotion();
@@ -38,9 +41,9 @@ function RevealComponent({
   return (
     <m.div
       className={cn(className)}
-      initial={{ opacity: 0, y }}
-      whileInView={{ opacity: 1, y: 0 }}
-      viewport={{ once, amount: 0.2, margin: "0px 0px -6% 0px" }}
+      initial={{ opacity: 0, y, scale }}
+      whileInView={{ opacity: 1, y: 0, scale: 1 }}
+      viewport={{ once, amount: 0.15, margin: "0px 0px -6% 0px" }}
       transition={{
         duration: MOTION.reveal.duration,
         delay: totalDelay,

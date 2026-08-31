@@ -265,6 +265,14 @@ export const socialLinks: SocialLink[] = [
   },
 ];
 
-export const footerLinks: SocialLink[] = socialLinks.filter(
-  (link) => link.id !== "github",
-);
+/** Opens the PDF in a new tab — file lives in /public */
+export const resumeLink = {
+  id: "resume",
+  label: "Résumé",
+  href: "/Resume.pdf",
+} as const;
+
+export const footerLinks: SocialLink[] = [
+  ...socialLinks.filter((link) => link.id !== "github"),
+  { id: resumeLink.id, label: resumeLink.label, href: resumeLink.href },
+];

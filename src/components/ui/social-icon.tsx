@@ -107,7 +107,7 @@ export function SocialIcon({ link, className }: SocialIconProps) {
       rel={isExternal ? "noopener noreferrer" : undefined}
       aria-label={link.label}
       className={cn(
-        "group inline-flex w-fit items-center gap-3 text-foreground-secondary transition-all duration-[250ms] ease-out",
+        "group inline-flex min-h-11 w-fit items-center gap-3 text-foreground-secondary transition-all duration-[250ms] ease-[cubic-bezier(0.22,1,0.36,1)]",
         "hover:-translate-y-0.5 hover:text-foreground",
         "active:scale-[0.985] motion-reduce:active:scale-100",
         "focus-visible:rounded-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--background)]",

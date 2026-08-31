@@ -3,7 +3,7 @@
 import { useState } from "react";
 
 import { zodResolver } from "@hookform/resolvers/zod";
-import { AnimatePresence, m, useReducedMotion } from "framer-motion";
+import { AnimatePresence, m } from "framer-motion";
 import { Controller, useForm } from "react-hook-form";
 
 import { Button } from "@/components/ui/button";
@@ -14,8 +14,9 @@ import {
   CONTACT_BUDGETS,
   CONTACT_SERVICES,
   CONTACT_TIMELINES,
-  EASING_CINEMATIC,
+  EASING_OUT,
 } from "@/constants";
+import { useReducedMotion } from "@/hooks/use-reduced-motion";
 import {
   type ContactFormValues,
   contactFormSchema,
@@ -83,8 +84,8 @@ export function ContactForm() {
           initial={prefersReducedMotion ? false : { opacity: 0, y: 12 }}
           animate={{ opacity: 1, y: 0 }}
           exit={prefersReducedMotion ? undefined : { opacity: 0, y: -8 }}
-          transition={{ duration: 0.55, ease: EASING_CINEMATIC }}
-          className="flex min-h-[420px] flex-col justify-center py-4"
+          transition={{ duration: 0.5, ease: EASING_OUT }}
+          className="flex min-h-[260px] flex-col justify-center py-2"
         >
           <div
             className="mb-6 flex h-12 w-12 items-center justify-center rounded-full border border-border bg-card shadow-[var(--shadow-sm)]"
@@ -120,15 +121,15 @@ export function ContactForm() {
       ) : (
         <m.form
           key="form"
-          className="flex flex-col gap-5"
+          className="flex flex-col gap-3.5"
           onSubmit={handleSubmit(onSubmit)}
           noValidate
           aria-label="Contact form"
           initial={false}
           exit={prefersReducedMotion ? undefined : { opacity: 0, y: -8 }}
-          transition={{ duration: 0.4, ease: EASING_CINEMATIC }}
+          transition={{ duration: 0.4, ease: EASING_OUT }}
         >
-          <div className="grid grid-cols-1 gap-5 sm:grid-cols-2">
+          <div className="grid grid-cols-1 gap-3.5 sm:grid-cols-2">
             <Input
               label="Name"
               placeholder="Jane Doe"
@@ -157,44 +158,49 @@ export function ContactForm() {
                 value={field.value}
                 onChange={field.onChange}
                 error={errors.service?.message}
+                compact
               />
             )}
           />
 
-          <Controller
-            name="budget"
-            control={control}
-            render={({ field }) => (
-              <ChipGroup
-                name="budget"
-                label="Budget"
-                options={CONTACT_BUDGETS}
-                value={field.value}
-                onChange={field.onChange}
-                error={errors.budget?.message}
-              />
-            )}
-          />
+          <div className="grid grid-cols-1 gap-3.5 sm:grid-cols-2">
+            <Controller
+              name="budget"
+              control={control}
+              render={({ field }) => (
+                <ChipGroup
+                  name="budget"
+                  label="Budget"
+                  options={CONTACT_BUDGETS}
+                  value={field.value}
+                  onChange={field.onChange}
+                  error={errors.budget?.message}
+                  compact
+                />
+              )}
+            />
 
-          <Controller
-            name="timeline"
-            control={control}
-            render={({ field }) => (
-              <ChipGroup
-                name="timeline"
-                label="Timeline"
-                options={CONTACT_TIMELINES}
-                value={field.value}
-                onChange={field.onChange}
-                error={errors.timeline?.message}
-              />
-            )}
-          />
+            <Controller
+              name="timeline"
+              control={control}
+              render={({ field }) => (
+                <ChipGroup
+                  name="timeline"
+                  label="Timeline"
+                  options={CONTACT_TIMELINES}
+                  value={field.value}
+                  onChange={field.onChange}
+                  error={errors.timeline?.message}
+                  compact
+                />
+              )}
+            />
+          </div>
 
           <Textarea
             label="Project Description"
             placeholder="Tell me about your project, goals, and anything you'd like me to know..."
-            rows={5}
+            rows={3}
             error={errors.message?.message}
             {...register("message")}
           />
@@ -210,7 +216,7 @@ export function ContactForm() {
             size="lg"
             fullWidth
             disabled={isSubmitting}
-            className="mt-2 hover:-translate-y-0.5 hover:shadow-[var(--shadow-md)]"
+            className="mt-1 hover:-translate-y-0.5 hover:shadow-[var(--shadow-md)]"
           >
             {isSubmitting ? (
               <span className="inline-flex items-center gap-2.5">

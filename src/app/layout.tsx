@@ -1,5 +1,8 @@
 import type { Metadata, Viewport } from "next";
+import Script from "next/script";
 import type { ReactNode } from "react";
+
+import { SpeedInsights } from "@vercel/speed-insights/next";
 
 import { siteConfig } from "@/data";
 import { heroPortraits } from "@/data";
@@ -7,7 +10,7 @@ import { inter } from "@/lib/fonts";
 import { cn } from "@/lib/utils";
 import {
   AnimationProvider,
-  InkProvider,
+  PointerEngineProvider,
   SmoothScrollProvider,
   TheatreIntroProvider,
   ThemeProvider,
@@ -114,11 +117,7 @@ export default function RootLayout({ children }: RootLayoutProps) {
   const heroPreload = heroPortraits[0]?.src;
 
   return (
-    <html
-      lang="en"
-      className={cn(inter.variable, "h-full")}
-      suppressHydrationWarning
-    >
+    <html lang="en" className={cn(inter.variable)} suppressHydrationWarning>
       <head>
         {heroPreload ? (
           <link
@@ -130,7 +129,7 @@ export default function RootLayout({ children }: RootLayoutProps) {
           />
         ) : null}
       </head>
-      <body className="flex min-h-full flex-col antialiased">
+      <body className="antialiased">
         <div
           id="theatre-boot"
           className="theatre-boot theatre-stage"
@@ -141,20 +140,22 @@ export default function RootLayout({ children }: RootLayoutProps) {
           <div className="theatre-stage__grain" />
           <div className="theatre-stage__chrome">
             <span>Creative Portfolio</span>
-            <span>Vol. 2026</span>
+            <span>VOL 2026</span>
           </div>
           <div className="theatre-stage__center">
-            <p className="theatre-stage__title">The Dhruva</p>
-            <p className="theatre-stage__tagline">
-              Curating high-performance
-              <br />
-              digital environments for the
-              <br />
-              avant-garde
-            </p>
+            <div className="theatre-stage__brand">
+              <p className="theatre-stage__title">THE DHRUVA</p>
+              <p className="theatre-stage__tagline">
+                Curating high-performance
+                <br />
+                digital environments for the
+                <br />
+                avant-garde
+              </p>
+            </div>
           </div>
           <div className="theatre-stage__enter">
-            <span>Click or draw to enter</span>
+            <span className="theatre-stage__enter-text">Enter Experience</span>
             <svg
               className="theatre-stage__chevron"
               viewBox="0 0 16 10"
@@ -179,11 +180,17 @@ export default function RootLayout({ children }: RootLayoutProps) {
           <AnimationProvider>
             <TheatreIntroProvider>
               <SmoothScrollProvider>
-                <InkProvider>{children}</InkProvider>
+                <PointerEngineProvider>{children}</PointerEngineProvider>
               </SmoothScrollProvider>
             </TheatreIntroProvider>
           </AnimationProvider>
         </ThemeProvider>
+        <Script
+          id="hs-script-loader"
+          src="https://js-na2.hs-scripts.com/247221692.js"
+          strategy="lazyOnload"
+        />
+        <SpeedInsights />
       </body>
     </html>
   );

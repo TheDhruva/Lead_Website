@@ -6,4 +6,5 @@ export {
   projectRows,
   socialLinks,
   footerLinks,
+  resumeLink,
 } from "./site";

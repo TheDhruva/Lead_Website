@@ -6,7 +6,7 @@ export const NAV_ITEMS: NavItem[] = [
   { label: "Work", href: "#work" },
   { label: "Services", href: "#services" },
   { label: "Videos", href: "#video" },
-  { label: "Projects", href: "#projects" },
+  { label: "Web Designs", href: "#projects" },
   { label: "Contact", href: "#contact" },
 ];
 
@@ -42,32 +42,37 @@ export const CONTACT_TIMELINES = [
   "Flexible",
 ] as const;
 
-export const THEATRE_INTRO_TIMEOUT_MS = 2400;
-/** Faster auto-enter on return visits (intro still plays every time) */
-export const THEATRE_INTRO_RETURN_TIMEOUT_MS = 780;
+/** Auto-advance after entrance completes on first visit */
+export const THEATRE_INTRO_TIMEOUT_MS = 2500;
+/** Shorter hold on return visits */
+export const THEATRE_INTRO_RETURN_TIMEOUT_MS = 800;
 /** Beat between paper-cutout expression swaps in the hero */
 export const FACE_CYCLE_INTERVAL_MS = 2400;
 
-/** Navbar clearance so section headings aren't hidden */
-export const NAV_SCROLL_OFFSET = -112;
-
-/** Shared cinematic motion language */
-export const EASING_CINEMATIC = [0.4, 0, 0.2, 1] as const;
+/** Shared cinematic motion language — premium ease-out throughout */
+export const EASING_CINEMATIC = [0.22, 1, 0.36, 1] as const;
 export const EASING_IN_OUT = [0.45, 0, 0.55, 1] as const;
-export const EASING_OUT = [0.16, 1, 0.3, 1] as const;
+export const EASING_OUT = [0.22, 1, 0.36, 1] as const;
 
 export const MOTION = {
   theatreExit: { duration: 1.35, ease: EASING_IN_OUT },
   theatreExitReturn: { duration: 0.72, ease: EASING_IN_OUT },
+  theatreEntrance: {
+    chrome: { delay: 0.12, duration: 0.48 },
+    title: { delay: 0.32, duration: 0.62 },
+    subtitle: { delay: 0.52, duration: 0.48 },
+    enter: { delay: 0.78, duration: 0.42 },
+  },
   /** Quiet beat after intro curtain clears before interaction unlocks */
   theatreSettleMs: 140,
   pageEnter: { duration: 1.05, ease: EASING_IN_OUT, delay: 0.08 },
-  /** Shared film rhythm for Services → Video → Projects */
-  reveal: { duration: 0.65, ease: EASING_CINEMATIC, y: 22 },
-  stagger: 0.09,
-  itemBaseDelay: 0.1,
-  hover: { duration: 0.18, ease: EASING_OUT },
+  /** Restrained section reveals — editorial, premium */
+  reveal: { duration: 0.62, ease: EASING_OUT, y: 36, scale: 0.97 },
+  stagger: 0.07,
+  itemBaseDelay: 0.06,
+  hover: { duration: 0.2, ease: EASING_OUT },
   press: { duration: 0.14, ease: EASING_CINEMATIC, scale: 0.985 },
   theme: { duration: 0.3 },
-  imageFade: { duration: 0.45, ease: EASING_CINEMATIC },
+  imageFade: { duration: 0.5, ease: EASING_OUT },
+  layout: { duration: 0.55, ease: EASING_OUT },
 } as const;

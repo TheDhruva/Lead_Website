@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useId, useState } from "react";
+import { useCallback, useEffect, useId, useRef, useState } from "react";
 
 import { AnimatePresence, m } from "framer-motion";
 import { Menu, X } from "lucide-react";
@@ -12,6 +12,8 @@ import { ThemeToggle } from "@/components/ui/theme-toggle";
 import { MOTION, NAV_ITEMS, SECTION_IDS } from "@/constants";
 import { useActiveSection } from "@/hooks/use-active-section";
 import { useLenis } from "@/hooks/use-lenis";
+import { useNavMetrics } from "@/hooks/use-nav-metrics";
+import { getScrollContainer, getScrollTop } from "@/lib/scroll-container";
 import { cn } from "@/lib/utils";
 
 const SECTION_LIST = [
@@ -22,50 +24,111 @@ const SECTION_LIST = [
   SECTION_IDS.contact,
 ] as const;
 
+const SCROLL_THRESHOLD = 24;
+
 export function Navbar() {
   const [menuOpen, setMenuOpen] = useState(false);
-  const [scrolled, setScrolled] = useState(false);
   const menuId = useId();
+  const navRef = useRef<HTMLElement>(null);
+  const menuButtonRef = useRef<HTMLButtonElement>(null);
+  const scrolledRef = useRef(false);
   const { activeId, scrollToSection } = useActiveSection(SECTION_LIST);
   const lenis = useLenis();
+
+  useNavMetrics(navRef);
 
   const closeMenu = useCallback(() => setMenuOpen(false), []);
 
   useEffect(() => {
-    const update = (scrollY: number) => {
-      setScrolled(scrollY > 24);
+    const nav = navRef.current;
+    if (!nav) return;
+
+    const applyScrolled = (scrollY: number) => {
+      const next = scrollY > SCROLL_THRESHOLD;
+      if (scrolledRef.current === next) return;
+      scrolledRef.current = next;
+      nav.dataset.scrolled = next ? "true" : "false";
+      requestAnimationFrame(() => {
+        const rect = nav.getBoundingClientRect();
+        const safeTop = rect.top + rect.height + 20;
+        document.documentElement.style.setProperty(
+          "--nav-height",
+          `${rect.height}px`,
+        );
+        document.documentElement.style.setProperty(
+          "--nav-offset",
+          `${rect.top}px`,
+        );
+        document.documentElement.style.setProperty(
+          "--nav-safe-top",
+          `${safeTop}px`,
+        );
+      });
     };
 
+    const container = getScrollContainer();
+    const onScroll = () => applyScrolled(getScrollTop());
+    onScroll();
+
     if (lenis) {
-      update(lenis.scroll);
-      const onScroll = ({ scroll }: { scroll: number }) => update(scroll);
       lenis.on("scroll", onScroll);
       return () => {
         lenis.off("scroll", onScroll);
       };
     }
 
-    const onWindowScroll = () => update(window.scrollY);
-    onWindowScroll();
-    window.addEventListener("scroll", onWindowScroll, { passive: true });
-    return () => window.removeEventListener("scroll", onWindowScroll);
+    container?.addEventListener("scroll", onScroll, { passive: true });
+
+    return () => {
+      container?.removeEventListener("scroll", onScroll);
+    };
   }, [lenis]);
 
   useEffect(() => {
     if (!menuOpen) return;
 
+    const menu = document.getElementById(menuId);
+    const focusable = menu
+      ? Array.from(
+          menu.querySelectorAll<HTMLElement>(
+            'a[href], button:not([disabled]), textarea, input, select, [tabindex]:not([tabindex="-1"])',
+          ),
+        )
+      : [];
+    const first = focusable[0];
+    const last = focusable[focusable.length - 1];
+
+    first?.focus();
+
     const onKeyDown = (event: KeyboardEvent) => {
-      if (event.key === "Escape") closeMenu();
+      if (event.key === "Escape") {
+        event.preventDefault();
+        closeMenu();
+        return;
+      }
+
+      if (event.key !== "Tab" || focusable.length === 0) return;
+
+      if (event.shiftKey && document.activeElement === first) {
+        event.preventDefault();
+        last?.focus();
+      } else if (!event.shiftKey && document.activeElement === last) {
+        event.preventDefault();
+        first?.focus();
+      }
     };
 
     document.addEventListener("keydown", onKeyDown);
     document.body.style.overflow = "hidden";
 
+    const trigger = menuButtonRef.current;
+
     return () => {
       document.removeEventListener("keydown", onKeyDown);
       document.body.style.overflow = "";
+      trigger?.focus();
     };
-  }, [menuOpen, closeMenu]);
+  }, [menuOpen, closeMenu, menuId]);
 
   const handleNavClick = (href: string) => {
     scrollToSection(href);
@@ -74,29 +137,30 @@ export function Navbar() {
 
   return (
     <nav
+      ref={navRef}
       aria-label="Primary"
+      data-scrolled="false"
       className={cn(
-        "fixed left-1/2 z-50 flex w-[90%] max-w-container-max -translate-x-1/2 items-center justify-between rounded-full border border-border px-gutter shadow-2xl",
-        "transition-[top,padding,background-color,border-color,box-shadow,backdrop-filter] duration-300 ease-[cubic-bezier(0.16,1,0.3,1)]",
-        "max-md:bg-background max-md:backdrop-blur-none",
-        "md:bg-nav",
-        scrolled
-          ? "top-4 py-2.5 md:backdrop-blur-2xl"
-          : "top-6 py-4 md:backdrop-blur-xl",
+        "navbar fixed left-1/2 z-50 flex w-[min(92%,1480px)] max-w-container-max -translate-x-1/2 items-center justify-between rounded-full border px-4 sm:px-gutter",
+        "transition-[top,padding,background-color,border-color,box-shadow,backdrop-filter] duration-300 ease-[cubic-bezier(0.22,1,0.36,1)]",
+        "top-4 py-2 md:py-2.5 md:backdrop-blur-xl",
+        "max-md:border-border/80 max-md:bg-background/95 max-md:shadow-[0_8px_28px_rgb(0_0_0/0.07)]",
+        "md:border-border/55 md:bg-nav/88 md:shadow-[0_8px_32px_rgb(0_0_0/0.05)]",
       )}
     >
       <a
         href="#work"
+        data-cursor="link"
         onClick={(event) => {
           event.preventDefault();
           handleNavClick("#work");
         }}
-        className="font-display-lg text-display-lg-mobile tracking-tighter text-foreground transition-opacity duration-200 hover:opacity-80 md:text-display-lg"
+        className="shrink-0 font-display-lg text-[1.35rem] leading-none font-extrabold tracking-[-0.04em] text-foreground transition-opacity duration-200 hover:opacity-80 sm:text-[1.5rem] md:text-[1.65rem]"
       >
-        <MagneticText text="DHRUVA" strength={9} radius={130} />
+        <MagneticText text="DHRUVA" strength={7} radius={120} />
       </a>
 
-      <div className="hidden items-center gap-8 md:flex">
+      <div className="relative hidden items-center gap-6 md:flex lg:gap-8">
         {NAV_ITEMS.map((item) => {
           const id = item.href.replace("#", "");
           const isActive = activeId === id;
@@ -105,19 +169,27 @@ export function Navbar() {
             <a
               key={item.href}
               href={item.href}
+              data-cursor="link"
               onClick={(event) => {
                 event.preventDefault();
                 handleNavClick(item.href);
               }}
               aria-current={isActive ? "true" : undefined}
               className={cn(
-                "font-label-md text-label-md transition-all duration-[250ms] ease-out hover:text-foreground",
+                "relative py-1 font-label-md text-label-md transition-colors duration-[250ms] ease-out hover:text-foreground",
                 isActive
-                  ? "border-b border-foreground pb-1 font-bold text-foreground"
+                  ? "font-semibold text-foreground"
                   : "font-medium text-foreground-secondary",
               )}
             >
               {item.label}
+              {isActive ? (
+                <m.span
+                  layoutId="nav-active-indicator"
+                  className="absolute right-0 -bottom-1 left-0 mx-auto h-px w-full max-w-[calc(100%-0.5rem)] bg-[var(--accent-cherry)]"
+                  transition={{ duration: 0.35, ease: [0.22, 1, 0.36, 1] }}
+                />
+              ) : null}
             </a>
           );
         })}
@@ -125,14 +197,16 @@ export function Navbar() {
 
       <div className="flex items-center gap-3">
         <ThemeToggle className="hidden md:inline-flex" />
-        <Magnetic className="hidden sm:inline-flex" strength={16} radius={160}>
+        <Magnetic className="hidden sm:inline-flex" strength={10} radius={140}>
           <Button size="md" onClick={() => handleNavClick("#contact")}>
             Hire Me
           </Button>
         </Magnetic>
 
         <button
+          ref={menuButtonRef}
           type="button"
+          data-cursor="button"
           className="inline-flex items-center justify-center rounded-full border border-border p-2 text-foreground transition-all duration-[250ms] hover:bg-card-hover active:scale-[0.985] motion-reduce:active:scale-100 md:hidden"
           aria-expanded={menuOpen}
           aria-controls={menuId}
@@ -151,6 +225,9 @@ export function Navbar() {
         {menuOpen ? (
           <m.div
             id={menuId}
+            role="dialog"
+            aria-modal="true"
+            aria-label="Navigation menu"
             initial={{ opacity: 0, y: -8 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -8 }}
@@ -166,6 +243,7 @@ export function Navbar() {
                   <a
                     key={item.href}
                     href={item.href}
+                    data-cursor="link"
                     onClick={(event) => {
                       event.preventDefault();
                       handleNavClick(item.href);

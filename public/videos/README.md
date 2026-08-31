@@ -17,4 +17,4 @@ After replacing source footage, run:
 npm run optimize:videos
 ```
 
-This backs up originals to `public/videos/.originals/`, re-encodes all formats, and extracts poster frames. Requires [ffmpeg](https://ffmpeg.org/).
+This backs up originals to `assets/videos/originals/` (not served publicly), re-encodes all formats, and extracts poster frames. Requires [ffmpeg](https://ffmpeg.org/).

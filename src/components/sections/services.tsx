@@ -9,6 +9,7 @@ import { ServiceCard } from "@/components/ui/service-card";
 import { services } from "@/data";
 import { useMediaQuery } from "@/hooks/use-media-query";
 import { useReducedMotion } from "@/hooks/use-reduced-motion";
+import { getScrollContainer } from "@/lib/scroll-container";
 
 /** How strongly a new card must beat the current one before switching */
 const HYSTERESIS = 0.14;
@@ -25,7 +26,6 @@ function centralityScore(rect: DOMRect, viewportHeight: number) {
   const cardCenter = rect.top + rect.height / 2;
   const viewCenter = viewportHeight * 0.48;
   const distance = Math.abs(cardCenter - viewCenter);
-  // Wider focus band (~ middle 50% of the screen)
   const maxDistance = viewportHeight * 0.32;
   const linear = 1 - Math.min(distance / maxDistance, 1);
   return linear * linear;
@@ -35,7 +35,6 @@ export function Services() {
   const isMobile = useMediaQuery("(max-width: 767px)");
   const prefersReducedMotion = useReducedMotion();
   const [activeId, setActiveId] = useState<string | null>(null);
-  const [spotlight, setSpotlight] = useState<Record<string, number>>({});
   const [loadedImageIds, setLoadedImageIds] = useState(() => new Set<string>());
   const clearTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const cardRefs = useRef<Map<string, HTMLElement>>(new Map());
@@ -76,7 +75,6 @@ export function Services() {
     if (!isMobile) return;
 
     const viewportHeight = window.innerHeight || 1;
-    const nextSpotlight: Record<string, number> = {};
     let bestId: string | null = null;
     let bestScore = 0;
 
@@ -85,11 +83,20 @@ export function Services() {
         element.getBoundingClientRect(),
         viewportHeight,
       );
-      nextSpotlight[id] = prefersReducedMotion
+
+      const grow = prefersReducedMotion
+        ? score >= EXPAND_CONTENT_AT
+          ? 2.15
+          : 1
+        : 1 + score * 1.15;
+      const opacity = prefersReducedMotion
         ? score >= EXPAND_CONTENT_AT
           ? 1
-          : 0
-        : score;
+          : 0.7
+        : 0.55 + score * 0.45;
+
+      element.style.setProperty("--spot-grow", String(grow));
+      element.style.setProperty("--spot-opacity", String(opacity));
 
       if (score > bestScore) {
         bestScore = score;
@@ -97,12 +104,13 @@ export function Services() {
       }
     });
 
-    setSpotlight(nextSpotlight);
-
     if (Date.now() < lockUntilRef.current) return;
 
     const currentId = activeIdRef.current;
-    const currentScore = currentId ? (nextSpotlight[currentId] ?? 0) : 0;
+    const currentEl = currentId ? cardRefs.current.get(currentId) : null;
+    const currentScore = currentEl
+      ? centralityScore(currentEl.getBoundingClientRect(), viewportHeight)
+      : 0;
 
     if (!bestId || bestScore < ACTIVATE_FLOOR) {
       if (currentId && currentScore < 0.18) {
@@ -113,7 +121,6 @@ export function Services() {
 
     if (bestId === currentId) return;
 
-    // Hysteresis: only switch when the new card clearly wins
     if (
       currentId &&
       currentScore > 0.22 &&
@@ -133,7 +140,6 @@ export function Services() {
     });
   }, [updateMobileSpotlight]);
 
-  // Mobile: scroll-linked spotlight with priming when the section enters
   useEffect(() => {
     if (!isMobile) {
       primedRef.current = false;
@@ -141,9 +147,10 @@ export function Services() {
     }
 
     const section = sectionRef.current;
+    const scrollRoot = getScrollContainer();
     const onScrollOrResize = () => scheduleSpotlightUpdate();
 
-    window.addEventListener("scroll", onScrollOrResize, { passive: true });
+    scrollRoot?.addEventListener("scroll", onScrollOrResize, { passive: true });
     window.addEventListener("resize", onScrollOrResize);
 
     const sectionObserver = section
@@ -155,14 +162,17 @@ export function Services() {
               const firstId = services[0]?.id ?? null;
               if (firstId) {
                 setActiveCard(firstId);
-                // Defer spotlight paint to the next frame (scroll system), not sync setState in effect body beyond activation
                 lockUntilRef.current = Date.now() + 180;
                 markImageLoaded(firstId);
               }
             }
             scheduleSpotlightUpdate();
           },
-          { threshold: 0.15, rootMargin: "0px 0px -10% 0px" },
+          {
+            threshold: 0.15,
+            rootMargin: "0px 0px -10% 0px",
+            root: scrollRoot ?? null,
+          },
         )
       : null;
 
@@ -171,7 +181,7 @@ export function Services() {
     scheduleSpotlightUpdate();
 
     return () => {
-      window.removeEventListener("scroll", onScrollOrResize);
+      scrollRoot?.removeEventListener("scroll", onScrollOrResize);
       window.removeEventListener("resize", onScrollOrResize);
       sectionObserver?.disconnect();
       if (rafRef.current !== null) {
@@ -193,19 +203,17 @@ export function Services() {
 
       if (isMobile) {
         lockUntilRef.current = Date.now() + TAP_LOCK_MS;
-        setSpotlight((prev) => {
-          const next: Record<string, number> = {};
-          for (const service of services) {
-            next[service.id] =
-              service.id === id ? 1 : Math.min(prev[service.id] ?? 0, 0.2);
+        cardRefs.current.forEach((element, cardId) => {
+          if (cardId === id) {
+            element.style.setProperty("--spot-grow", "2.15");
+            element.style.setProperty("--spot-opacity", "1");
+          } else {
+            element.style.setProperty("--spot-grow", "1");
+            element.style.setProperty("--spot-opacity", "0.58");
           }
-          return next;
         });
-        // No scrollIntoView — scroll already drives focus; tapping shouldn't fight it
         return;
       }
-
-      // Desktop hover path unchanged
     },
     [isMobile, markImageLoaded, setActiveCard],
   );
@@ -219,7 +227,7 @@ export function Services() {
     clearTimeoutRef.current = setTimeout(() => {
       setActiveCard(null);
       clearTimeoutRef.current = null;
-    }, 120);
+    }, 220);
   }, [isMobile, setActiveCard]);
 
   useEffect(() => {
@@ -234,32 +242,27 @@ export function Services() {
     <section
       ref={sectionRef}
       id="services"
-      className="bg-background px-gutter py-16 md:py-20 lg:py-24"
+      data-snap-frame
+      className="section-frame section-tone-services section-grid-bg"
       aria-labelledby="services-heading"
     >
       <Container>
         <Reveal>
-          <SectionTitle as="h2" id="services-heading">
-            Core Disciplines
+          <SectionTitle as="h2" id="services-heading" className="mb-6 md:mb-8">
+            Services
           </SectionTitle>
         </Reveal>
         <Reveal index={1}>
           <div
-            className="services-container flex h-[min(760px,78svh)] flex-col gap-3 md:h-[min(560px,68svh)] md:flex-row md:gap-4 lg:gap-5"
+            className="services-container flex h-[min(520px,calc(100svh-var(--nav-safe-top)-6rem))] flex-col gap-3 md:h-[min(460px,calc(100svh-var(--nav-safe-top)-6.5rem))] md:flex-row md:gap-4 lg:gap-5"
             onMouseLeave={handleClear}
           >
             {services.map((service, index) => {
-              const amount = isMobile
-                ? (spotlight[service.id] ?? 0)
-                : undefined;
               const isExpanded = isMobile
-                ? (amount ?? 0) >= EXPAND_CONTENT_AT
+                ? activeId === service.id
                 : activeId === service.id;
-              const isDimmed = isMobile
-                ? activeId !== null &&
-                  activeId !== service.id &&
-                  (amount ?? 0) < 0.35
-                : activeId !== null && activeId !== service.id;
+              const isDimmed =
+                !isMobile && activeId !== null && activeId !== service.id;
 
               return (
                 <ServiceCard
@@ -268,7 +271,7 @@ export function Services() {
                   service={service}
                   isExpanded={isExpanded}
                   isDimmed={isDimmed}
-                  expandAmount={amount}
+                  useTouchSpotlight={isMobile}
                   enableHoverExpand={!isMobile}
                   loadImage={
                     loadedImageIds.has(service.id) ||

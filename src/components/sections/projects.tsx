@@ -9,58 +9,77 @@ import { cn } from "@/lib/utils";
 
 export function Projects() {
   return (
-    <section
-      id="projects"
-      className="bg-background px-gutter py-16 md:py-20 lg:py-24"
-      aria-labelledby="projects-heading"
-    >
-      <Container>
-        <Reveal>
-          <SectionTitle
-            as="h2"
-            id="projects-heading"
-            className="mb-10 md:mb-12"
+    <div id="projects" className="section-tone-projects relative z-0">
+      {projectRows.map((row, rowIndex) => {
+        const reverse = rowIndex % 2 === 1;
+        const isFirst = rowIndex === 0;
+
+        return (
+          <section
+            key={row.id}
+            data-snap-frame
+            aria-labelledby={isFirst ? "projects-heading" : undefined}
+            aria-label={
+              isFirst ? undefined : `Web designs group ${rowIndex + 1}`
+            }
+            className="section-frame overflow-hidden"
           >
-            Selected Work
-          </SectionTitle>
-        </Reveal>
+            <Container className="flex w-full flex-col">
+              {isFirst ? (
+                <Reveal>
+                  <SectionTitle
+                    as="h2"
+                    id="projects-heading"
+                    className="mb-5 md:mb-7 md:text-[34px] lg:text-[36px]"
+                  >
+                    Web Designs
+                  </SectionTitle>
+                </Reveal>
+              ) : null}
 
-        <div className="flex flex-col gap-8 md:gap-10 lg:gap-12">
-          {projectRows.map((row, rowIndex) => {
-            const reverse = rowIndex % 2 === 1;
-
-            return (
-              <Reveal key={row.id} index={rowIndex + 1}>
+              <Reveal index={isFirst ? 1 : 0}>
                 <div
                   className={cn(
-                    "grid grid-cols-1 gap-6 md:gap-7",
+                    "grid min-h-0 grid-cols-1 gap-4 md:gap-5",
+                    "md:grid-cols-2 lg:h-[min(26rem,calc(100svh-var(--nav-safe-top)-6rem))]",
                     reverse
-                      ? "lg:grid-cols-[minmax(0,1fr)_minmax(0,1.7fr)] lg:gap-8"
-                      : "lg:grid-cols-[minmax(0,1.7fr)_minmax(0,1fr)] lg:gap-8",
+                      ? "lg:grid-cols-[minmax(0,1fr)_minmax(0,1.7fr)] lg:gap-5"
+                      : "lg:grid-cols-[minmax(0,1.7fr)_minmax(0,1fr)] lg:gap-5",
                   )}
                 >
                   <div
-                    className={cn("min-h-0 min-w-0", reverse && "lg:order-2")}
+                    className={cn(
+                      "relative z-0 min-h-0 min-w-0 overflow-hidden md:col-span-2 lg:col-span-1 lg:h-full",
+                      reverse && "lg:order-2",
+                    )}
                   >
-                    <ProjectCard project={row.website} />
+                    <ProjectCard project={row.website} className="h-full" />
                   </div>
 
                   <div
                     className={cn(
-                      "grid min-h-0 min-w-0 grid-cols-2 gap-4 md:gap-5 lg:grid-cols-1 lg:gap-6",
+                      "grid min-h-0 min-w-0 grid-cols-2 gap-3 md:col-span-2 md:gap-4 lg:col-span-1 lg:h-full lg:grid-cols-1 lg:gap-4",
                       reverse && "lg:order-1",
                     )}
                   >
                     {row.brands.map((brand) => (
-                      <ProjectCard key={brand.id} project={brand} />
+                      <div
+                        key={brand.id}
+                        className="relative z-0 min-h-0 overflow-hidden"
+                      >
+                        <ProjectCard
+                          project={brand}
+                          className="h-full min-h-0"
+                        />
+                      </div>
                     ))}
                   </div>
                 </div>
               </Reveal>
-            );
-          })}
-        </div>
-      </Container>
-    </section>
+            </Container>
+          </section>
+        );
+      })}
+    </div>
   );
 }

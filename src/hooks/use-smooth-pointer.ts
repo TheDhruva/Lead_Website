@@ -3,16 +3,17 @@
 import { type RefObject, useEffect, useRef } from "react";
 
 import { useCanPointerReact } from "@/hooks/use-can-pointer-react";
+import { pointerEngine, pointerLocalToElement } from "@/lib/pointer-engine";
 
 interface PointerSmoothOptions {
-  /** 0–1 lerp toward target each frame */
+  /** 0–1 lerp toward target each frame (element-local smoothing) */
   ease?: number;
   enabled?: boolean;
 }
 
 /**
- * Smooth viewport pointer. Writes into a ref to avoid re-renders.
- * x/y are client coords; nx/ny are -1…1 from viewport center.
+ * Smooth viewport pointer via shared PointerEngine.
+ * Writes into a ref — no re-renders.
  */
 export function useSmoothPointer(
   enabled = true,
@@ -34,22 +35,11 @@ export function useSmoothPointer(
       return;
     }
 
-    let raf = 0;
-    let running = true;
-    const target = { x: window.innerWidth / 2, y: window.innerHeight / 2 };
-    const current = { x: target.x, y: target.y };
-    let hasPointer = false;
+    const current = { x: window.innerWidth / 2, y: window.innerHeight / 2 };
 
-    const onMove = (event: PointerEvent) => {
-      target.x = event.clientX;
-      target.y = event.clientY;
-      hasPointer = true;
-    };
-
-    const tick = () => {
-      if (!running) return;
-      current.x += (target.x - current.x) * ease;
-      current.y += (target.y - current.y) * ease;
+    return pointerEngine.subscribe((frame) => {
+      current.x += (frame.currentX - current.x) * ease;
+      current.y += (frame.currentY - current.y) * ease;
       const hw = window.innerWidth / 2 || 1;
       const hh = window.innerHeight / 2 || 1;
       pointerRef.current = {
@@ -57,20 +47,9 @@ export function useSmoothPointer(
         y: current.y,
         nx: (current.x - hw) / hw,
         ny: (current.y - hh) / hh,
-        active: hasPointer,
+        active: frame.active,
       };
-      raf = requestAnimationFrame(tick);
-    };
-
-    window.addEventListener("pointermove", onMove, { passive: true });
-    raf = requestAnimationFrame(tick);
-
-    return () => {
-      running = false;
-      cancelAnimationFrame(raf);
-      window.removeEventListener("pointermove", onMove);
-      pointerRef.current.active = false;
-    };
+    });
   }, [active, ease]);
 
   return pointerRef;
@@ -78,7 +57,7 @@ export function useSmoothPointer(
 
 /**
  * Smooth pointer relative to an element center.
- * Writes --px/--py (px) and --nx/--ny (-1…1) on the element.
+ * Writes --spot-x/--spot-y on the element via shared PointerEngine.
  */
 export function useElementPointerVars(
   ref: RefObject<HTMLElement | null>,
@@ -96,41 +75,29 @@ export function useElementPointerVars(
     const el = ref.current;
     if (!active || !el) return;
 
-    let raf = 0;
-    let running = true;
-    const target = { x: 0, y: 0, inside: false };
     const current = { x: 0, y: 0 };
+    const rect = el.getBoundingClientRect();
+    current.x = rect.width / 2;
+    current.y = rect.height / 2;
 
-    const onMove = (event: PointerEvent) => {
-      const rect = el.getBoundingClientRect();
-      const lx = event.clientX - rect.left;
-      const ly = event.clientY - rect.top;
-      target.x = lx;
-      target.y = ly;
-      target.inside =
-        lx >= 0 && ly >= 0 && lx <= rect.width && ly <= rect.height;
-    };
+    return pointerEngine.subscribe((frame) => {
+      const local = pointerLocalToElement(el, frame.targetX, frame.targetY);
+      const targetX = local.inside ? local.x : rect.width / 2;
+      const targetY = local.inside ? local.y : rect.height / 2;
 
-    const onLeave = () => {
-      target.inside = false;
-      const rect = el.getBoundingClientRect();
-      target.x = rect.width / 2;
-      target.y = rect.height / 2;
-    };
+      current.x += (targetX - current.x) * ease;
+      current.y += (targetY - current.y) * ease;
 
-    const tick = () => {
-      if (!running) return;
-      current.x += (target.x - current.x) * ease;
-      current.y += (target.y - current.y) * ease;
-      const rect = el.getBoundingClientRect();
-      const nx = rect.width ? (current.x / rect.width) * 2 - 1 : 0;
-      const ny = rect.height ? (current.y / rect.height) * 2 - 1 : 0;
+      const freshRect = el.getBoundingClientRect();
+      const nx = freshRect.width ? (current.x / freshRect.width) * 2 - 1 : 0;
+      const ny = freshRect.height ? (current.y / freshRect.height) * 2 - 1 : 0;
+
       stateRef.current = {
         x: current.x,
         y: current.y,
         nx,
         ny,
-        inside: target.inside,
+        inside: local.inside,
       };
 
       if (cssVars) {
@@ -138,29 +105,9 @@ export function useElementPointerVars(
         el.style.setProperty("--spot-y", `${current.y}px`);
         el.style.setProperty("--spot-nx", nx.toFixed(4));
         el.style.setProperty("--spot-ny", ny.toFixed(4));
-        el.dataset.spotActive = target.inside ? "true" : "false";
+        el.dataset.spotActive = local.inside ? "true" : "false";
       }
-
-      raf = requestAnimationFrame(tick);
-    };
-
-    const rect = el.getBoundingClientRect();
-    target.x = rect.width / 2;
-    target.y = rect.height / 2;
-    current.x = target.x;
-    current.y = target.y;
-
-    el.addEventListener("pointermove", onMove, { passive: true });
-    el.addEventListener("pointerleave", onLeave, { passive: true });
-    raf = requestAnimationFrame(tick);
-
-    return () => {
-      running = false;
-      cancelAnimationFrame(raf);
-      el.removeEventListener("pointermove", onMove);
-      el.removeEventListener("pointerleave", onLeave);
-      el.removeAttribute("data-spot-active");
-    };
+    });
   }, [active, ease, cssVars, ref]);
 
   return stateRef;
