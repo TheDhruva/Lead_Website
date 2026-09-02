@@ -10,8 +10,15 @@ import {
 } from "react";
 
 import type Lenis from "lenis";
+import type Snap from "lenis/snap";
 
 import { useReducedMotion } from "@/hooks/use-reduced-motion";
+import {
+  LENIS_EASING,
+  observeLenisSnapTargets,
+  refreshLenisSnapElements,
+  registerLenisSnap,
+} from "@/lib/lenis-section-snap";
 import { SCROLL_CONTAINER_ID, registerLenis } from "@/lib/scroll-container";
 import { useTheatreIntro } from "@/providers/theatre-intro-provider";
 
@@ -37,9 +44,10 @@ export function SmoothScrollProvider({ children }: SmoothScrollProviderProps) {
     if (prefersReducedMotion || !hasEntered) return;
 
     const isCoarsePointer = window.matchMedia("(pointer: coarse)").matches;
-    if (isCoarsePointer) return;
 
     let instance: Lenis | null = null;
+    let snap: Snap | null = null;
+    let unobserveSnap: (() => void) | null = null;
     let cancelled = false;
     let retryId = 0;
 
@@ -56,24 +64,39 @@ export function SmoothScrollProvider({ children }: SmoothScrollProviderProps) {
         return;
       }
 
-      const LenisCtor = (await import("lenis")).default;
+      const [{ default: LenisCtor }, { default: SnapCtor }] = await Promise.all(
+        [import("lenis"), import("lenis/snap")],
+      );
+
       if (cancelled) return;
 
       instance = new LenisCtor({
         wrapper,
         content,
-        duration: 1.05,
-        lerp: 0.085,
-        easing: (t) => Math.min(1, 1.001 - Math.pow(2, -10 * t)),
+        duration: 0.95,
+        lerp: 0.1,
+        easing: LENIS_EASING,
         orientation: "vertical",
         smoothWheel: true,
-        wheelMultiplier: 0.82,
-        touchMultiplier: 1.35,
-        syncTouch: false,
+        wheelMultiplier: 0.9,
+        touchMultiplier: 1.15,
+        syncTouch: isCoarsePointer,
+      });
+
+      snap = new SnapCtor(instance, {
+        type: "lock",
+        duration: prefersReducedMotion ? 0.28 : 0.82,
+        easing: LENIS_EASING,
+        debounce: 0,
       });
 
       registerLenis(instance);
+      registerLenisSnap(snap);
       setLenis(instance);
+
+      refreshLenisSnapElements();
+      unobserveSnap = observeLenisSnapTargets(content);
+
       instance.scrollTo(wrapper.scrollTop, { immediate: true });
 
       function raf(time: number) {
@@ -92,7 +115,10 @@ export function SmoothScrollProvider({ children }: SmoothScrollProviderProps) {
       if (rafIdRef.current !== null) {
         cancelAnimationFrame(rafIdRef.current);
       }
+      unobserveSnap?.();
+      snap?.destroy();
       instance?.destroy();
+      registerLenisSnap(null);
       registerLenis(null);
       setLenis(null);
     };

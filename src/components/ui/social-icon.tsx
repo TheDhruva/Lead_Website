@@ -107,7 +107,7 @@ export function SocialIcon({ link, className }: SocialIconProps) {
       rel={isExternal ? "noopener noreferrer" : undefined}
       aria-label={link.label}
       className={cn(
-        "group inline-flex min-h-11 w-fit items-center gap-3 text-foreground-secondary transition-all duration-[250ms] ease-[cubic-bezier(0.22,1,0.36,1)]",
+        "group inline-flex min-h-10 w-fit max-w-full min-w-0 items-center gap-2 text-foreground-secondary transition-all duration-[250ms] ease-[cubic-bezier(0.22,1,0.36,1)] max-md:gap-1.5 md:min-h-11 md:gap-3",
         "hover:-translate-y-0.5 hover:text-foreground",
         "active:scale-[0.985] motion-reduce:active:scale-100",
         "focus-visible:rounded-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--background)]",
@@ -115,10 +115,10 @@ export function SocialIcon({ link, className }: SocialIconProps) {
       )}
     >
       <Icon
-        className="h-[18px] w-[18px] transition-transform duration-[250ms] ease-out group-hover:scale-110"
+        className="h-[18px] w-[18px] shrink-0 transition-transform duration-[250ms] ease-out group-hover:scale-110"
         aria-hidden="true"
       />
-      <span className="font-label-md text-label-md tracking-wide">
+      <span className="whitespace-nowrap font-label-md text-[13px] tracking-wide md:text-label-md">
         {link.label}
       </span>
     </a>

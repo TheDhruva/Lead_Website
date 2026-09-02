@@ -146,7 +146,7 @@ export function ContactForm() {
           animate={{ opacity: 1, y: 0 }}
           exit={prefersReducedMotion ? undefined : { opacity: 0, y: -8 }}
           transition={{ duration: 0.5, ease: EASING_OUT }}
-          className="flex min-h-[260px] flex-col justify-center py-2"
+          className="contact-form__success flex min-h-[260px] flex-col justify-center py-2"
         >
           <div
             className="mb-6 flex h-12 w-12 items-center justify-center rounded-full border border-border bg-card shadow-[var(--shadow-sm)]"
@@ -191,7 +191,7 @@ export function ContactForm() {
       ) : (
         <m.form
           key="form"
-          className="flex flex-col gap-3.5"
+          className="contact-form flex min-w-0 flex-col gap-3 max-md:gap-2.5 md:gap-2"
           onSubmit={handleSubmit(onSubmit, onInvalid)}
           noValidate
           aria-label="Contact form"
@@ -199,7 +199,7 @@ export function ContactForm() {
           exit={prefersReducedMotion ? undefined : { opacity: 0, y: -8 }}
           transition={{ duration: 0.4, ease: EASING_OUT }}
         >
-          <div className="grid grid-cols-1 gap-3.5 sm:grid-cols-2">
+          <div className="grid min-w-0 grid-cols-1 gap-3 max-md:gap-2.5 sm:grid-cols-2 md:gap-2">
             <Input
               label="Name"
               placeholder="Jane Doe"
@@ -235,7 +235,7 @@ export function ContactForm() {
             )}
           />
 
-          <div className="grid grid-cols-1 gap-3.5 sm:grid-cols-2">
+          <div className="grid min-w-0 grid-cols-1 gap-3 max-md:gap-2.5 sm:grid-cols-2 md:gap-2">
             <Controller
               name="budget"
               control={control}
@@ -273,14 +273,14 @@ export function ContactForm() {
             <Textarea
               label="Project Description"
               placeholder="Tell me about your project, goals, and anything you'd like me to know..."
-              rows={3}
+              rows={2}
               maxLength={CONTACT_MESSAGE_MAX}
               error={errors.message?.message}
               {...messageField}
               onFocus={() => playInputFocus()}
             />
             <p
-              className="mt-1.5 text-right text-xs text-foreground-secondary"
+              className="contact-form__char-count mt-1.5 text-right text-xs text-foreground-secondary"
               aria-live="polite"
             >
               {messageLength}/{CONTACT_MESSAGE_MAX}
@@ -299,7 +299,7 @@ export function ContactForm() {
             fullWidth
             sfx
             disabled={isSubmitting}
-            className="mt-1 hover:-translate-y-0.5 hover:shadow-[var(--shadow-md)]"
+            className="contact-form__submit mt-0.5 min-h-12 hover:-translate-y-0.5 hover:shadow-[var(--shadow-md)] md:min-h-10 md:py-2.5 md:text-sm"
           >
             {isSubmitting ? (
               <span className="inline-flex items-center gap-2.5">

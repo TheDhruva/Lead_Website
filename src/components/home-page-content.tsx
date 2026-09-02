@@ -5,14 +5,17 @@ import dynamic from "next/dynamic";
 import { PageTransition } from "@/components/animations/page-transition";
 import { AudioGestureUnlock } from "@/components/audio-gesture-unlock";
 import { Navbar } from "@/components/layout/navbar";
+import { SectionScrollSnap } from "@/components/scroll/section-scroll-snap";
 import { Hero } from "@/components/sections/hero";
 import { TheatreIntro } from "@/components/sections/theatre-intro";
 import { LazySection } from "@/components/ui/lazy-section";
 import { MuteButton } from "@/components/ui/mute-button";
 import { SectionSkeleton } from "@/components/ui/section-skeleton";
+import { VideoPrefetch } from "@/components/video-prefetch";
 import { SECTION_IDS } from "@/constants";
 import { useHashScroll } from "@/hooks/use-hash-scroll";
 import { SCROLL_CONTAINER_ID } from "@/lib/scroll-container";
+import { useAudio } from "@/providers/audio-provider";
 import { useTheatreIntro } from "@/providers/theatre-intro-provider";
 
 const Services = dynamic(
@@ -57,15 +60,19 @@ function HashScrollSync() {
 }
 
 export function HomePageContent() {
-  const { hasEntered } = useTheatreIntro();
+  const { hasEntered, bootstrapped } = useTheatreIntro();
+  const { unlocked } = useAudio();
+  const showMute = bootstrapped && (hasEntered || unlocked);
 
   return (
     <>
-      <TheatreIntro />
+      <VideoPrefetch />
+      {!hasEntered ? <TheatreIntro /> : null}
       <HashScrollSync />
+      <SectionScrollSnap />
       <AudioGestureUnlock />
-      {hasEntered ? <MuteButton /> : null}
-      <PageTransition className="relative h-[100svh]">
+      {showMute ? <MuteButton /> : null}
+      <PageTransition data-page-shell className="relative h-[100svh]">
         <a
           href="#main-content"
           className="sr-only focus:not-sr-only focus:absolute focus:top-4 focus:left-4 focus:z-[110] focus:rounded-full focus:bg-primary focus:px-4 focus:py-2 focus:text-primary-foreground"

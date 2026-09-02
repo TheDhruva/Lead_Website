@@ -7,7 +7,7 @@ import { useAudio } from "@/providers/audio-provider";
 import { useTheatreIntro } from "@/providers/theatre-intro-provider";
 
 /**
- * Returning visitors skip the intro — unlock ambient audio on the first gesture.
+ * Unlocks ambient audio on first site interaction if autoplay was blocked.
  */
 export function AudioGestureUnlock() {
   const { hasEntered } = useTheatreIntro();

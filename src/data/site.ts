@@ -157,38 +157,39 @@ export const projectRows: ProjectShowcaseRow[] = [
   {
     id: "row-1",
     website: {
-      id: "ecommerce",
-      title: "E-Commerce Platform",
+      id: "driving-school",
+      title: "Driving School Website",
       description:
-        "A conversion-focused storefront with cinematic product storytelling.",
+        "A conversion-focused driving academy site with theory LMS and lesson booking.",
       category: "Website",
       tags: ["Next.js", "Tailwind CSS", "Framer Motion"],
       image: "/images/projects/digital/website-1.webp",
-      imageAlt: "E-commerce platform website design showcase.",
+      imageAlt: "Driving school website design showcase.",
       variant: "website",
-      href: "#contact",
+      href: "https://mrdrivingschooluk.netlify.app/",
     },
     brands: [
       {
-        id: "tech-startup",
-        title: "Tech Startup Branding",
+        id: "local-restaurant-menu",
+        title: "Local Restaurant Menu Design",
         description:
-          "Identity system built for clarity, scale, and investor confidence.",
+          "Editorial menu system with print-ready layouts and social campaign assets.",
         category: "Brand Identity",
-        tags: ["Brand Identity", "Typography"],
+        tags: ["Print", "Social Design"],
         image: "/images/projects/brand/poster-1.webp",
-        imageAlt: "Brand identity exploration for a tech startup.",
+        imageAlt: "Local restaurant menu design exploration.",
         variant: "brand",
         href: "#contact",
       },
       {
-        id: "restaurant",
-        title: "Restaurant Menu Design",
-        description: "Editorial menus and print assets with quiet luxury.",
+        id: "product-brand",
+        title: "Product Brand Identity",
+        description:
+          "Packaging and identity system for a contemporary product line.",
         category: "Brand Identity",
-        tags: ["Print", "Social Design"],
+        tags: ["Brand Identity", "Packaging"],
         image: "/images/projects/brand/poster-2.webp",
-        imageAlt: "Collaborative design session for a restaurant brand.",
+        imageAlt: "Product brand identity design presentation.",
         variant: "brand",
         href: "#contact",
       },
@@ -197,16 +198,16 @@ export const projectRows: ProjectShowcaseRow[] = [
   {
     id: "row-2",
     website: {
-      id: "agency",
-      title: "Creative Agency Portfolio",
+      id: "golf-club",
+      title: "Golf Club Landing Website",
       description:
-        "An immersive studio site engineered for motion and conversion.",
+        "A precision-focused golf equipment landing experience built for conversion.",
       category: "Website",
       tags: ["React", "GSAP", "UI/UX"],
       image: "/images/projects/digital/website-2.webp",
-      imageAlt: "Creative agency portfolio website design showcase.",
+      imageAlt: "Golf club landing website design showcase.",
       variant: "website",
-      href: "#contact",
+      href: "https://golf-mart.netlify.app/",
     },
     brands: [
       {

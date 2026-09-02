@@ -42,10 +42,10 @@ export const CONTACT_TIMELINES = [
   "Flexible",
 ] as const;
 
-/** Auto-advance after entrance completes on first visit */
-export const THEATRE_INTRO_TIMEOUT_MS = 2500;
-/** Shorter hold on return visits */
-export const THEATRE_INTRO_RETURN_TIMEOUT_MS = 800;
+/** Thin loading line duration before enter prompt / auto-advance */
+export const THEATRE_INTRO_LOAD_MS = 2500;
+/** Title split reveal before the loading line starts */
+export const THEATRE_INTRO_REVEAL_MS = 1200;
 /** Beat between paper-cutout expression swaps in the hero */
 export const FACE_CYCLE_INTERVAL_MS = 2400;
 

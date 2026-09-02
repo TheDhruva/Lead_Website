@@ -167,6 +167,7 @@ export function Navbar() {
           "navbar fixed left-1/2 z-50 flex w-[min(92%,1480px)] max-w-container-max -translate-x-1/2 items-center justify-between rounded-full border px-4 sm:px-gutter",
           "transition-[top,padding,background-color,border-color,box-shadow,backdrop-filter] duration-300 ease-[cubic-bezier(0.22,1,0.36,1)]",
           "top-4 py-2 md:py-2.5 md:backdrop-blur-xl",
+          "max-md:top-3 max-md:px-3 max-md:py-1.5",
           "max-md:border-border/80 max-md:bg-background/95 max-md:shadow-[0_8px_28px_rgb(0_0_0/0.07)]",
           "md:border-border/55 md:bg-nav/88 md:shadow-[0_8px_32px_rgb(0_0_0/0.05)]",
         )}
@@ -178,7 +179,7 @@ export function Navbar() {
             handleNavClick("#work");
           }}
           onMouseEnter={onCursor}
-          className="shrink-0 font-display-lg text-[1.35rem] leading-none font-extrabold tracking-[-0.04em] text-foreground transition-opacity duration-200 hover:opacity-80 sm:text-[1.5rem] md:text-[1.65rem]"
+          className="shrink-0 font-display-lg text-[1.35rem] leading-none font-extrabold tracking-[-0.04em] text-foreground transition-opacity duration-200 hover:opacity-80 max-md:text-[1.15rem] sm:text-[1.5rem] md:text-[1.65rem]"
         >
           <MagneticText text="DHRUVA" strength={7} radius={120} />
         </a>
@@ -233,7 +234,7 @@ export function Navbar() {
           <button
             ref={menuButtonRef}
             type="button"
-            className="inline-flex items-center justify-center rounded-full border border-border p-2 text-foreground transition-all duration-[250ms] hover:bg-card-hover active:scale-[0.985] motion-reduce:active:scale-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring md:hidden"
+            className="inline-flex min-h-11 min-w-11 items-center justify-center rounded-full border border-border p-2 text-foreground transition-all duration-[250ms] hover:bg-card-hover active:scale-[0.985] motion-reduce:active:scale-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring md:hidden"
             aria-expanded={menuOpen}
             aria-controls={menuId}
             aria-label={menuOpen ? "Close menu" : "Open menu"}

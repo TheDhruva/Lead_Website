@@ -1,3 +1,4 @@
+import { getLenisSnap } from "@/lib/lenis-section-snap";
 import {
   getLenis,
   getScrollContainer,
@@ -6,6 +7,10 @@ import {
 
 let lockCount = 0;
 let savedScrollTop = 0;
+
+export function isScrollPanelLocked(): boolean {
+  return lockCount > 0;
+}
 
 export function lockScrollPanel(): void {
   lockCount += 1;
@@ -16,6 +21,7 @@ export function lockScrollPanel(): void {
   const lenis = getLenis();
 
   lenis?.stop();
+  getLenisSnap()?.stop();
 
   if (container) {
     container.style.overflow = "hidden";
@@ -43,4 +49,6 @@ export function unlockScrollPanel(): void {
     lenis.start();
     lenis.scrollTo(savedScrollTop, { immediate: true });
   }
+
+  getLenisSnap()?.start();
 }

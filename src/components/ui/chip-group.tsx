@@ -81,7 +81,10 @@ export function ChipGroup({
         {label}
       </legend>
       <div
-        className={cn("flex flex-wrap", compact ? "gap-1.5" : "gap-2")}
+        className={cn(
+          "flex flex-wrap",
+          compact ? "gap-1.5 max-md:gap-1.25" : "gap-2",
+        )}
         role="radiogroup"
         aria-labelledby={labelId}
       >

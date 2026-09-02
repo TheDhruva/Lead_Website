@@ -12,10 +12,14 @@ import {
 } from "react";
 
 import {
+  AMBIENT_DUCKED_VOLUME,
+  AMBIENT_DUCK_MS,
   AMBIENT_FADE_MS,
   AMBIENT_TARGET_VOLUME,
   AMBIENT_TRACK,
   SFX,
+  SFX_DUCKED_MASTER,
+  SFX_MASTER,
   SFX_VOLUME,
   type SfxKey,
 } from "@/constants/audio";
@@ -25,8 +29,13 @@ interface AudioContextValue {
   play: (key: SfxKey) => void;
   muted: boolean;
   unlocked: boolean;
+  videoAudioActive: boolean;
   toggleMute: () => void;
+  /** Call from a user gesture (click / key) to start ambient + SFX */
   unlockAudio: () => void;
+  /** Best-effort autoplay — may be blocked until unlockAudio */
+  tryAutoplayAmbient: () => void;
+  setVideoAudioActive: (active: boolean) => void;
 }
 
 const noop = () => {};
@@ -35,8 +44,11 @@ const AudioContext = createContext<AudioContextValue>({
   play: noop,
   muted: false,
   unlocked: false,
+  videoAudioActive: false,
   toggleMute: noop,
   unlockAudio: noop,
+  tryAutoplayAmbient: noop,
+  setVideoAudioActive: noop,
 });
 
 export function useAudio() {
@@ -53,11 +65,13 @@ export function AudioProvider({ children }: AudioProviderProps) {
 
   const [muted, setMuted] = useState(false);
   const [unlocked, setUnlocked] = useState(false);
+  const [videoAudioActive, setVideoAudioActiveState] = useState(false);
 
   const ambientRef = useRef<HTMLAudioElement | null>(null);
   const sfxRefs = useRef<Partial<Record<SfxKey, HTMLAudioElement>>>({});
   const mutedRef = useRef(false);
   const unlockedRef = useRef(false);
+  const videoAudioCountRef = useRef(0);
   const fadeFrameRef = useRef<number | null>(null);
 
   useEffect(() => {
@@ -68,13 +82,24 @@ export function AudioProvider({ children }: AudioProviderProps) {
     unlockedRef.current = unlocked;
   }, [unlocked]);
 
+  const getAmbientTarget = useCallback(() => {
+    if (mutedRef.current) return 0;
+    if (videoAudioCountRef.current > 0) return AMBIENT_DUCKED_VOLUME;
+    return AMBIENT_TARGET_VOLUME;
+  }, []);
+
+  const getSfxMultiplier = useCallback(() => {
+    if (videoAudioCountRef.current > 0) return SFX_MASTER * SFX_DUCKED_MASTER;
+    return SFX_MASTER;
+  }, []);
+
   useEffect(() => {
     if (disabled) return;
 
     (Object.keys(SFX) as SfxKey[]).forEach((key) => {
       const el = new Audio(SFX[key]);
       el.preload = "auto";
-      el.volume = SFX_VOLUME[key];
+      el.volume = SFX_VOLUME[key] * SFX_MASTER;
       sfxRefs.current[key] = el;
     });
 
@@ -123,31 +148,63 @@ export function AudioProvider({ children }: AudioProviderProps) {
     fadeFrameRef.current = requestAnimationFrame(tick);
   }, []);
 
-  const unlockAudio = useCallback(() => {
-    if (disabled || unlockedRef.current) return;
-
+  const startAmbientPlayback = useCallback(() => {
     const ambient = ambientRef.current;
-    if (!ambient) return;
+    if (!ambient) return Promise.reject(new Error("no ambient"));
 
-    void ambient
-      .play()
-      .then(() => {
-        unlockedRef.current = true;
-        setUnlocked(true);
-        fadeAmbient(AMBIENT_TARGET_VOLUME, AMBIENT_FADE_MS);
-      })
-      .catch(noop);
-  }, [disabled, fadeAmbient]);
+    return ambient.play().then(() => {
+      unlockedRef.current = true;
+      setUnlocked(true);
+      fadeAmbient(getAmbientTarget(), AMBIENT_FADE_MS);
+    });
+  }, [fadeAmbient, getAmbientTarget]);
+
+  const unlockAudio = useCallback(() => {
+    if (disabled || unlockedRef.current) {
+      if (unlockedRef.current && !mutedRef.current) {
+        fadeAmbient(getAmbientTarget(), AMBIENT_FADE_MS);
+      }
+      return;
+    }
+
+    void startAmbientPlayback().catch(noop);
+  }, [disabled, fadeAmbient, getAmbientTarget, startAmbientPlayback]);
+
+  const tryAutoplayAmbient = useCallback(() => {
+    if (disabled || unlockedRef.current) return;
+    void startAmbientPlayback().catch(noop);
+  }, [disabled, startAmbientPlayback]);
 
   const toggleMute = useCallback(() => {
     if (disabled || !unlockedRef.current) return;
 
     setMuted((previous) => {
       const next = !previous;
-      fadeAmbient(next ? 0 : AMBIENT_TARGET_VOLUME, AMBIENT_FADE_MS);
+      fadeAmbient(next ? 0 : getAmbientTarget(), AMBIENT_FADE_MS);
       return next;
     });
-  }, [disabled, fadeAmbient]);
+  }, [disabled, fadeAmbient, getAmbientTarget]);
+
+  const setVideoAudioActive = useCallback(
+    (active: boolean) => {
+      const nextCount = Math.max(
+        0,
+        videoAudioCountRef.current + (active ? 1 : -1),
+      );
+      if (nextCount === videoAudioCountRef.current) return;
+
+      videoAudioCountRef.current = nextCount;
+      setVideoAudioActiveState(nextCount > 0);
+
+      if (!unlockedRef.current || mutedRef.current) return;
+
+      fadeAmbient(
+        getAmbientTarget(),
+        nextCount > 0 ? AMBIENT_DUCK_MS : AMBIENT_FADE_MS,
+      );
+    },
+    [fadeAmbient, getAmbientTarget],
+  );
 
   const play = useCallback(
     (key: SfxKey) => {
@@ -156,10 +213,12 @@ export function AudioProvider({ children }: AudioProviderProps) {
       const el = sfxRefs.current[key];
       if (!el) return;
 
+      const multiplier = getSfxMultiplier();
+      el.volume = Math.min(1, SFX_VOLUME[key] * multiplier);
       el.currentTime = 0;
       void el.play().catch(noop);
     },
-    [disabled],
+    [disabled, getSfxMultiplier],
   );
 
   const value = useMemo(
@@ -167,10 +226,23 @@ export function AudioProvider({ children }: AudioProviderProps) {
       play: disabled ? noop : play,
       muted: disabled ? true : muted,
       unlocked: disabled ? false : unlocked,
+      videoAudioActive: disabled ? false : videoAudioActive,
       toggleMute: disabled ? noop : toggleMute,
       unlockAudio: disabled ? noop : unlockAudio,
+      tryAutoplayAmbient: disabled ? noop : tryAutoplayAmbient,
+      setVideoAudioActive: disabled ? noop : setVideoAudioActive,
     }),
-    [disabled, muted, unlocked, play, toggleMute, unlockAudio],
+    [
+      disabled,
+      muted,
+      unlocked,
+      videoAudioActive,
+      play,
+      toggleMute,
+      unlockAudio,
+      tryAutoplayAmbient,
+      setVideoAudioActive,
+    ],
   );
 
   return (

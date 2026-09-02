@@ -14,7 +14,9 @@ export function Container({
   as: Tag = "div",
 }: ContainerProps) {
   return (
-    <Tag className={cn("mx-auto w-full max-w-container-max", className)}>
+    <Tag
+      className={cn("mx-auto w-full min-w-0 max-w-container-max", className)}
+    >
       {children}
     </Tag>
   );

@@ -51,9 +51,17 @@ export function getSectionScrollOffset(el: HTMLElement): number {
 
 export function scrollToSectionElement(target: HTMLElement): void {
   if (isContactSection(target)) {
-    scrollContainerTo(getPageEndScrollY(), "smooth");
+    scrollContainerTo(getPageEndScrollY(), {
+      behavior: "smooth",
+      duration: 1.05,
+      programmatic: true,
+    });
     return;
   }
 
-  scrollContainerTo(getOffsetInScrollContainer(target), "smooth");
+  scrollContainerTo(getOffsetInScrollContainer(target), {
+    behavior: "smooth",
+    duration: 1.05,
+    programmatic: true,
+  });
 }

@@ -7,15 +7,13 @@ import {
   useContext,
   useEffect,
   useMemo,
-  useState,
   useSyncExternalStore,
 } from "react";
-
-import { useReducedMotion } from "@/hooks/use-reduced-motion";
 
 interface TheatreIntroContextValue {
   hasEntered: boolean;
   isReturning: boolean;
+  bootstrapped: boolean;
   enter: () => void;
 }
 
@@ -37,6 +35,18 @@ interface TheatreIntroProviderProps {
 
 const INTRO_SEEN_KEY = "dhruva-intro-seen";
 
+type IntroBootState = {
+  bootstrapped: boolean;
+  hasEntered: boolean;
+  isReturning: boolean;
+};
+
+const INITIAL_INTRO: IntroBootState = {
+  bootstrapped: false,
+  hasEntered: false,
+  isReturning: false,
+};
+
 function readIntroSeen() {
   try {
     return localStorage.getItem(INTRO_SEEN_KEY) === "1";
@@ -47,8 +57,9 @@ function readIntroSeen() {
 
 function applyTheatreDone() {
   setTheatreLock(false);
-  document.documentElement.classList.add("theatre-done");
-  document.documentElement.classList.remove("theatre-active");
+  const root = document.documentElement;
+  root.classList.add("theatre-done");
+  root.classList.remove("theatre-active");
   document.getElementById("theatre-boot")?.remove();
 }
 
@@ -57,21 +68,77 @@ function setTheatreLock(locked: boolean) {
   document.body.style.overflow = locked ? "hidden" : "";
 }
 
+function computeIntroState(): IntroBootState {
+  const returning = readIntroSeen();
+  const reduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+  if (reduced) {
+    applyTheatreDone();
+    return {
+      bootstrapped: true,
+      isReturning: false,
+      hasEntered: true,
+    };
+  }
+
+  setTheatreLock(true);
+  document.documentElement.classList.add("theatre-active");
+
+  return {
+    bootstrapped: true,
+    isReturning: returning,
+    hasEntered: false,
+  };
+}
+
+let introSnapshot: IntroBootState = INITIAL_INTRO;
+let introInitialized = false;
+const introListeners = new Set<() => void>();
+
+function emitIntroChange() {
+  for (const listener of introListeners) {
+    listener();
+  }
+}
+
+function bootstrapIntro() {
+  if (introInitialized || typeof window === "undefined") return;
+  introInitialized = true;
+  introSnapshot = computeIntroState();
+  emitIntroChange();
+}
+
+function subscribeIntro(listener: () => void) {
+  introListeners.add(listener);
+
+  queueMicrotask(() => {
+    bootstrapIntro();
+  });
+
+  return () => {
+    introListeners.delete(listener);
+  };
+}
+
+function getIntroSnapshot() {
+  return introSnapshot;
+}
+
+function getIntroServerSnapshot() {
+  return INITIAL_INTRO;
+}
+
 export function TheatreIntroProvider({ children }: TheatreIntroProviderProps) {
-  const prefersReducedMotion = useReducedMotion();
-  const [hasEntered, setHasEntered] = useState(false);
-  const isReturning = useSyncExternalStore(
-    () => () => {},
-    readIntroSeen,
-    () => false,
+  const intro = useSyncExternalStore(
+    subscribeIntro,
+    getIntroSnapshot,
+    getIntroServerSnapshot,
   );
 
-  const skipIntro = prefersReducedMotion || isReturning;
-  const entered = skipIntro || hasEntered;
-
   const enter = useCallback(() => {
-    setHasEntered(true);
+    introSnapshot = { ...introSnapshot, hasEntered: true };
     applyTheatreDone();
+    emitIntroChange();
     try {
       localStorage.setItem(INTRO_SEEN_KEY, "1");
     } catch {
@@ -80,12 +147,7 @@ export function TheatreIntroProvider({ children }: TheatreIntroProviderProps) {
   }, []);
 
   useEffect(() => {
-    if (!skipIntro) return;
-    applyTheatreDone();
-  }, [skipIntro]);
-
-  useEffect(() => {
-    if (entered) return;
+    if (!intro.bootstrapped || intro.hasEntered) return;
 
     setTheatreLock(true);
 
@@ -101,15 +163,16 @@ export function TheatreIntroProvider({ children }: TheatreIntroProviderProps) {
       window.removeEventListener("touchmove", blockScroll);
       setTheatreLock(false);
     };
-  }, [entered]);
+  }, [intro.bootstrapped, intro.hasEntered]);
 
   const value = useMemo(
     () => ({
-      hasEntered: entered,
-      isReturning,
+      hasEntered: intro.hasEntered,
+      isReturning: intro.isReturning,
+      bootstrapped: intro.bootstrapped,
       enter,
     }),
-    [entered, isReturning, enter],
+    [intro, enter],
   );
 
   return (

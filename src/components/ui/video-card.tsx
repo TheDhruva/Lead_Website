@@ -8,32 +8,27 @@ import {
   useCallback,
   useEffect,
   useMemo,
+  useRef,
   useState,
 } from "react";
 
 import { Pause, Play, Volume2, VolumeX } from "lucide-react";
 
 import { CursorSpotlight } from "@/components/ui/cursor-spotlight";
-import { useAutoplayVideo } from "@/hooks/use-autoplay-video";
-import { useCanPointerReact } from "@/hooks/use-can-pointer-react";
+import { VIDEO_PLAYBACK_VOLUME } from "@/constants/audio";
+import { useHoverPreviewVideo } from "@/hooks/use-hover-preview-video";
 import { useReducedMotion } from "@/hooks/use-reduced-motion";
-import {
-  lerp,
-  pointerEngine,
-  pointerLocalToElement,
-} from "@/lib/pointer-engine";
 import { cn } from "@/lib/utils";
 import { getVideoSources } from "@/lib/video-source";
+import { useAudio } from "@/providers/audio-provider";
 import type { VideoItem } from "@/types";
-
-const PLAYBACK_FAR = 0.92;
-const PLAYBACK_NEAR = 1;
 
 interface VideoCardProps {
   video: VideoItem;
   className?: string;
   priority?: boolean;
   featured?: boolean;
+  sectionActive?: boolean;
   /** Stagger media loading within a grid (ms) */
   loadDelay?: number;
 }
@@ -43,25 +38,36 @@ function VideoCardComponent({
   className,
   priority,
   featured = false,
+  sectionActive = true,
   loadDelay = 0,
 }: VideoCardProps) {
-  const { containerRef, videoRef, isInView, markUserPaused } = useAutoplayVideo(
-    {
-      threshold: 0.08,
-      rootMargin: "160px 0px",
-    },
-  );
+  const prefersReducedMotion = useReducedMotion();
+  const { setVideoAudioActive } = useAudio();
   const [videoFailed, setVideoFailed] = useState(false);
   const [isMuted, setIsMuted] = useState(true);
+  const isMutedRef = useRef(true);
   const [isPlaying, setIsPlaying] = useState(false);
   const [isBuffering, setIsBuffering] = useState(false);
   const [loadReady, setLoadReady] = useState(loadDelay <= 0);
-  const prefersReducedMotion = useReducedMotion();
-  const canPointerReact = useCanPointerReact();
+  const {
+    containerRef,
+    videoRef,
+    canInteract,
+    markUserPaused,
+    handlePointerEnter,
+    handlePointerLeave,
+    pauseAndReset,
+  } = useHoverPreviewVideo({
+    threshold: 0.12,
+    rootMargin: "0px",
+    enabled: !prefersReducedMotion,
+    sectionActive,
+    preload: loadReady && sectionActive,
+  });
   const showVideo = Boolean(video.src) && !videoFailed;
   const isPortrait = featured || video.aspect === "portrait";
 
-  const shouldLoadMedia = isInView && loadReady;
+  const shouldLoadMedia = loadReady;
   const videoSources = useMemo(() => getVideoSources(video), [video]);
 
   useEffect(() => {
@@ -106,43 +112,6 @@ function VideoCardComponent({
     };
   }, [videoRef]);
 
-  useEffect(() => {
-    if (!canPointerReact || !showVideo) return;
-    const card = containerRef.current;
-    const videoEl = videoRef.current;
-    if (!card || !videoEl) return;
-
-    let currentRate = PLAYBACK_NEAR;
-
-    const unsubscribe = pointerEngine.subscribe((frame) => {
-      let target = PLAYBACK_NEAR;
-      const local = pointerLocalToElement(card, frame.targetX, frame.targetY);
-
-      if (local.inside && !videoEl.paused) {
-        const rect = card.getBoundingClientRect();
-        const cx = rect.left + rect.width / 2;
-        const cy = rect.top + rect.height / 2;
-        const maxDist = Math.hypot(rect.width, rect.height) * 0.5 || 1;
-        const dist = Math.hypot(frame.targetX - cx, frame.targetY - cy);
-        const t = Math.min(1, dist / maxDist);
-        target = PLAYBACK_NEAR - t * (PLAYBACK_NEAR - PLAYBACK_FAR);
-      } else if (!local.inside && !videoEl.paused) {
-        target = PLAYBACK_FAR;
-      }
-
-      currentRate = lerp(currentRate, target, 0.12);
-      const next = Math.round(currentRate * 1000) / 1000;
-      if (Math.abs(videoEl.playbackRate - next) > 0.004) {
-        videoEl.playbackRate = next;
-      }
-    });
-
-    return () => {
-      unsubscribe();
-      videoEl.playbackRate = 1;
-    };
-  }, [canPointerReact, showVideo, containerRef, videoRef]);
-
   const handleVideoError = useCallback(() => {
     setVideoFailed(true);
     setIsBuffering(false);
@@ -150,7 +119,7 @@ function VideoCardComponent({
 
   const handleTogglePlay = useCallback(() => {
     const videoEl = videoRef.current;
-    if (!videoEl) return;
+    if (!videoEl || !canInteract) return;
     if (videoEl.paused) {
       markUserPaused(false);
       if (videoEl.readyState === HTMLMediaElement.HAVE_NOTHING) {
@@ -159,12 +128,34 @@ function VideoCardComponent({
       if (videoEl.readyState < HTMLMediaElement.HAVE_FUTURE_DATA) {
         setIsBuffering(true);
       }
-      void videoEl.play();
+      void videoEl.play().then(() => {
+        if (!isMutedRef.current) {
+          setVideoAudioActive(true);
+        }
+      });
     } else {
       markUserPaused(true);
       videoEl.pause();
+      if (!isMutedRef.current) {
+        setVideoAudioActive(false);
+      }
     }
-  }, [markUserPaused, videoRef]);
+  }, [canInteract, markUserPaused, setVideoAudioActive, videoRef]);
+
+  useEffect(() => {
+    if (sectionActive) return;
+
+    const videoEl = videoRef.current;
+    if (videoEl) {
+      videoEl.pause();
+    }
+
+    if (!isMutedRef.current) {
+      setVideoAudioActive(false);
+    }
+
+    pauseAndReset();
+  }, [sectionActive, pauseAndReset, setVideoAudioActive, videoRef]);
 
   const handleToggleMute = useCallback(
     (event: MouseEvent<HTMLButtonElement>) => {
@@ -172,11 +163,30 @@ function VideoCardComponent({
       const videoEl = videoRef.current;
       if (!videoEl) return;
       const nextMuted = !videoEl.muted;
+
+      if (nextMuted) {
+        setVideoAudioActive(false);
+      } else {
+        videoEl.volume = VIDEO_PLAYBACK_VOLUME;
+        if (!videoEl.paused) {
+          setVideoAudioActive(true);
+        }
+      }
+
       videoEl.muted = nextMuted;
+      isMutedRef.current = nextMuted;
       setIsMuted(nextMuted);
     },
-    [videoRef],
+    [setVideoAudioActive, videoRef],
   );
+
+  useEffect(() => {
+    return () => {
+      if (!isMutedRef.current) {
+        setVideoAudioActive(false);
+      }
+    };
+  }, [setVideoAudioActive]);
 
   const handleCardKeyDown = useCallback(
     (event: KeyboardEvent<HTMLElement>) => {
@@ -205,7 +215,7 @@ function VideoCardComponent({
       className={cn(
         "relative h-auto w-full",
         isPortrait
-          ? "aspect-[9/16] max-h-[min(70svh,36rem)] md:max-h-[min(62svh,34rem)] lg:aspect-auto lg:max-h-none lg:h-full"
+          ? "aspect-[9/16] max-h-[min(62svh,32rem)] md:max-h-[min(62svh,34rem)] lg:aspect-auto lg:max-h-none lg:h-full"
           : "aspect-video lg:aspect-auto lg:h-full",
         className,
       )}
@@ -218,6 +228,8 @@ function VideoCardComponent({
         <article
           ref={containerRef}
           tabIndex={0}
+          onPointerEnter={showVideo ? handlePointerEnter : undefined}
+          onPointerLeave={showVideo ? handlePointerLeave : undefined}
           onClick={showVideo ? handleTogglePlay : undefined}
           onKeyDown={showVideo ? handleCardKeyDown : undefined}
           aria-label={ariaLabel}
@@ -237,14 +249,7 @@ function VideoCardComponent({
               muted={isMuted}
               loop
               playsInline
-              autoPlay={shouldLoadMedia}
-              preload={
-                shouldLoadMedia
-                  ? featured || priority
-                    ? "auto"
-                    : "metadata"
-                  : "none"
-              }
+              preload={shouldLoadMedia ? "auto" : "none"}
               aria-hidden="true"
               onError={handleVideoError}
             >

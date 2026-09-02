@@ -22,15 +22,18 @@ export function Projects() {
             aria-label={
               isFirst ? undefined : `Web designs group ${rowIndex + 1}`
             }
-            className="section-frame overflow-hidden"
+            className={cn(
+              "section-frame overflow-hidden max-md:overflow-visible",
+              !isFirst && "section-frame--projects-follow",
+            )}
           >
-            <Container className="flex w-full flex-col">
+            <Container className="flex w-full max-w-none flex-col">
               {isFirst ? (
                 <Reveal>
                   <SectionTitle
                     as="h2"
                     id="projects-heading"
-                    className="mb-5 md:mb-7 md:text-[34px] lg:text-[36px]"
+                    className="mb-5 max-md:mb-4 md:mb-7 md:text-[34px] lg:text-[36px]"
                   >
                     Web Designs
                   </SectionTitle>
@@ -40,7 +43,7 @@ export function Projects() {
               <Reveal index={isFirst ? 1 : 0}>
                 <div
                   className={cn(
-                    "grid min-h-0 grid-cols-1 gap-4 md:gap-5",
+                    "grid min-h-0 grid-cols-1 gap-3.5 md:gap-5",
                     "md:grid-cols-2 lg:h-[min(26rem,calc(100svh-var(--nav-safe-top)-6rem))]",
                     reverse
                       ? "lg:grid-cols-[minmax(0,1fr)_minmax(0,1.7fr)] lg:gap-5"
@@ -58,7 +61,7 @@ export function Projects() {
 
                   <div
                     className={cn(
-                      "grid min-h-0 min-w-0 grid-cols-2 gap-3 md:col-span-2 md:gap-4 lg:col-span-1 lg:h-full lg:grid-cols-1 lg:gap-4",
+                      "grid min-h-0 min-w-0 grid-cols-2 gap-2.5 md:col-span-2 md:gap-4 lg:col-span-1 lg:h-full lg:grid-cols-1 lg:gap-4",
                       reverse && "lg:order-1",
                     )}
                   >

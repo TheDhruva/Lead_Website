@@ -6,6 +6,7 @@ export { useReducedMotion } from "./use-reduced-motion";
 export { useActiveSection } from "./use-active-section";
 export { useLenis, useIsMounted } from "./use-lenis";
 export { useFaceCycle } from "./use-face-cycle";
+export { useHoverPreviewVideo } from "./use-hover-preview-video";
 export { useAutoplayVideo } from "./use-autoplay-video";
 export { useSmoothScroll } from "./use-smooth-scroll";
 export { useNavMetrics } from "./use-nav-metrics";

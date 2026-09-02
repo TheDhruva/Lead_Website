@@ -10,6 +10,7 @@ import { services } from "@/data";
 import { useMediaQuery } from "@/hooks/use-media-query";
 import { useReducedMotion } from "@/hooks/use-reduced-motion";
 import { getScrollContainer } from "@/lib/scroll-container";
+import { cn } from "@/lib/utils";
 
 /** How strongly a new card must beat the current one before switching */
 const HYSTERESIS = 0.14;
@@ -86,9 +87,9 @@ export function Services() {
 
       const grow = prefersReducedMotion
         ? score >= EXPAND_CONTENT_AT
-          ? 2.15
+          ? 2.85
           : 1
-        : 1 + score * 1.15;
+        : 1 + score * 1.9;
       const opacity = prefersReducedMotion
         ? score >= EXPAND_CONTENT_AT
           ? 1
@@ -205,7 +206,7 @@ export function Services() {
         lockUntilRef.current = Date.now() + TAP_LOCK_MS;
         cardRefs.current.forEach((element, cardId) => {
           if (cardId === id) {
-            element.style.setProperty("--spot-grow", "2.15");
+            element.style.setProperty("--spot-grow", "2.85");
             element.style.setProperty("--spot-opacity", "1");
             element.style.setProperty("--spot-scale", "0.985");
             window.setTimeout(() => {
@@ -251,15 +252,18 @@ export function Services() {
       className="section-frame section-tone-services section-grid-bg"
       aria-labelledby="services-heading"
     >
-      <Container>
+      <Container className="w-full max-w-none">
         <Reveal>
-          <SectionTitle as="h2" id="services-heading" className="mb-6 md:mb-8">
+          <SectionTitle as="h2" id="services-heading" className="mb-5 md:mb-8">
             Services
           </SectionTitle>
         </Reveal>
         <Reveal index={1}>
           <div
-            className="services-container flex h-[min(520px,calc(100svh-var(--nav-safe-top)-6rem))] flex-col gap-3 md:h-[min(460px,calc(100svh-var(--nav-safe-top)-6.5rem))] md:flex-row md:gap-4 lg:gap-5"
+            className={cn(
+              "services-container flex h-[min(520px,calc(100svh-var(--nav-safe-top)-6rem))] min-w-0 flex-col gap-3 md:h-[min(460px,calc(100svh-var(--nav-safe-top)-6.5rem))] md:flex-row md:gap-4 lg:gap-5",
+              isMobile && "services-container--mobile",
+            )}
             onMouseLeave={handleClear}
           >
             {services.map((service, index) => {

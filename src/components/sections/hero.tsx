@@ -20,6 +20,10 @@ import type { HeroPortrait } from "@/types";
 const CUTOUT_COUNT = heroPortraits.length;
 /** Right side stays two expressions ahead so both flanks stay different */
 const RIGHT_OFFSET = 2;
+/** Primary mobile anchor — person-1 cutout behind headline */
+const MOBILE_PORTRAIT_INDEX = 0;
+
+const MOBILE_LINE_EASE = [0.16, 1, 0.3, 1] as const;
 
 function PortraitStack({
   portraits,
@@ -114,7 +118,6 @@ function PortraitStack({
                 : { duration: 0.55, ease: EASING_OUT }
             }
           >
-            {/* Native img — skip next/image optimizer & CSS filters that wash cutouts on light bg */}
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img
               src={active.src}
@@ -129,6 +132,119 @@ function PortraitStack({
             />
           </m.div>
         </AnimatePresence>
+      </div>
+    </div>
+  );
+}
+
+function HeroMobile() {
+  const prefersReducedMotion = useReducedMotion();
+  const { scrollTo } = useSmoothScroll();
+  const portrait = heroPortraits[MOBILE_PORTRAIT_INDEX]!;
+
+  const lineMotion = (delay: number) =>
+    prefersReducedMotion
+      ? { initial: false as const, animate: { opacity: 1, y: 0 } }
+      : {
+          initial: { opacity: 0, y: 22 },
+          animate: { opacity: 1, y: 0 },
+          transition: { delay, duration: 0.68, ease: MOBILE_LINE_EASE },
+        };
+
+  return (
+    <div className="hero-mobile relative z-10 flex w-full flex-col lg:hidden">
+      <div className="hero-mobile__stage relative flex w-full flex-col items-center">
+        <div className="hero-mobile__visual relative w-full max-w-full">
+          <m.div
+            className="hero-mobile__portrait-bg pointer-events-none"
+            aria-hidden="true"
+            initial={prefersReducedMotion ? false : { opacity: 0, scale: 1.03 }}
+            animate={{ opacity: 1, scale: 1 }}
+            transition={
+              prefersReducedMotion
+                ? { duration: 0.01 }
+                : { duration: 0.9, ease: MOBILE_LINE_EASE }
+            }
+          >
+            <div className="hero-mobile__portrait-levitate">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src={portrait.src}
+                alt=""
+                draggable={false}
+                decoding="async"
+                loading="eager"
+                fetchPriority="high"
+                className="hero-cutout hero-mobile__portrait-img"
+              />
+            </div>
+          </m.div>
+
+          <h1
+            id="hero-heading-mobile"
+            className="hero-mobile__headline font-headline-xl font-extrabold text-foreground"
+          >
+            <m.span
+              className="hero-mobile__headline-line1 block"
+              {...lineMotion(0.12)}
+            >
+              <span className="hero-mobile__make">Make</span> Audience
+            </m.span>
+            <m.span className="block" {...lineMotion(0.24)}>
+              Feel Your
+            </m.span>
+            <m.span
+              className="block text-foreground-secondary"
+              {...lineMotion(0.36)}
+            >
+              Presence
+            </m.span>
+          </h1>
+        </div>
+
+        <m.p
+          className="hero-mobile__copy relative z-20 mx-auto max-w-[21rem] px-1 pt-3 text-center font-body-lg text-foreground-secondary"
+          initial={prefersReducedMotion ? false : { opacity: 0, y: 14 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={
+            prefersReducedMotion
+              ? { duration: 0.01 }
+              : { delay: 0.46, duration: 0.58, ease: MOBILE_LINE_EASE }
+          }
+        >
+          Beautiful websites, powerful visuals, and videos that make your brand
+          impossible to ignore. A cinematic approach to digital presence.
+        </m.p>
+
+        <m.div
+          className="hero-mobile__cta relative z-20 flex w-full flex-col items-center gap-2.5 px-1 pt-4 pb-[max(0.35rem,env(safe-area-inset-bottom))]"
+          initial={prefersReducedMotion ? false : { opacity: 0, y: 12 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={
+            prefersReducedMotion
+              ? { duration: 0.01 }
+              : { delay: 0.56, duration: 0.55, ease: MOBILE_LINE_EASE }
+          }
+        >
+          <Button
+            size="lg"
+            sfx
+            fullWidth
+            className="hero-mobile__cta-primary"
+            onClick={() => scrollTo("#contact")}
+          >
+            I&apos;m Ready To Grow
+          </Button>
+          <Button
+            size="lg"
+            variant="ghost"
+            sfx
+            className="hero-mobile__cta-secondary"
+            onClick={() => scrollTo("#projects")}
+          >
+            View Work
+          </Button>
+        </m.div>
       </div>
     </div>
   );
@@ -154,74 +270,65 @@ export function Hero() {
       className="section-frame section-frame--hero section-tone-hero relative items-center"
       aria-labelledby="hero-heading"
     >
-      <Container className="relative w-full">
-        <PortraitStack
-          portraits={heroPortraits}
-          activeIndex={leftIndex}
-          side="left"
-          gazeEnabled={canReact && isDesktop}
-        />
+      <Container className="relative w-full min-w-0 max-w-none">
+        <div className="hidden lg:contents">
+          <PortraitStack
+            portraits={heroPortraits}
+            activeIndex={leftIndex}
+            side="left"
+            gazeEnabled={canReact && isDesktop}
+          />
 
-        <m.div
-          className="relative z-10 mx-auto flex max-w-4xl flex-col items-center px-2 text-center sm:px-0"
-          initial={
-            prefersReducedMotion ? false : { opacity: 0, y: 40, scale: 0.97 }
-          }
-          animate={{ opacity: 1, y: 0, scale: 1 }}
-          transition={{
-            duration: MOTION.reveal.duration,
-            ease: MOTION.reveal.ease,
-            delay: prefersReducedMotion ? 0 : 0.12,
-          }}
-        >
-          <div
-            className="pointer-events-none mb-5 flex justify-center lg:hidden"
-            aria-hidden="true"
+          <m.div
+            className="relative z-10 mx-auto flex max-w-4xl flex-col items-center px-2 text-center sm:px-0"
+            initial={
+              prefersReducedMotion ? false : { opacity: 0, y: 40, scale: 0.97 }
+            }
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            transition={{
+              duration: MOTION.reveal.duration,
+              ease: MOTION.reveal.ease,
+              delay: prefersReducedMotion ? 0 : 0.12,
+            }}
           >
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img
-              src={heroPortraits[0]?.src}
-              alt=""
-              draggable={false}
-              decoding="async"
-              className="hero-cutout h-[7.5rem] w-[5.5rem] object-contain opacity-85 sm:h-32 sm:w-24"
-            />
-          </div>
-          <h1
-            id="hero-heading"
-            className="mb-5 font-headline-xl text-headline-xl font-extrabold tracking-tighter text-foreground md:mb-6 md:text-[68px] md:leading-[1.08] lg:text-[72px]"
-          >
-            Make Audience <br />
-            <span className="text-foreground-secondary">
-              Feel Your Presence
-            </span>
-          </h1>
-          <p className="mx-auto mb-8 max-w-2xl font-body-lg text-body-lg text-foreground-secondary md:mb-9">
-            Beautiful websites, powerful visuals, and videos that make your
-            brand impossible to ignore. A cinematic approach to digital
-            presence.
-          </p>
-          <div className="flex flex-col items-center justify-center gap-4 sm:flex-row">
-            <Button size="lg" sfx onClick={() => scrollTo("#contact")}>
-              I&apos;m Ready To Grow
-            </Button>
-            <Button
-              size="lg"
-              variant="ghost"
-              sfx
-              onClick={() => scrollTo("#projects")}
+            <h1
+              id="hero-heading"
+              className="mb-5 font-headline-xl text-headline-xl font-extrabold tracking-tighter text-foreground md:mb-6 md:text-[68px] md:leading-[1.08] lg:text-[72px]"
             >
-              View Work
-            </Button>
-          </div>
-        </m.div>
+              Make Audience <br />
+              <span className="text-foreground-secondary">
+                Feel Your Presence
+              </span>
+            </h1>
+            <p className="mx-auto mb-8 max-w-2xl font-body-lg text-body-lg text-foreground-secondary md:mb-9">
+              Beautiful websites, powerful visuals, and videos that make your
+              brand impossible to ignore. A cinematic approach to digital
+              presence.
+            </p>
+            <div className="flex flex-col items-center justify-center gap-4 sm:flex-row">
+              <Button size="lg" sfx onClick={() => scrollTo("#contact")}>
+                I&apos;m Ready To Grow
+              </Button>
+              <Button
+                size="lg"
+                variant="ghost"
+                sfx
+                onClick={() => scrollTo("#projects")}
+              >
+                View Work
+              </Button>
+            </div>
+          </m.div>
 
-        <PortraitStack
-          portraits={heroPortraits}
-          activeIndex={rightIndex}
-          side="right"
-          gazeEnabled={canReact && isDesktop}
-        />
+          <PortraitStack
+            portraits={heroPortraits}
+            activeIndex={rightIndex}
+            side="right"
+            gazeEnabled={canReact && isDesktop}
+          />
+        </div>
+
+        <HeroMobile />
       </Container>
     </section>
   );

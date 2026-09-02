@@ -12,15 +12,28 @@ export const SFX = {
 
 export type SfxKey = keyof typeof SFX;
 
+/** Master trim so SFX sit under ambient without clipping */
+export const SFX_MASTER = 0.72;
+
 export const SFX_VOLUME: Record<SfxKey, number> = {
-  buttonClick: 0.45,
-  buttonHover: 0.45,
-  cursorHover: 0.15,
-  elementAppear: 0.45,
-  inputFocus: 0.09,
-  sectionSnap: 0.09,
-  submitSuccess: 0.25,
+  buttonClick: 0.32,
+  buttonHover: 0.24,
+  cursorHover: 0.14,
+  elementAppear: 0.3,
+  inputFocus: 0.16,
+  sectionSnap: 0.16,
+  submitSuccess: 0.26,
 };
 
-export const AMBIENT_TARGET_VOLUME = 0.4;
-export const AMBIENT_FADE_MS = 200;
+/** Ambient bed — audible but not dominant */
+export const AMBIENT_TARGET_VOLUME = 0.22;
+/** Duck ambient while a showcase video plays with sound on */
+export const AMBIENT_DUCKED_VOLUME = 0.07;
+/** Trim SFX slightly while video audio is active */
+export const SFX_DUCKED_MASTER = 0.55;
+
+export const AMBIENT_FADE_MS = 420;
+export const AMBIENT_DUCK_MS = 520;
+
+/** Native video element level when user unmutes */
+export const VIDEO_PLAYBACK_VOLUME = 0.82;

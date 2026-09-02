@@ -1,8 +1,19 @@
 import type Lenis from "lenis";
 
+import { LENIS_EASING, getLenisSnap } from "@/lib/lenis-section-snap";
+
 export const SCROLL_CONTAINER_ID = "scroll-container";
 
 let lenisInstance: Lenis | null = null;
+let programmaticScrollUntil = 0;
+
+export function markProgrammaticScroll(durationMs = 1300): void {
+  programmaticScrollUntil = performance.now() + durationMs;
+}
+
+export function isProgrammaticScroll(): boolean {
+  return performance.now() < programmaticScrollUntil;
+}
 
 export function registerLenis(instance: Lenis | null): void {
   lenisInstance = instance;
@@ -37,12 +48,42 @@ export function getScrollTop(): number {
   return container?.scrollTop ?? window.scrollY;
 }
 
+export interface ScrollContainerOptions {
+  behavior?: ScrollBehavior;
+  duration?: number;
+  programmatic?: boolean;
+}
+
 export function scrollContainerTo(
   top: number,
-  behavior: ScrollBehavior = "smooth",
+  behaviorOrOptions: ScrollBehavior | ScrollContainerOptions = "smooth",
 ): void {
+  const options =
+    typeof behaviorOrOptions === "string"
+      ? { behavior: behaviorOrOptions }
+      : behaviorOrOptions;
+
+  const behavior = options.behavior ?? "smooth";
+  const duration = options.duration ?? 1.05;
+  const immediate = behavior === "auto";
+
+  if (options.programmatic !== false && !immediate) {
+    markProgrammaticScroll(duration * 1000 + 200);
+    getLenisSnap()?.stop();
+    window.setTimeout(
+      () => {
+        getLenisSnap()?.start();
+      },
+      duration * 1000 + 250,
+    );
+  }
+
   if (lenisInstance) {
-    lenisInstance.scrollTo(top, { immediate: behavior === "auto" });
+    lenisInstance.scrollTo(top, {
+      immediate,
+      duration,
+      easing: LENIS_EASING,
+    });
     return;
   }
 

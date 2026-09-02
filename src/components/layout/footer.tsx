@@ -75,11 +75,11 @@ export function SiteFooter({
       )}
     >
       {embedded ? (
-        <div className="flex flex-col items-start justify-between gap-6 sm:flex-row sm:items-center sm:gap-8">
+        <div className="flex flex-col items-start justify-between gap-5 min-w-0 sm:flex-row sm:items-center sm:gap-8">
           {content}
         </div>
       ) : (
-        <Container className="flex flex-col items-start justify-between gap-6 sm:flex-row sm:items-center sm:gap-8">
+        <Container className="flex flex-col items-start justify-between gap-5 min-w-0 sm:flex-row sm:items-center sm:gap-8">
           {content}
         </Container>
       )}

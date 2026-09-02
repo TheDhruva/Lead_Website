@@ -1,134 +1,123 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 
 import { AnimatePresence, m } from "framer-motion";
 
-import {
-  MOTION,
-  THEATRE_INTRO_RETURN_TIMEOUT_MS,
-  THEATRE_INTRO_TIMEOUT_MS,
-} from "@/constants";
-import { useIsMounted } from "@/hooks/use-lenis";
+import { THEATRE_INTRO_LOAD_MS, THEATRE_INTRO_REVEAL_MS } from "@/constants";
 import { useReducedMotion } from "@/hooks/use-reduced-motion";
+import { cn } from "@/lib/utils";
 import { useAudio } from "@/providers/audio-provider";
 import { useTheatreIntro } from "@/providers/theatre-intro-provider";
 
-/** Zoom multiplier on exit — type stays vector-sharp while filling the frame */
-const TITLE_EXIT_SCALE = 10;
-const TITLE_EXIT_SCALE_RETURN = 8;
+const ENTRANCE_EASE = [0.16, 1, 0.3, 1] as const;
+const EXIT_EASE = [0.4, 0, 0.2, 1] as const;
+const EXIT_DURATION = 0.68;
 
-const chromeFade = {
-  duration: 0.28,
-  ease: [0.4, 0, 1, 1] as const,
+type IntroPhase = "reveal" | "loading" | "ready" | "exiting" | "gone";
+
+const titleSlideEnter = {
+  initial: { opacity: 0, y: 44 },
+  animate: { opacity: 1, y: 0 },
+  transition: { delay: 0.14, duration: 0.88, ease: ENTRANCE_EASE },
 };
 
-const ENTRANCE_EASE = [0.16, 1, 0.3, 1] as const;
-
-type IntroPhase = "entering" | "hold" | "exiting" | "gone";
-
-function entranceMotion(
-  delay: number,
-  duration: number,
-  skip: boolean,
-  y = 14,
-) {
-  if (skip) {
-    return {
-      initial: false as const,
-      animate: { opacity: 1, y: 0 },
-      transition: { duration: 0 },
-    };
-  }
-
-  return {
-    initial: { opacity: 0, y },
-    animate: { opacity: 1, y: 0 },
-    transition: { delay, duration, ease: ENTRANCE_EASE },
-  };
-}
-
-function titleEntranceMotion(skip: boolean) {
-  const { delay, duration } = MOTION.theatreEntrance.title;
-
-  if (skip) {
-    return {
-      initial: false as const,
-      animate: { opacity: 1, y: 0, scale: 1 },
-      transition: { duration: 0 },
-    };
-  }
-
-  return {
-    initial: { opacity: 0, y: 16, scale: 0.98 },
-    animate: { opacity: 1, y: 0, scale: 1 },
-    transition: { delay, duration, ease: ENTRANCE_EASE },
-  };
-}
+const titleSlideExit = {
+  opacity: 0,
+  y: -44,
+};
 
 export function TheatreIntro() {
-  const { isReturning, enter } = useTheatreIntro();
-  const { unlockAudio, play } = useAudio();
+  const { isReturning, enter, bootstrapped } = useTheatreIntro();
+  const { unlockAudio, tryAutoplayAmbient, play } = useAudio();
   const prefersReducedMotion = useReducedMotion();
-  const mounted = useIsMounted();
-  const skipEntrance = isReturning;
-  const [phase, setPhase] = useState<IntroPhase>(
-    skipEntrance ? "hold" : "entering",
-  );
+  const [phase, setPhase] = useState<IntroPhase>("reveal");
+  const [loadProgress, setLoadProgress] = useState(0);
+  const loadFrameRef = useRef<number | null>(null);
+  const handoffRef = useRef(false);
 
   useEffect(() => {
-    if (isReturning) return;
-    document.documentElement.classList.add("theatre-active");
-    document.getElementById("theatre-boot")?.remove();
-  }, [isReturning]);
+    if (!bootstrapped || prefersReducedMotion || handoffRef.current) return;
+
+    handoffRef.current = true;
+    document.documentElement.classList.add("theatre-intro-live");
+
+    requestAnimationFrame(() => {
+      document.getElementById("theatre-boot")?.remove();
+    });
+  }, [bootstrapped, prefersReducedMotion]);
+
+  const unlockFromGesture = useCallback(() => {
+    unlockAudio();
+  }, [unlockAudio]);
+
+  useEffect(() => {
+    if (!bootstrapped || prefersReducedMotion || phase !== "reveal") return;
+
+    const timer = window.setTimeout(() => {
+      setPhase("loading");
+    }, THEATRE_INTRO_REVEAL_MS);
+
+    return () => window.clearTimeout(timer);
+  }, [bootstrapped, prefersReducedMotion, phase]);
 
   const beginExit = useCallback(
-    (withAudio = false) => {
-      if (withAudio) {
-        unlockAudio();
+    (fromUserGesture = false) => {
+      if (fromUserGesture) {
+        unlockFromGesture();
         requestAnimationFrame(() => play("elementAppear"));
+      } else if (isReturning) {
+        tryAutoplayAmbient();
       }
+
       setPhase((current) =>
-        current === "entering" || current === "hold" ? "exiting" : current,
+        current === "reveal" || current === "loading" || current === "ready"
+          ? "exiting"
+          : current,
       );
     },
-    [unlockAudio, play],
+    [isReturning, play, tryAutoplayAmbient, unlockFromGesture],
   );
 
   useEffect(() => {
-    if (prefersReducedMotion || phase !== "entering" || skipEntrance) return;
+    if (prefersReducedMotion || phase !== "loading") return;
 
-    const { delay, duration } = MOTION.theatreEntrance.enter;
-    const entranceMs = (delay + duration) * 1000 + 60;
-    const timer = window.setTimeout(() => {
-      setPhase("hold");
-    }, entranceMs);
+    const start = performance.now();
 
-    return () => window.clearTimeout(timer);
-  }, [prefersReducedMotion, phase, skipEntrance]);
+    const tick = (now: number) => {
+      const progress = Math.min(
+        100,
+        ((now - start) / THEATRE_INTRO_LOAD_MS) * 100,
+      );
+      setLoadProgress(progress);
 
-  useEffect(() => {
-    if (prefersReducedMotion || phase !== "hold") return;
+      if (progress < 100) {
+        loadFrameRef.current = requestAnimationFrame(tick);
+        return;
+      }
 
-    const holdMs = isReturning
-      ? THEATRE_INTRO_RETURN_TIMEOUT_MS
-      : THEATRE_INTRO_TIMEOUT_MS;
-    const timer = window.setTimeout(() => beginExit(false), holdMs);
+      if (isReturning) {
+        window.setTimeout(() => beginExit(false), 120);
+      } else {
+        setPhase("ready");
+      }
+    };
 
-    return () => window.clearTimeout(timer);
+    loadFrameRef.current = requestAnimationFrame(tick);
+
+    return () => {
+      if (loadFrameRef.current !== null) {
+        cancelAnimationFrame(loadFrameRef.current);
+        loadFrameRef.current = null;
+      }
+    };
   }, [prefersReducedMotion, phase, isReturning, beginExit]);
 
   useEffect(() => {
-    if (prefersReducedMotion || (phase !== "entering" && phase !== "hold")) {
-      return;
-    }
+    if (prefersReducedMotion || phase !== "ready") return;
 
     const onKeyDown = (event: KeyboardEvent) => {
-      if (
-        event.key === "Enter" ||
-        event.key === " " ||
-        event.key === "Escape"
-      ) {
+      if (event.key === "Enter" || event.key === " ") {
         event.preventDefault();
         beginExit(true);
       }
@@ -138,96 +127,72 @@ export function TheatreIntro() {
     return () => window.removeEventListener("keydown", onKeyDown);
   }, [prefersReducedMotion, phase, beginExit]);
 
-  const exitDuration = isReturning
-    ? MOTION.theatreExitReturn.duration
-    : MOTION.theatreExit.duration;
-  const exitEase = isReturning
-    ? MOTION.theatreExitReturn.ease
-    : MOTION.theatreExit.ease;
   const exiting = phase === "exiting";
-  const enterReady = phase === "hold";
+  const showEnterPrompt = phase === "ready";
+  const showProgress = phase === "loading" || phase === "ready" || exiting;
+  const contentVisible = phase !== "gone";
 
-  if (prefersReducedMotion || isReturning) return null;
-
-  const {
-    chrome,
-    subtitle: tagline,
-    enter: enterMotion,
-  } = MOTION.theatreEntrance;
-  const chromeMotion = entranceMotion(
-    chrome.delay,
-    chrome.duration,
-    skipEntrance,
-    10,
-  );
-  const taglineMotion = entranceMotion(
-    tagline.delay,
-    tagline.duration,
-    skipEntrance,
-  );
-  const enterHintMotion = entranceMotion(
-    enterMotion.delay,
-    enterMotion.duration,
-    skipEntrance,
-    8,
-  );
-  const titleMotion = titleEntranceMotion(skipEntrance);
+  if (!bootstrapped || prefersReducedMotion) {
+    return null;
+  }
 
   return (
     <AnimatePresence>
-      {phase !== "gone" ? (
+      {contentVisible ? (
         <m.div
           id="theatre-intro"
           role="dialog"
           aria-modal="true"
           aria-label="Welcome to DHRUVA"
-          className="theatre-intro theatre-stage fixed inset-0 z-[100] cursor-pointer overflow-hidden"
-          onClick={() => beginExit(true)}
+          aria-busy={phase === "loading" || undefined}
+          className={cn(
+            "theatre-intro theatre-curtain fixed inset-0 z-[200] overflow-hidden",
+            showEnterPrompt && "cursor-pointer",
+          )}
+          onClick={() => {
+            if (showEnterPrompt) beginExit(true);
+          }}
           onKeyDown={(event) => {
-            if (
-              event.key === "Enter" ||
-              event.key === " " ||
-              event.key === "Escape"
-            ) {
+            if (!showEnterPrompt) return;
+            if (event.key === "Enter" || event.key === " ") {
               event.preventDefault();
               beginExit(true);
             }
           }}
-          tabIndex={0}
+          tabIndex={showEnterPrompt ? 0 : -1}
           initial={{ opacity: 1 }}
-          animate={exiting ? { opacity: [1, 1, 0] } : { opacity: 1 }}
-          transition={
-            exiting
-              ? {
-                  duration: exitDuration,
-                  times: [0, 0.82, 1],
-                  ease: exitEase,
-                }
-              : { duration: 0 }
-          }
+          animate={{ opacity: exiting ? 0 : 1 }}
+          transition={{
+            duration: exiting ? 0.35 : 0,
+            delay: exiting ? 0.42 : 0,
+            ease: EXIT_EASE,
+          }}
           onAnimationComplete={() => {
             if (phase !== "exiting") return;
             setPhase("gone");
-            document.documentElement.classList.remove("theatre-active");
-            document.documentElement.classList.add("theatre-settling");
-            window.setTimeout(() => {
-              enter();
-            }, MOTION.theatreSettleMs);
-            window.setTimeout(() => {
-              document.documentElement.classList.remove("theatre-settling");
-            }, 420);
+            document.documentElement.classList.remove(
+              "theatre-active",
+              "theatre-intro-live",
+            );
+            enter();
           }}
         >
-          <div className="theatre-stage__paper" aria-hidden="true" />
-          <div className="theatre-stage__vignette" aria-hidden="true" />
-          <div className="theatre-stage__grain" aria-hidden="true" />
-
           <m.button
             type="button"
             className="theatre-stage__skip"
-            initial={chromeMotion.initial}
-            animate={exiting ? { opacity: 0 } : chromeMotion.animate}
-            transition={exiting ? chromeFade : chromeMotion.transition}
+            initial={{ opacity: 0, y: -8 }}
+            animate={
+              exiting
+                ? { opacity: 0, y: -12 }
+                : phase === "reveal"
+                  ? { opacity: 0, y: -8 }
+                  : { opacity: 1, y: 0 }
+            }
+            transition={{
+              duration: exiting ? EXIT_DURATION : 0.5,
+              delay: exiting ? 0 : 0.7,
+              ease: ENTRANCE_EASE,
+            }}
             onClick={(event) => {
               event.stopPropagation();
               beginExit(true);
@@ -238,9 +203,19 @@ export function TheatreIntro() {
 
           <m.header
             className="theatre-stage__chrome"
-            initial={chromeMotion.initial}
-            animate={exiting ? { opacity: 0, y: 0 } : chromeMotion.animate}
-            transition={exiting ? chromeFade : chromeMotion.transition}
+            initial={{ opacity: 0, y: -12 }}
+            animate={
+              exiting
+                ? { opacity: 0, y: -16 }
+                : phase === "reveal"
+                  ? { opacity: 0, y: -12 }
+                  : { opacity: 1, y: 0 }
+            }
+            transition={{
+              duration: exiting ? EXIT_DURATION : 0.58,
+              delay: exiting ? 0.02 : 0.48,
+              ease: ENTRANCE_EASE,
+            }}
           >
             <span>Creative Portfolio</span>
             <span>VOL 2026</span>
@@ -249,36 +224,39 @@ export function TheatreIntro() {
           <div className="theatre-stage__center">
             <div className="theatre-stage__brand">
               <m.div
-                className={[
-                  "theatre-intro__title-scaler origin-center will-change-transform",
-                  exiting ? "theatre-intro__title--cutout" : "",
-                ].join(" ")}
-                initial={titleMotion.initial}
-                animate={
-                  exiting
-                    ? {
-                        opacity: 1,
-                        y: 0,
-                        scale: isReturning
-                          ? TITLE_EXIT_SCALE_RETURN
-                          : TITLE_EXIT_SCALE,
-                      }
-                    : titleMotion.animate
-                }
+                className="theatre-stage__title-row"
+                aria-label="THE DHRUVA"
+                initial={titleSlideEnter.initial}
+                animate={exiting ? titleSlideExit : titleSlideEnter.animate}
                 transition={
                   exiting
-                    ? { duration: exitDuration, ease: exitEase }
-                    : titleMotion.transition
+                    ? { duration: EXIT_DURATION, ease: EXIT_EASE }
+                    : titleSlideEnter.transition
                 }
               >
-                <p className="theatre-stage__title">THE DHRUVA</p>
+                <span className="theatre-stage__title-part theatre-stage__title-part--left">
+                  THE
+                </span>
+                <span className="theatre-stage__title-part theatre-stage__title-part--right">
+                  DHRUVA
+                </span>
               </m.div>
 
               <m.p
                 className="theatre-stage__tagline"
-                initial={taglineMotion.initial}
-                animate={exiting ? { opacity: 0, y: 0 } : taglineMotion.animate}
-                transition={exiting ? chromeFade : taglineMotion.transition}
+                initial={{ opacity: 0, y: 22 }}
+                animate={
+                  exiting
+                    ? { opacity: 0, y: -18 }
+                    : phase === "reveal"
+                      ? { opacity: 0, y: 22 }
+                      : { opacity: 1, y: 0 }
+                }
+                transition={{
+                  duration: exiting ? EXIT_DURATION : 0.62,
+                  delay: exiting ? 0.08 : 0.52,
+                  ease: ENTRANCE_EASE,
+                }}
               >
                 Curating high-performance
                 <br />
@@ -290,31 +268,43 @@ export function TheatreIntro() {
           </div>
 
           <m.div
-            className={[
-              "theatre-stage__enter",
-              enterReady ? "theatre-stage__enter--ready" : "",
-            ].join(" ")}
-            initial={enterHintMotion.initial}
-            animate={exiting ? { opacity: 0, y: 0 } : enterHintMotion.animate}
-            transition={exiting ? chromeFade : enterHintMotion.transition}
+            className="theatre-stage__footer"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: showProgress && !exiting ? 1 : 0 }}
+            transition={{ duration: 0.4, ease: ENTRANCE_EASE }}
+            aria-hidden={!showProgress}
           >
-            <span className="theatre-stage__enter-text">
-              {mounted && isReturning ? "Welcome back" : "Enter Experience"}
-            </span>
-            <svg
-              className="theatre-stage__chevron"
-              viewBox="0 0 16 10"
-              fill="none"
-              aria-hidden="true"
+            <div
+              className="theatre-stage__progress"
+              role="progressbar"
+              aria-valuemin={0}
+              aria-valuemax={100}
+              aria-valuenow={Math.round(loadProgress)}
+              aria-label="Loading portfolio"
             >
-              <path
-                d="M1.5 1.5L8 8.5L14.5 1.5"
-                stroke="currentColor"
-                strokeWidth="1.15"
-                strokeLinecap="round"
-                strokeLinejoin="round"
+              <m.div
+                className="theatre-stage__progress-fill"
+                initial={{ scaleX: 0 }}
+                animate={{ scaleX: loadProgress / 100 }}
+                transition={{ duration: 0.12, ease: "linear" }}
               />
-            </svg>
+            </div>
+
+            <m.p
+              className={cn(
+                "theatre-stage__enter-prompt",
+                showEnterPrompt && "theatre-stage__enter-prompt--visible",
+              )}
+              initial={{ opacity: 0, y: 8 }}
+              animate={
+                showEnterPrompt && !exiting
+                  ? { opacity: 1, y: 0 }
+                  : { opacity: 0, y: 8 }
+              }
+              transition={{ duration: 0.42, ease: ENTRANCE_EASE }}
+            >
+              Press to enter & enable sound
+            </m.p>
           </m.div>
         </m.div>
       ) : null}

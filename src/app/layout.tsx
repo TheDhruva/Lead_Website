@@ -133,48 +133,15 @@ export default function RootLayout({ children }: RootLayoutProps) {
       <body className="antialiased">
         <div
           id="theatre-boot"
-          className="theatre-boot theatre-stage"
+          className="theatre-boot theatre-curtain"
           aria-hidden="true"
-        >
-          <div className="theatre-stage__paper" />
-          <div className="theatre-stage__vignette" />
-          <div className="theatre-stage__grain" />
-          <div className="theatre-stage__chrome">
-            <span>Creative Portfolio</span>
-            <span>VOL 2026</span>
-          </div>
-          <div className="theatre-stage__center">
-            <div className="theatre-stage__brand">
-              <p className="theatre-stage__title">THE DHRUVA</p>
-              <p className="theatre-stage__tagline">
-                Curating high-performance
-                <br />
-                digital environments for the
-                <br />
-                avant-garde
-              </p>
-            </div>
-          </div>
-          <div className="theatre-stage__enter">
-            <span className="theatre-stage__enter-text">Enter Experience</span>
-            <svg
-              className="theatre-stage__chevron"
-              viewBox="0 0 16 10"
-              fill="none"
-            >
-              <path
-                d="M1.5 1.5L8 8.5L14.5 1.5"
-                stroke="currentColor"
-                strokeWidth="1.15"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              />
-            </svg>
-          </div>
-        </div>
-        <script
+          suppressHydrationWarning
+        />
+        <Script
+          id="theatre-intro-boot"
+          strategy="beforeInteractive"
           dangerouslySetInnerHTML={{
-            __html: `(function(){try{if(window.matchMedia('(prefers-reduced-motion: reduce)').matches){document.documentElement.classList.add('theatre-skip');var b=document.getElementById('theatre-boot');if(b)b.remove();return;}if(localStorage.getItem('dhruva-intro-seen')==='1'){document.documentElement.classList.add('theatre-done','theatre-skip');var b2=document.getElementById('theatre-boot');if(b2)b2.remove();}}catch(e){}})();`,
+            __html: `(function(){try{var r=document.documentElement;if(window.matchMedia('(prefers-reduced-motion: reduce)').matches){r.classList.add('theatre-skip','theatre-done');return;}var t=localStorage.getItem('dhruva-theme');if(t==='dark'||(t!=='light'&&window.matchMedia('(prefers-color-scheme: dark)').matches)){r.classList.add('dark');}r.classList.add('theatre-active','theatre-locked');}catch(e){}})();`,
           }}
         />
         <ThemeProvider>

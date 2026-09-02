@@ -25,7 +25,7 @@ function ContactFormLazy() {
   });
 
   return (
-    <div ref={ref} className="min-h-[420px]">
+    <div ref={ref} className="min-h-0">
       {isInView ? <ContactForm /> : <ContactFormSkeleton />}
     </div>
   );
@@ -39,22 +39,30 @@ export function Contact() {
       className="section-contact section-tone-contact contact-scene"
       aria-labelledby="contact-heading"
     >
-      <Container className="contact-scene__body flex w-full flex-col gap-6 md:gap-7">
-        <div className="grid min-h-0 flex-1 grid-cols-1 items-center gap-6 lg:grid-cols-2 lg:gap-10 xl:gap-12">
-          <Reveal className="flex flex-col gap-5 lg:gap-6">
-            <div className="flex flex-col gap-4">
-              <h2
-                id="contact-heading"
-                className="max-w-[14ch] font-headline-xl text-[28px] leading-[1.12] tracking-tight text-foreground md:text-[34px] lg:text-[38px]"
-              >
-                Your Brand Deserves More Than Another Template.
-              </h2>
+      <Container className="contact-scene__body flex w-full min-w-0 max-w-none flex-col gap-5 md:max-h-full md:gap-3 lg:gap-4">
+        <div className="contact-scene__main grid min-h-0 min-w-0 flex-1 grid-cols-1 items-start gap-4 max-md:gap-3.5 md:items-center md:gap-0">
+          <Reveal className="contact-scene__intro flex min-w-0 flex-col gap-4 max-md:gap-3 md:gap-4">
+            <h2
+              id="contact-heading"
+              className="contact-scene__heading font-headline-xl font-extrabold text-foreground"
+            >
+              <span className="contact-scene__heading-line block">
+                Your Brand Deserves
+              </span>
+              <span className="contact-scene__heading-line block">
+                More Than Another
+              </span>
+              <span className="contact-scene__heading-line contact-scene__heading-line--accent block">
+                Template.
+              </span>
+            </h2>
 
+            <div className="flex flex-col gap-3 max-md:gap-2 md:gap-3">
               <a
                 href={resumeLink.href}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="group inline-flex min-h-11 w-fit items-center gap-3 text-foreground-secondary transition-all duration-[280ms] ease-[cubic-bezier(0.22,1,0.36,1)] hover:-translate-y-0.5 hover:text-foreground active:scale-[0.985] motion-reduce:active:scale-100 focus-visible:rounded-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--background)]"
+                className="contact-scene__resume-desktop group hidden min-h-11 w-fit items-center gap-3 text-foreground-secondary transition-all duration-[280ms] ease-[cubic-bezier(0.22,1,0.36,1)] hover:-translate-y-0.5 hover:text-foreground active:scale-[0.985] motion-reduce:active:scale-100 focus-visible:rounded-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--background)] md:inline-flex"
               >
                 <FileText
                   className="h-[18px] w-[18px] transition-transform duration-[280ms] ease-[cubic-bezier(0.22,1,0.36,1)] group-hover:scale-110"
@@ -67,16 +75,39 @@ export function Contact() {
               </a>
             </div>
 
-            <nav aria-label="Social links" className="flex flex-col gap-2.5">
+            <nav
+              aria-label="Social links"
+              className="contact-scene__links flex flex-col gap-2 md:gap-2"
+            >
+              <a
+                href={resumeLink.href}
+                target="_blank"
+                rel="noopener noreferrer"
+                aria-label={`View ${resumeLink.label}`}
+                className="contact-scene__link contact-scene__link--resume group inline-flex min-h-10 w-fit max-w-full min-w-0 items-center gap-1.5 text-foreground-secondary transition-all duration-[250ms] ease-[cubic-bezier(0.22,1,0.36,1)] hover:-translate-y-0.5 hover:text-foreground active:scale-[0.985] motion-reduce:active:scale-100 focus-visible:rounded-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--background)] md:hidden"
+              >
+                <FileText
+                  className="h-[18px] w-[18px] shrink-0 transition-transform duration-[250ms] ease-out group-hover:scale-110"
+                  aria-hidden="true"
+                  strokeWidth={1.75}
+                />
+                <span className="whitespace-nowrap font-label-md text-[13px] tracking-wide">
+                  Résumé
+                </span>
+              </a>
               {socialLinks.map((link) => (
-                <SocialIcon key={link.id} link={link} />
+                <SocialIcon
+                  key={link.id}
+                  link={link}
+                  className="contact-scene__link"
+                />
               ))}
             </nav>
           </Reveal>
 
           <Reveal
             index={1}
-            className="contact-scene__panel w-full p-4 md:p-6 lg:p-7"
+            className="contact-scene__panel min-w-0 w-full max-w-full self-start overflow-hidden p-4 max-md:px-3.5 max-md:py-3.5 md:self-center md:p-0"
           >
             <ContactFormLazy />
           </Reveal>
