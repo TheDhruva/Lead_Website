@@ -1,9 +1,16 @@
 "use client";
 
-import { type HTMLAttributes, type ReactNode, useEffect, useRef } from "react";
+import {
+  type HTMLAttributes,
+  type ReactNode,
+  useCallback,
+  useEffect,
+  useRef,
+} from "react";
 
 import { useCanPointerReact } from "@/hooks/use-can-pointer-react";
 import { lerp, pointerEngine } from "@/lib/pointer-engine";
+import { isScrollActive } from "@/lib/scroll-bus";
 import { cn } from "@/lib/utils";
 
 interface MagneticProps extends HTMLAttributes<HTMLDivElement> {
@@ -24,6 +31,17 @@ export function Magnetic({
 }: MagneticProps) {
   const canReact = useCanPointerReact();
   const rootRef = useRef<HTMLDivElement>(null);
+  const centerRef = useRef({ cx: 0, cy: 0 });
+
+  const measureCenter = useCallback(() => {
+    const el = rootRef.current;
+    if (!el) return;
+    const rect = el.getBoundingClientRect();
+    centerRef.current = {
+      cx: rect.left + rect.width / 2,
+      cy: rect.top + rect.height / 2,
+    };
+  }, []);
 
   useEffect(() => {
     if (!canReact) return;
@@ -33,14 +51,24 @@ export function Magnetic({
     const current = { x: 0, y: 0 };
     const max = Math.min(15, Math.max(6, strength));
 
-    return pointerEngine.subscribe((frame) => {
+    measureCenter();
+
+    const resizeObserver = new ResizeObserver(measureCenter);
+    resizeObserver.observe(el);
+    window.addEventListener("resize", measureCenter);
+    window.addEventListener("orientationchange", measureCenter);
+
+    const unsubscribe = pointerEngine.subscribe((frame) => {
+      if (isScrollActive()) {
+        el.style.transform = "";
+        return;
+      }
+
       let targetX = 0;
       let targetY = 0;
 
       if (frame.active) {
-        const rect = el.getBoundingClientRect();
-        const cx = rect.left + rect.width / 2;
-        const cy = rect.top + rect.height / 2;
+        const { cx, cy } = centerRef.current;
         const dx = frame.targetX - cx;
         const dy = frame.targetY - cy;
         const dist = Math.hypot(dx, dy);
@@ -61,12 +89,19 @@ export function Magnetic({
         el.style.transform = `translate3d(${current.x.toFixed(2)}px, ${current.y.toFixed(2)}px, 0)`;
       }
     });
-  }, [canReact, radius, strength]);
+
+    return () => {
+      resizeObserver.disconnect();
+      window.removeEventListener("resize", measureCenter);
+      window.removeEventListener("orientationchange", measureCenter);
+      unsubscribe();
+    };
+  }, [canReact, measureCenter, radius, strength]);
 
   return (
     <div
       ref={rootRef}
-      className={cn("magnetic inline-flex will-change-transform", className)}
+      className={cn("magnetic inline-flex", className)}
       {...props}
     >
       {children}

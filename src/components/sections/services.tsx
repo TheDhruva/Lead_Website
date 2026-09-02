@@ -7,30 +7,19 @@ import { Container } from "@/components/ui/container";
 import { SectionTitle } from "@/components/ui/section-title";
 import { ServiceCard } from "@/components/ui/service-card";
 import { services } from "@/data";
+import { useCinematicSection } from "@/hooks/use-cinematic-section";
 import { useMediaQuery } from "@/hooks/use-media-query";
 import { useReducedMotion } from "@/hooks/use-reduced-motion";
+import { flushScrollBus } from "@/lib/scroll-bus";
 import { getScrollContainer } from "@/lib/scroll-container";
+import {
+  registerServicesSpotlight,
+  unregisterServicesSpotlight,
+} from "@/lib/services-mobile-spotlight";
 import { cn } from "@/lib/utils";
 
-/** How strongly a new card must beat the current one before switching */
-const HYSTERESIS = 0.14;
-/** Minimum centrality before a card can become active */
-const ACTIVATE_FLOOR = 0.32;
-/** Content / media treat card as expanded above this spotlight */
-const EXPAND_CONTENT_AT = 0.48;
 /** Tap briefly holds scroll-driven updates so the choice feels intentional */
 const TAP_LOCK_MS = 650;
-
-function centralityScore(rect: DOMRect, viewportHeight: number) {
-  if (rect.bottom <= 0 || rect.top >= viewportHeight) return 0;
-
-  const cardCenter = rect.top + rect.height / 2;
-  const viewCenter = viewportHeight * 0.48;
-  const distance = Math.abs(cardCenter - viewCenter);
-  const maxDistance = viewportHeight * 0.32;
-  const linear = 1 - Math.min(distance / maxDistance, 1);
-  return linear * linear;
-}
 
 export function Services() {
   const isMobile = useMediaQuery("(max-width: 767px)");
@@ -42,8 +31,8 @@ export function Services() {
   const activeIdRef = useRef<string | null>(null);
   const lockUntilRef = useRef(0);
   const sectionRef = useRef<HTMLElement | null>(null);
+  useCinematicSection(sectionRef, "services");
   const primedRef = useRef(false);
-  const rafRef = useRef<number | null>(null);
 
   const registerCardRef = useCallback(
     (id: string, element: HTMLElement | null) => {
@@ -72,88 +61,25 @@ export function Services() {
     [markImageLoaded],
   );
 
-  const updateMobileSpotlight = useCallback(() => {
-    if (!isMobile) return;
-
-    const viewportHeight = window.innerHeight || 1;
-    let bestId: string | null = null;
-    let bestScore = 0;
-
-    cardRefs.current.forEach((element, id) => {
-      const score = centralityScore(
-        element.getBoundingClientRect(),
-        viewportHeight,
-      );
-
-      const grow = prefersReducedMotion
-        ? score >= EXPAND_CONTENT_AT
-          ? 2.85
-          : 1
-        : 1 + score * 1.9;
-      const opacity = prefersReducedMotion
-        ? score >= EXPAND_CONTENT_AT
-          ? 1
-          : 0.7
-        : 0.55 + score * 0.45;
-
-      element.style.setProperty("--spot-grow", String(grow));
-      element.style.setProperty("--spot-opacity", String(opacity));
-
-      if (score > bestScore) {
-        bestScore = score;
-        bestId = id;
-      }
-    });
-
-    if (Date.now() < lockUntilRef.current) return;
-
-    const currentId = activeIdRef.current;
-    const currentEl = currentId ? cardRefs.current.get(currentId) : null;
-    const currentScore = currentEl
-      ? centralityScore(currentEl.getBoundingClientRect(), viewportHeight)
-      : 0;
-
-    if (!bestId || bestScore < ACTIVATE_FLOOR) {
-      if (currentId && currentScore < 0.18) {
-        setActiveCard(null);
-      }
-      return;
-    }
-
-    if (bestId === currentId) return;
-
-    if (
-      currentId &&
-      currentScore > 0.22 &&
-      bestScore < currentScore + HYSTERESIS
-    ) {
-      return;
-    }
-
-    setActiveCard(bestId);
-  }, [isMobile, prefersReducedMotion, setActiveCard]);
-
-  const scheduleSpotlightUpdate = useCallback(() => {
-    if (rafRef.current !== null) return;
-    rafRef.current = window.requestAnimationFrame(() => {
-      rafRef.current = null;
-      updateMobileSpotlight();
-    });
-  }, [updateMobileSpotlight]);
-
   useEffect(() => {
     if (!isMobile) {
+      unregisterServicesSpotlight();
       primedRef.current = false;
       return;
     }
 
+    registerServicesSpotlight({
+      enabled: true,
+      prefersReducedMotion,
+      cardRefs: cardRefs.current,
+      activeIdRef,
+      lockUntilRef,
+      setActiveCard,
+      sectionElement: sectionRef.current,
+    });
+
     const section = sectionRef.current;
     const scrollRoot = getScrollContainer();
-    const onScrollOrResize = () => scheduleSpotlightUpdate();
-
-    scrollRoot?.addEventListener("scroll", onScrollOrResize, { passive: true });
-    window.addEventListener("resize", onScrollOrResize);
-
     const sectionObserver = section
       ? new IntersectionObserver(
           ([entry]) => {
@@ -167,7 +93,7 @@ export function Services() {
                 markImageLoaded(firstId);
               }
             }
-            scheduleSpotlightUpdate();
+            flushScrollBus();
           },
           {
             threshold: 0.15,
@@ -178,19 +104,13 @@ export function Services() {
       : null;
 
     if (section && sectionObserver) sectionObserver.observe(section);
-
-    scheduleSpotlightUpdate();
+    flushScrollBus();
 
     return () => {
-      scrollRoot?.removeEventListener("scroll", onScrollOrResize);
-      window.removeEventListener("resize", onScrollOrResize);
       sectionObserver?.disconnect();
-      if (rafRef.current !== null) {
-        cancelAnimationFrame(rafRef.current);
-        rafRef.current = null;
-      }
+      unregisterServicesSpotlight();
     };
-  }, [isMobile, scheduleSpotlightUpdate, setActiveCard, markImageLoaded]);
+  }, [isMobile, prefersReducedMotion, setActiveCard, markImageLoaded]);
 
   const handleActivate = useCallback(
     (id: string) => {
@@ -249,19 +169,25 @@ export function Services() {
       ref={sectionRef}
       id="services"
       data-snap-frame
+      data-scroll-anchor-ratio="0.44"
       className="section-frame section-tone-services section-grid-bg"
       aria-labelledby="services-heading"
     >
       <Container className="w-full max-w-none">
         <Reveal>
-          <SectionTitle as="h2" id="services-heading" className="mb-5 md:mb-8">
+          <SectionTitle
+            as="h2"
+            id="services-heading"
+            className="cinematic-layer cinematic-layer--title mb-5 md:mb-8"
+          >
             Services
           </SectionTitle>
         </Reveal>
         <Reveal index={1}>
           <div
+            data-scroll-anchor
             className={cn(
-              "services-container flex h-[min(520px,calc(100svh-var(--nav-safe-top)-6rem))] min-w-0 flex-col gap-3 md:h-[min(460px,calc(100svh-var(--nav-safe-top)-6.5rem))] md:flex-row md:gap-4 lg:gap-5",
+              "services-container cinematic-layer cinematic-layer--grid flex h-[min(520px,calc(100svh-var(--nav-safe-top)-6rem))] min-w-0 flex-col gap-3 md:h-[min(460px,calc(100svh-var(--nav-safe-top)-6.5rem))] md:flex-row md:gap-4 lg:gap-5",
               isMobile && "services-container--mobile",
             )}
             onMouseLeave={handleClear}

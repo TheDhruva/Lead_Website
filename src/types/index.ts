@@ -42,6 +42,10 @@ export interface VideoItem {
   src?: string;
   hevcSrc?: string;
   webmSrc?: string;
+  /** ~720p / lower-bitrate variants for mobile — optional until transcoded */
+  mobileSrc?: string;
+  mobileHevcSrc?: string;
+  mobileWebmSrc?: string;
   aspect: "portrait" | "landscape";
   featured?: boolean;
 }

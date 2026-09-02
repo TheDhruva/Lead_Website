@@ -2,6 +2,8 @@
 
 import { useEffect } from "react";
 
+import { resolveSectionId } from "@/constants";
+import { requestLazySectionMount } from "@/lib/lazy-section-mount";
 import { scrollToSectionElement } from "@/lib/scroll-position";
 import { useTheatreIntro } from "@/providers/theatre-intro-provider";
 
@@ -17,7 +19,8 @@ export function useHashScroll() {
     const hash = window.location.hash;
     if (!hash || hash.length < 2) return;
 
-    const id = hash.slice(1);
+    const id = resolveSectionId(hash.slice(1));
+    requestLazySectionMount(id);
     let attempts = 0;
 
     const tryScroll = () => {

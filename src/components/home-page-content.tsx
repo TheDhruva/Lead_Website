@@ -5,13 +5,12 @@ import dynamic from "next/dynamic";
 import { PageTransition } from "@/components/animations/page-transition";
 import { AudioGestureUnlock } from "@/components/audio-gesture-unlock";
 import { Navbar } from "@/components/layout/navbar";
-import { SectionScrollSnap } from "@/components/scroll/section-scroll-snap";
+import { ScrollIntentGuidance } from "@/components/scroll/scroll-intent-guidance";
 import { Hero } from "@/components/sections/hero";
 import { TheatreIntro } from "@/components/sections/theatre-intro";
 import { LazySection } from "@/components/ui/lazy-section";
 import { MuteButton } from "@/components/ui/mute-button";
 import { SectionSkeleton } from "@/components/ui/section-skeleton";
-import { VideoPrefetch } from "@/components/video-prefetch";
 import { SECTION_IDS } from "@/constants";
 import { useHashScroll } from "@/hooks/use-hash-scroll";
 import { SCROLL_CONTAINER_ID } from "@/lib/scroll-container";
@@ -66,10 +65,9 @@ export function HomePageContent() {
 
   return (
     <>
-      <VideoPrefetch />
       {!hasEntered ? <TheatreIntro /> : null}
       <HashScrollSync />
-      <SectionScrollSnap />
+      <ScrollIntentGuidance />
       <AudioGestureUnlock />
       {showMute ? <MuteButton /> : null}
       <PageTransition data-page-shell className="relative h-[100svh]">
@@ -90,6 +88,7 @@ export function HomePageContent() {
               id={SECTION_IDS.services}
               className="section-tone-services section-placeholder"
               minHeight="100svh"
+              scrollAnchorRatio="0.44"
             >
               <Services />
             </LazySection>
@@ -97,6 +96,7 @@ export function HomePageContent() {
               id={SECTION_IDS.video}
               className="section-tone-videos section-placeholder"
               minHeight="100svh"
+              scrollAnchorRatio="0.47"
             >
               <VideoShowcase />
             </LazySection>
@@ -104,10 +104,18 @@ export function HomePageContent() {
               id={SECTION_IDS.projects}
               className="section-tone-projects section-placeholder"
               minHeight="100svh"
+              scrollAnchorRatio="0.45"
             >
               <Projects />
             </LazySection>
-            <Contact />
+            <LazySection
+              id={SECTION_IDS.contact}
+              className="section-tone-contact section-placeholder"
+              minHeight="100svh"
+              scrollAnchorRatio="0.42"
+            >
+              <Contact />
+            </LazySection>
           </main>
         </div>
       </PageTransition>

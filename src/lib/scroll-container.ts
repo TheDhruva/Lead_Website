@@ -1,11 +1,13 @@
 import type Lenis from "lenis";
 
-import { LENIS_EASING, getLenisSnap } from "@/lib/lenis-section-snap";
+import { LENIS_EASING } from "@/lib/lenis-config";
 
 export const SCROLL_CONTAINER_ID = "scroll-container";
 
 let lenisInstance: Lenis | null = null;
 let programmaticScrollUntil = 0;
+let guidanceSettlingUntil = 0;
+let guidanceLockedUntil = 0;
 
 export function markProgrammaticScroll(durationMs = 1300): void {
   programmaticScrollUntil = performance.now() + durationMs;
@@ -13,6 +15,38 @@ export function markProgrammaticScroll(durationMs = 1300): void {
 
 export function isProgrammaticScroll(): boolean {
   return performance.now() < programmaticScrollUntil;
+}
+
+export function lockGuidance(durationMs: number): void {
+  guidanceLockedUntil = Math.max(
+    guidanceLockedUntil,
+    performance.now() + durationMs,
+  );
+}
+
+export function unlockGuidance(): void {
+  guidanceLockedUntil = 0;
+}
+
+export function isGuidanceLocked(): boolean {
+  return performance.now() < guidanceLockedUntil;
+}
+
+export function markGuidanceSettle(durationMs: number): void {
+  guidanceSettlingUntil = performance.now() + durationMs;
+  lockGuidance(durationMs);
+}
+
+export function isGuidanceSettling(): boolean {
+  return performance.now() < guidanceSettlingUntil;
+}
+
+export function cancelGuidanceSettle(): void {
+  guidanceSettlingUntil = 0;
+  const lenis = lenisInstance;
+  if (lenis) {
+    lenis.scrollTo(lenis.scroll, { immediate: true, lock: false });
+  }
 }
 
 export function registerLenis(instance: Lenis | null): void {
@@ -52,6 +86,8 @@ export interface ScrollContainerOptions {
   behavior?: ScrollBehavior;
   duration?: number;
   programmatic?: boolean;
+  lock?: boolean;
+  easing?: (t: number) => number;
 }
 
 export function scrollContainerTo(
@@ -64,25 +100,19 @@ export function scrollContainerTo(
       : behaviorOrOptions;
 
   const behavior = options.behavior ?? "smooth";
-  const duration = options.duration ?? 1.05;
+  const duration = options.duration ?? 1.02;
   const immediate = behavior === "auto";
 
   if (options.programmatic !== false && !immediate) {
     markProgrammaticScroll(duration * 1000 + 200);
-    getLenisSnap()?.stop();
-    window.setTimeout(
-      () => {
-        getLenisSnap()?.start();
-      },
-      duration * 1000 + 250,
-    );
   }
 
   if (lenisInstance) {
     lenisInstance.scrollTo(top, {
       immediate,
       duration,
-      easing: LENIS_EASING,
+      easing: options.easing ?? LENIS_EASING,
+      lock: options.lock ?? false,
     });
     return;
   }

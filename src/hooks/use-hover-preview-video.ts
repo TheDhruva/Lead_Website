@@ -12,6 +12,8 @@ interface UseHoverPreviewVideoOptions {
   enabled?: boolean;
   /** Parent videos section is on screen */
   sectionActive?: boolean;
+  /** Primary visible card — only this card loads/decodes media */
+  mediaActive?: boolean;
   /** Load preview frames before the card scrolls into view */
   preload?: boolean;
 }
@@ -21,6 +23,7 @@ export function useHoverPreviewVideo({
   rootMargin = "0px",
   enabled = true,
   sectionActive = true,
+  mediaActive = true,
   preload = false,
 }: UseHoverPreviewVideoOptions = {}) {
   const videoRef = useRef<HTMLVideoElement>(null);
@@ -34,7 +37,7 @@ export function useHoverPreviewVideo({
   const userPausedRef = useRef(false);
   const previewReadyRef = useRef(false);
 
-  const canInteract = enabled && sectionActive && isInView;
+  const canInteract = enabled && sectionActive && mediaActive && isInView;
 
   const seekPreview = useCallback((video: HTMLVideoElement) => {
     const duration = Number.isFinite(video.duration)
@@ -72,7 +75,8 @@ export function useHoverPreviewVideo({
 
   useEffect(() => {
     const video = videoRef.current;
-    const shouldPrepare = enabled && sectionActive && (isInView || preload);
+    const shouldPrepare =
+      enabled && sectionActive && mediaActive && (isInView || preload);
 
     if (!video || !shouldPrepare) {
       if (!preload) {
@@ -122,7 +126,12 @@ export function useHoverPreviewVideo({
       video.removeEventListener("seeked", onSeeked);
       video.pause();
     };
-  }, [enabled, isInView, preload, sectionActive, seekPreview]);
+  }, [enabled, isInView, mediaActive, preload, sectionActive, seekPreview]);
+
+  useEffect(() => {
+    if (mediaActive) return;
+    pauseAndReset();
+  }, [mediaActive, pauseAndReset]);
 
   useEffect(() => {
     if (canInteract) return;

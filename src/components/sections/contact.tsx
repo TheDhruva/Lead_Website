@@ -1,6 +1,7 @@
 "use client";
 
 import dynamic from "next/dynamic";
+import { useRef } from "react";
 
 import { FileText } from "lucide-react";
 
@@ -10,6 +11,7 @@ import { ContactFormSkeleton } from "@/components/ui/contact-form-skeleton";
 import { Container } from "@/components/ui/container";
 import { SocialIcon } from "@/components/ui/social-icon";
 import { resumeLink, socialLinks } from "@/data";
+import { useCinematicSection } from "@/hooks/use-cinematic-section";
 import { useIntersectionObserver } from "@/hooks/use-intersection-observer";
 
 const ContactForm = dynamic(
@@ -32,19 +34,27 @@ function ContactFormLazy() {
 }
 
 export function Contact() {
+  const sectionRef = useRef<HTMLElement>(null);
+  useCinematicSection(sectionRef, "contact");
+
   return (
     <section
+      ref={sectionRef}
       id="contact"
       data-snap-frame
+      data-scroll-anchor-ratio="0.42"
       className="section-contact section-tone-contact contact-scene"
       aria-labelledby="contact-heading"
     >
       <Container className="contact-scene__body flex w-full min-w-0 max-w-none flex-col gap-5 md:max-h-full md:gap-3 lg:gap-4">
-        <div className="contact-scene__main grid min-h-0 min-w-0 flex-1 grid-cols-1 items-start gap-4 max-md:gap-3.5 md:items-center md:gap-0">
-          <Reveal className="contact-scene__intro flex min-w-0 flex-col gap-4 max-md:gap-3 md:gap-4">
+        <div
+          data-scroll-anchor
+          className="contact-scene__main grid min-h-0 min-w-0 flex-1 grid-cols-1 items-start gap-4 max-md:gap-3.5 md:items-center md:gap-0"
+        >
+          <Reveal className="contact-scene__intro cinematic-layer cinematic-layer--links flex min-w-0 flex-col gap-4 max-md:gap-3 md:gap-4">
             <h2
               id="contact-heading"
-              className="contact-scene__heading font-headline-xl font-extrabold text-foreground"
+              className="contact-scene__heading cinematic-layer cinematic-layer--heading font-headline-xl font-extrabold text-foreground"
             >
               <span className="contact-scene__heading-line block">
                 Your Brand Deserves
@@ -107,7 +117,7 @@ export function Contact() {
 
           <Reveal
             index={1}
-            className="contact-scene__panel min-w-0 w-full max-w-full self-start overflow-hidden p-4 max-md:px-3.5 max-md:py-3.5 md:self-center md:p-0"
+            className="contact-scene__panel cinematic-layer cinematic-layer--panel min-w-0 w-full max-w-full self-start overflow-hidden p-4 max-md:px-3.5 max-md:py-3.5 md:self-center md:p-0"
           >
             <ContactFormLazy />
           </Reveal>

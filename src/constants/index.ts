@@ -19,6 +19,17 @@ export const SECTION_IDS = {
   contact: "contact",
 } as const;
 
+/** Legacy hashes map to current section ids. */
+const SECTION_ALIASES: Record<string, string> = {
+  hero: SECTION_IDS.work,
+  top: SECTION_IDS.work,
+  home: SECTION_IDS.work,
+};
+
+export function resolveSectionId(id: string): string {
+  return SECTION_ALIASES[id] ?? id;
+}
+
 export const CONTACT_SERVICES = [
   "Website",
   "Video Editing",

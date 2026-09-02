@@ -4,10 +4,15 @@ import {
   type CSSProperties,
   type ReactNode,
   type RefObject,
+  useEffect,
   useState,
 } from "react";
 
 import { useIntersectionObserver } from "@/hooks/use-intersection-observer";
+import {
+  hashTargetsSection,
+  subscribeLazySectionMount,
+} from "@/lib/lazy-section-mount";
 import { cn } from "@/lib/utils";
 
 interface LazySectionProps {
@@ -20,6 +25,8 @@ interface LazySectionProps {
   minHeight?: CSSProperties["minHeight"];
   /** Start loading this far before the section enters the viewport. */
   rootMargin?: string;
+  /** Visual anchor ratio for scroll guidance while placeholder is mounted. */
+  scrollAnchorRatio?: string;
 }
 
 /**
@@ -34,7 +41,9 @@ export function LazySection({
   className,
   minHeight = "min(66svh, 700px)",
   rootMargin = "0px 0px 600px 0px",
+  scrollAnchorRatio,
 }: LazySectionProps) {
+  const [forceMount, setForceMount] = useState(() => hashTargetsSection(id));
   const { ref, isInView } = useIntersectionObserver<HTMLElement>({
     threshold: 0,
     rootMargin,
@@ -44,15 +53,36 @@ export function LazySection({
     typeof window === "undefined" || "IntersectionObserver" in window,
   );
 
+  useEffect(() => {
+    if (!id) return;
+
+    const mount = () => setForceMount(true);
+    const unsubMount = subscribeLazySectionMount(id, mount);
+
+    const onHashChange = () => {
+      if (hashTargetsSection(id)) mount();
+    };
+
+    window.addEventListener("hashchange", onHashChange);
+    return () => {
+      unsubMount();
+      window.removeEventListener("hashchange", onHashChange);
+    };
+  }, [id]);
+
+  const shouldMount = forceMount || isInView;
+
   if (!supported) {
     return <div className={className}>{children}</div>;
   }
 
-  if (!isInView) {
+  if (!shouldMount) {
     return (
       <section
         ref={ref}
         id={id}
+        data-snap-frame
+        data-scroll-anchor-ratio={scrollAnchorRatio}
         className={cn("min-h-0", className)}
         style={{ minHeight }}
         aria-hidden="true"

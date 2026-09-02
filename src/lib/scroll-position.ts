@@ -1,22 +1,21 @@
+import { requestLazySectionMount } from "@/lib/lazy-section-mount";
 import {
-  getOffsetInScrollContainer,
-  getScrollContainer,
-  scrollContainerTo,
-} from "@/lib/scroll-container";
+  GUIDANCE_SETTLE_EASING,
+  getNavSettleDuration,
+} from "@/lib/lenis-config";
+import {
+  getSectionAnchorScrollY,
+  getNavSafeTopPx as readNavSafeTopPx,
+} from "@/lib/scroll-anchor";
+import { getScrollContainer, scrollContainerTo } from "@/lib/scroll-container";
 
-/** Fallback when CSS vars are not yet measured (~108px) */
+/** @deprecated Use getNavSafeTopPx from scroll-anchor */
 const NAV_SAFE_FALLBACK_PX = 108;
 
 /** Read --nav-safe-top from the document (set by useNavMetrics). */
 export function getNavSafeTopPx(): number {
   if (typeof window === "undefined") return NAV_SAFE_FALLBACK_PX;
-
-  const raw = getComputedStyle(document.documentElement)
-    .getPropertyValue("--nav-safe-top")
-    .trim();
-
-  const parsed = parseFloat(raw);
-  return Number.isFinite(parsed) && parsed > 0 ? parsed : NAV_SAFE_FALLBACK_PX;
+  return readNavSafeTopPx();
 }
 
 /** @deprecated Use getNavSafeTopPx */
@@ -50,18 +49,36 @@ export function getSectionScrollOffset(el: HTMLElement): number {
 }
 
 export function scrollToSectionElement(target: HTMLElement): void {
+  if (target.id) {
+    requestLazySectionMount(target.id);
+  }
+
+  const container = getScrollContainer();
+  const viewportH = container?.clientHeight ?? window.innerHeight;
+  const maxScroll = getPageEndScrollY();
+  const navSafeTop = getNavSafeTopPx();
+  const isCoarsePointer = window.matchMedia("(pointer: coarse)").matches;
+  const duration = getNavSettleDuration(isCoarsePointer);
+
   if (isContactSection(target)) {
     scrollContainerTo(getPageEndScrollY(), {
       behavior: "smooth",
-      duration: 1.05,
+      duration,
       programmatic: true,
+      lock: true,
+      easing: GUIDANCE_SETTLE_EASING,
     });
     return;
   }
 
-  scrollContainerTo(getOffsetInScrollContainer(target), {
-    behavior: "smooth",
-    duration: 1.05,
-    programmatic: true,
-  });
+  scrollContainerTo(
+    getSectionAnchorScrollY(target, viewportH, maxScroll, navSafeTop),
+    {
+      behavior: "smooth",
+      duration,
+      programmatic: true,
+      lock: true,
+      easing: GUIDANCE_SETTLE_EASING,
+    },
+  );
 }

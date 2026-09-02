@@ -29,6 +29,8 @@ interface VideoCardProps {
   priority?: boolean;
   featured?: boolean;
   sectionActive?: boolean;
+  /** Only decode/play when this is the primary visible card */
+  mediaActive?: boolean;
   /** Stagger media loading within a grid (ms) */
   loadDelay?: number;
 }
@@ -39,6 +41,7 @@ function VideoCardComponent({
   priority,
   featured = false,
   sectionActive = true,
+  mediaActive = true,
   loadDelay = 0,
 }: VideoCardProps) {
   const prefersReducedMotion = useReducedMotion();
@@ -49,6 +52,7 @@ function VideoCardComponent({
   const [isPlaying, setIsPlaying] = useState(false);
   const [isBuffering, setIsBuffering] = useState(false);
   const [loadReady, setLoadReady] = useState(loadDelay <= 0);
+  const [eagerBuffer, setEagerBuffer] = useState(false);
   const {
     containerRef,
     videoRef,
@@ -62,13 +66,19 @@ function VideoCardComponent({
     rootMargin: "0px",
     enabled: !prefersReducedMotion,
     sectionActive,
-    preload: loadReady && sectionActive,
+    mediaActive,
+    preload: loadReady && sectionActive && mediaActive,
   });
   const showVideo = Boolean(video.src) && !videoFailed;
   const isPortrait = featured || video.aspect === "portrait";
 
-  const shouldLoadMedia = loadReady;
+  const shouldLoadMedia = loadReady && mediaActive;
   const videoSources = useMemo(() => getVideoSources(video), [video]);
+  const videoPreload = !shouldLoadMedia
+    ? "none"
+    : eagerBuffer
+      ? "auto"
+      : "metadata";
 
   useEffect(() => {
     if (loadDelay <= 0) return;
@@ -80,7 +90,16 @@ function VideoCardComponent({
     const videoEl = videoRef.current;
     if (!videoEl || !shouldLoadMedia) return;
     videoEl.load();
-  }, [shouldLoadMedia, videoRef, videoSources]);
+  }, [shouldLoadMedia, eagerBuffer, videoRef, videoSources]);
+
+  const requestEagerBuffer = useCallback(() => {
+    setEagerBuffer(true);
+  }, []);
+
+  const handleCardPointerEnter = useCallback(() => {
+    requestEagerBuffer();
+    handlePointerEnter();
+  }, [handlePointerEnter, requestEagerBuffer]);
 
   useEffect(() => {
     const videoEl = videoRef.current;
@@ -120,6 +139,7 @@ function VideoCardComponent({
   const handleTogglePlay = useCallback(() => {
     const videoEl = videoRef.current;
     if (!videoEl || !canInteract) return;
+    requestEagerBuffer();
     if (videoEl.paused) {
       markUserPaused(false);
       if (videoEl.readyState === HTMLMediaElement.HAVE_NOTHING) {
@@ -140,7 +160,13 @@ function VideoCardComponent({
         setVideoAudioActive(false);
       }
     }
-  }, [canInteract, markUserPaused, setVideoAudioActive, videoRef]);
+  }, [
+    canInteract,
+    markUserPaused,
+    requestEagerBuffer,
+    setVideoAudioActive,
+    videoRef,
+  ]);
 
   useEffect(() => {
     if (sectionActive) return;
@@ -228,7 +254,7 @@ function VideoCardComponent({
         <article
           ref={containerRef}
           tabIndex={0}
-          onPointerEnter={showVideo ? handlePointerEnter : undefined}
+          onPointerEnter={showVideo ? handleCardPointerEnter : undefined}
           onPointerLeave={showVideo ? handlePointerLeave : undefined}
           onClick={showVideo ? handleTogglePlay : undefined}
           onKeyDown={showVideo ? handleCardKeyDown : undefined}
@@ -249,7 +275,7 @@ function VideoCardComponent({
               muted={isMuted}
               loop
               playsInline
-              preload={shouldLoadMedia ? "auto" : "none"}
+              preload={videoPreload}
               aria-hidden="true"
               onError={handleVideoError}
             >

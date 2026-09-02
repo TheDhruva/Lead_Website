@@ -1,13 +1,19 @@
 /**
  * Re-encodes showcase videos for web delivery and extracts poster frames.
  *
- * Outputs:
- *   public/videos/showcase-{n}.mp4        — H.264 (compatible fallback)
- *   public/videos/showcase-{n}-hevc.mp4   — HEVC (Safari / iOS)
- *   public/videos/showcase-{n}.webm       — VP9 (Chrome / Firefox)
- *   public/images/videos/showcase-{n}-poster.webp
+ * Desktop outputs:
+ *   public/videos/showcase-{n}.mp4
+ *   public/videos/showcase-{n}-hevc.mp4
+ *   public/videos/showcase-{n}.webm
  *
- * Usage: node scripts/optimize-videos.mjs
+ * Mobile outputs (~720p portrait / 960px landscape, higher CRF):
+ *   public/videos/showcase-{n}-mobile.mp4
+ *   public/videos/showcase-{n}-mobile-hevc.mp4
+ *   public/videos/showcase-{n}-mobile.webm
+ *
+ * Usage:
+ *   node scripts/optimize-videos.mjs           — desktop + mobile
+ *   node scripts/optimize-videos.mjs --mobile  — mobile variants only
  */
 import { execSync } from "node:child_process";
 import fs from "node:fs";
@@ -17,6 +23,7 @@ const root = process.cwd();
 const videosDir = path.join(root, "public", "videos");
 const postersDir = path.join(root, "public", "images", "videos");
 const backupDir = path.join(root, "assets", "videos", "originals");
+const mobileOnly = process.argv.includes("--mobile");
 
 /** @type {{ id: number; aspect: "portrait" | "landscape" }[]} */
 const items = [
@@ -44,41 +51,36 @@ function backupOriginal(srcPath, name) {
   }
 }
 
-function optimizeItem({ id, aspect }) {
-  const input = path.join(videosDir, `showcase-${id}.mp4`);
-  if (!fs.existsSync(input)) {
-    console.warn(`⚠ Skipping showcase-${id}: ${input} not found`);
-    return;
-  }
+function desktopScale(aspect) {
+  return aspect === "portrait"
+    ? "scale='min(720,iw)':-2:flags=lanczos"
+    : "scale='min(1280,iw)':-2:flags=lanczos";
+}
 
-  console.log(`\n▶ showcase-${id} (${aspect})`);
+function mobileScale(aspect) {
+  return aspect === "portrait"
+    ? "scale='min(480,iw)':-2:flags=lanczos"
+    : "scale='min(960,iw)':-2:flags=lanczos";
+}
 
-  const posterOut = path.join(postersDir, `showcase-${id}-poster.webp`);
-  const h264Out = path.join(videosDir, `showcase-${id}.mp4`);
-  const h264Tmp = path.join(videosDir, `showcase-${id}.tmp.mp4`);
-  const hevcOut = path.join(videosDir, `showcase-${id}-hevc.mp4`);
-  const hevcTmp = path.join(videosDir, `showcase-${id}-hevc.tmp.mp4`);
-  const webmOut = path.join(videosDir, `showcase-${id}.webm`);
-  const webmTmp = path.join(videosDir, `showcase-${id}.tmp.webm`);
-
-  backupOriginal(h264Out, `showcase-${id}.mp4`);
-
-  const scale =
-    aspect === "portrait"
-      ? "scale='min(720,iw)':-2:flags=lanczos"
-      : "scale='min(1280,iw)':-2:flags=lanczos";
-
-  console.log("  poster frame…");
-  run(
-    `ffmpeg -y -ss 00:00:01 -i "${input}" -frames:v 1 -vf "${scale}" -q:v 80 "${posterOut}"`,
-  );
+function encodeVariants(
+  input,
+  aspect,
+  { prefix, scale, h264Crf, hevcCrf, webmCrf },
+) {
+  const h264Out = path.join(videosDir, `${prefix}.mp4`);
+  const h264Tmp = path.join(videosDir, `${prefix}.tmp.mp4`);
+  const hevcOut = path.join(videosDir, `${prefix}-hevc.mp4`);
+  const hevcTmp = path.join(videosDir, `${prefix}-hevc.tmp.mp4`);
+  const webmOut = path.join(videosDir, `${prefix}.webm`);
+  const webmTmp = path.join(videosDir, `${prefix}.tmp.webm`);
 
   console.log("  H.264…");
   run(
     [
       `ffmpeg -y -i "${input}"`,
       `-vf "${scale}"`,
-      "-c:v libx264 -preset slow -crf 28",
+      `-c:v libx264 -preset slow -crf ${h264Crf}`,
       "-movflags +faststart",
       "-an",
       `"${h264Tmp}"`,
@@ -90,7 +92,7 @@ function optimizeItem({ id, aspect }) {
     [
       `ffmpeg -y -i "${input}"`,
       `-vf "${scale}"`,
-      "-c:v libx265 -preset medium -crf 30 -tag:v hvc1",
+      `-c:v libx265 -preset medium -crf ${hevcCrf} -tag:v hvc1`,
       "-movflags +faststart",
       "-an",
       `"${hevcTmp}"`,
@@ -102,7 +104,7 @@ function optimizeItem({ id, aspect }) {
     [
       `ffmpeg -y -i "${input}"`,
       `-vf "${scale}"`,
-      "-c:v libvpx-vp9 -crf 38 -b:v 0 -row-mt 1",
+      `-c:v libvpx-vp9 -crf ${webmCrf} -b:v 0 -row-mt 1`,
       "-an",
       `"${webmTmp}"`,
     ].join(" "),
@@ -112,11 +114,65 @@ function optimizeItem({ id, aspect }) {
   fs.renameSync(hevcTmp, hevcOut);
   fs.renameSync(webmTmp, webmOut);
 
-  const sizes = [h264Out, hevcOut, webmOut, posterOut].map((file) => {
-    const kb = (fs.statSync(file).size / 1024).toFixed(0);
-    return `    ${path.basename(file)} — ${kb} KB`;
+  return [h264Out, hevcOut, webmOut];
+}
+
+function optimizeDesktopItem({ id, aspect }) {
+  const input = path.join(videosDir, `showcase-${id}.mp4`);
+  if (!fs.existsSync(input)) {
+    console.warn(`⚠ Skipping showcase-${id}: ${input} not found`);
+    return;
+  }
+
+  console.log(`\n▶ showcase-${id} desktop (${aspect})`);
+  backupOriginal(input, `showcase-${id}.mp4`);
+
+  const posterOut = path.join(postersDir, `showcase-${id}-poster.webp`);
+  const scale = desktopScale(aspect);
+
+  console.log("  poster frame…");
+  run(
+    `ffmpeg -y -ss 00:00:01 -i "${input}" -frames:v 1 -vf "${scale}" -q:v 80 "${posterOut}"`,
+  );
+
+  const files = encodeVariants(input, aspect, {
+    prefix: `showcase-${id}`,
+    scale,
+    h264Crf: 28,
+    hevcCrf: 30,
+    webmCrf: 38,
   });
-  console.log(sizes.join("\n"));
+
+  files.concat(posterOut).forEach((file) => {
+    const kb = (fs.statSync(file).size / 1024).toFixed(0);
+    console.log(`    ${path.basename(file)} — ${kb} KB`);
+  });
+}
+
+function optimizeMobileItem({ id, aspect }) {
+  const source = fs.existsSync(path.join(backupDir, `showcase-${id}.mp4`))
+    ? path.join(backupDir, `showcase-${id}.mp4`)
+    : path.join(videosDir, `showcase-${id}.mp4`);
+
+  if (!fs.existsSync(source)) {
+    console.warn(`⚠ Skipping mobile showcase-${id}: source not found`);
+    return;
+  }
+
+  console.log(`\n▶ showcase-${id} mobile (${aspect})`);
+
+  const files = encodeVariants(source, aspect, {
+    prefix: `showcase-${id}-mobile`,
+    scale: mobileScale(aspect),
+    h264Crf: 32,
+    hevcCrf: 34,
+    webmCrf: 42,
+  });
+
+  files.forEach((file) => {
+    const kb = (fs.statSync(file).size / 1024).toFixed(0);
+    console.log(`    ${path.basename(file)} — ${kb} KB`);
+  });
 }
 
 function main() {
@@ -128,13 +184,20 @@ function main() {
   }
 
   ensureDir(postersDir);
-  console.log("Optimizing showcase videos…");
+  console.log(
+    mobileOnly
+      ? "Encoding mobile showcase videos…"
+      : "Optimizing showcase videos…",
+  );
 
   for (const item of items) {
-    optimizeItem(item);
+    if (!mobileOnly) {
+      optimizeDesktopItem(item);
+    }
+    optimizeMobileItem(item);
   }
 
-  console.log("\n✓ Done. Originals saved in assets/videos/originals/");
+  console.log("\n✓ Done.");
 }
 
 main();

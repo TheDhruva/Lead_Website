@@ -9,11 +9,13 @@ import { Container } from "@/components/ui/container";
 import { EASING_OUT, FACE_CYCLE_INTERVAL_MS, MOTION } from "@/constants";
 import { heroPortraits } from "@/data";
 import { useCanPointerReact } from "@/hooks/use-can-pointer-react";
+import { useCinematicSection } from "@/hooks/use-cinematic-section";
 import { useFaceCycle } from "@/hooks/use-face-cycle";
 import { useMediaQuery } from "@/hooks/use-media-query";
 import { useReducedMotion } from "@/hooks/use-reduced-motion";
 import { useSmoothScroll } from "@/hooks/use-smooth-scroll";
 import { lerp, pointerEngine } from "@/lib/pointer-engine";
+import { isScrollActive } from "@/lib/scroll-bus";
 import { cn } from "@/lib/utils";
 import type { HeroPortrait } from "@/types";
 
@@ -49,17 +51,40 @@ function PortraitStack({
     }
 
     const current = { x: 0, y: 0, rx: 0, ry: 0 };
+    const frameCenterRef = { cx: 0, cy: 0, invW: 1, invH: 1 };
 
-    return pointerEngine.subscribe((frame) => {
+    const measureFrame = () => {
       const frameEl = frameRef.current;
+      if (!frameEl) return;
+      const rect = frameEl.getBoundingClientRect();
+      frameCenterRef.cx = rect.left + rect.width / 2;
+      frameCenterRef.cy = rect.top + rect.height / 2;
+      frameCenterRef.invW = 1 / Math.max(rect.width, 1);
+      frameCenterRef.invH = 1 / Math.max(rect.height, 1);
+    };
+
+    measureFrame();
+
+    const frameEl = frameRef.current;
+    const resizeObserver =
+      frameEl && typeof ResizeObserver !== "undefined"
+        ? new ResizeObserver(measureFrame)
+        : null;
+    resizeObserver?.observe(frameEl!);
+    window.addEventListener("resize", measureFrame);
+    window.addEventListener("orientationchange", measureFrame);
+
+    const unsubscribe = pointerEngine.subscribe((frame) => {
+      if (isScrollActive()) {
+        if (gazeRef.current) gazeRef.current.style.transform = "";
+        return;
+      }
+
       const gaze = gazeRef.current;
 
-      if (frameEl && gaze && frame.active) {
-        const rect = frameEl.getBoundingClientRect();
-        const cx = rect.left + rect.width / 2;
-        const cy = rect.top + rect.height / 2;
-        const dx = (frame.currentX - cx) / Math.max(rect.width, 1);
-        const dy = (frame.currentY - cy) / Math.max(rect.height, 1);
+      if (gaze && frame.active) {
+        const dx = (frame.currentX - frameCenterRef.cx) * frameCenterRef.invW;
+        const dy = (frame.currentY - frameCenterRef.cy) * frameCenterRef.invH;
         const targetX = Math.max(-1, Math.min(1, dx)) * 10;
         const targetY = Math.max(-1, Math.min(1, dy)) * 7;
         const targetRy = Math.max(-1, Math.min(1, dx)) * 4;
@@ -73,6 +98,13 @@ function PortraitStack({
         gaze.style.transform = `translate3d(${current.x.toFixed(2)}px, ${current.y.toFixed(2)}px, 0) rotateX(${current.rx.toFixed(2)}deg) rotateY(${current.ry.toFixed(2)}deg)`;
       }
     });
+
+    return () => {
+      resizeObserver?.disconnect();
+      window.removeEventListener("resize", measureFrame);
+      window.removeEventListener("orientationchange", measureFrame);
+      unsubscribe();
+    };
   }, [gazeEnabled]);
 
   if (!active) return null;
@@ -81,7 +113,7 @@ function PortraitStack({
     <div
       ref={frameRef}
       className={cn(
-        "pointer-events-none absolute top-1/2 hidden h-[18rem] w-48 -translate-y-1/2 lg:block xl:h-[22rem] xl:w-60",
+        "pointer-events-none absolute top-1/2 hidden h-[18rem] w-48 -translate-y-1/2 lg:block xl:h-[22rem] xl:w-60 cinematic-layer cinematic-layer--visual",
         side === "left" ? "left-0 xl:-left-2" : "right-0 xl:-right-2",
       )}
       aria-hidden="true"
@@ -93,7 +125,7 @@ function PortraitStack({
     >
       <div
         ref={gazeRef}
-        className="hero-cutout-gaze absolute inset-0 will-change-transform"
+        className="hero-cutout-gaze absolute inset-0"
         style={{ transformStyle: "preserve-3d" }}
       >
         <AnimatePresence mode="sync" initial={false}>
@@ -153,8 +185,11 @@ function HeroMobile() {
 
   return (
     <div className="hero-mobile relative z-10 flex w-full flex-col lg:hidden">
-      <div className="hero-mobile__stage relative flex w-full flex-col items-center">
-        <div className="hero-mobile__visual relative w-full max-w-full">
+      <div
+        className="hero-mobile__stage relative flex w-full flex-col items-center"
+        data-scroll-anchor
+      >
+        <div className="hero-mobile__visual cinematic-layer cinematic-layer--visual relative w-full max-w-full">
           <m.div
             className="hero-mobile__portrait-bg pointer-events-none"
             aria-hidden="true"
@@ -182,7 +217,7 @@ function HeroMobile() {
 
           <h1
             id="hero-heading-mobile"
-            className="hero-mobile__headline font-headline-xl font-extrabold text-foreground"
+            className="hero-mobile__headline cinematic-layer cinematic-layer--headline font-headline-xl font-extrabold text-foreground"
           >
             <m.span
               className="hero-mobile__headline-line1 block"
@@ -203,7 +238,7 @@ function HeroMobile() {
         </div>
 
         <m.p
-          className="hero-mobile__copy relative z-20 mx-auto max-w-[21rem] px-1 pt-3 text-center font-body-lg text-foreground-secondary"
+          className="hero-mobile__copy cinematic-layer cinematic-layer--copy relative z-20 mx-auto max-w-[21rem] px-1 pt-3 text-center font-body-lg text-foreground-secondary"
           initial={prefersReducedMotion ? false : { opacity: 0, y: 14 }}
           animate={{ opacity: 1, y: 0 }}
           transition={
@@ -217,7 +252,7 @@ function HeroMobile() {
         </m.p>
 
         <m.div
-          className="hero-mobile__cta relative z-20 flex w-full flex-col items-center gap-2.5 px-1 pt-4 pb-[max(0.35rem,env(safe-area-inset-bottom))]"
+          className="hero-mobile__cta cinematic-layer cinematic-layer--cta relative z-20 flex w-full flex-col items-center gap-2.5 px-1 pt-4 pb-[max(0.35rem,env(safe-area-inset-bottom))]"
           initial={prefersReducedMotion ? false : { opacity: 0, y: 12 }}
           animate={{ opacity: 1, y: 0 }}
           transition={
@@ -251,8 +286,10 @@ function HeroMobile() {
 }
 
 export function Hero() {
+  const sectionRef = useRef<HTMLElement>(null);
   const isDesktop = useMediaQuery("(min-width: 1024px)");
   const canReact = useCanPointerReact();
+  useCinematicSection(sectionRef, "hero");
   const { index } = useFaceCycle(
     isDesktop ? CUTOUT_COUNT : 1,
     FACE_CYCLE_INTERVAL_MS,
@@ -265,8 +302,10 @@ export function Hero() {
 
   return (
     <section
+      ref={sectionRef}
       id="work"
       data-snap-frame
+      data-scroll-anchor-ratio="0.4"
       className="section-frame section-frame--hero section-tone-hero relative items-center"
       aria-labelledby="hero-heading"
     >
@@ -280,6 +319,7 @@ export function Hero() {
           />
 
           <m.div
+            data-scroll-anchor
             className="relative z-10 mx-auto flex max-w-4xl flex-col items-center px-2 text-center sm:px-0"
             initial={
               prefersReducedMotion ? false : { opacity: 0, y: 40, scale: 0.97 }
@@ -293,19 +333,19 @@ export function Hero() {
           >
             <h1
               id="hero-heading"
-              className="mb-5 font-headline-xl text-headline-xl font-extrabold tracking-tighter text-foreground md:mb-6 md:text-[68px] md:leading-[1.08] lg:text-[72px]"
+              className="cinematic-layer cinematic-layer--headline mb-5 font-headline-xl text-headline-xl font-extrabold tracking-tighter text-foreground md:mb-6 md:text-[68px] md:leading-[1.08] lg:text-[72px]"
             >
               Make Audience <br />
               <span className="text-foreground-secondary">
                 Feel Your Presence
               </span>
             </h1>
-            <p className="mx-auto mb-8 max-w-2xl font-body-lg text-body-lg text-foreground-secondary md:mb-9">
+            <p className="cinematic-layer cinematic-layer--copy mx-auto mb-8 max-w-2xl font-body-lg text-body-lg text-foreground-secondary md:mb-9">
               Beautiful websites, powerful visuals, and videos that make your
               brand impossible to ignore. A cinematic approach to digital
               presence.
             </p>
-            <div className="flex flex-col items-center justify-center gap-4 sm:flex-row">
+            <div className="cinematic-layer cinematic-layer--cta flex flex-col items-center justify-center gap-4 sm:flex-row">
               <Button size="lg" sfx onClick={() => scrollTo("#contact")}>
                 I&apos;m Ready To Grow
               </Button>

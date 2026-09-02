@@ -6,41 +6,35 @@ import { videoItems } from "@/data";
 import { getVideoSources } from "@/lib/video-source";
 
 /**
- * Warms the HTTP cache for showcase videos during the intro overlay
- * so hover playback starts without buffering delay.
+ * Warms HTTP cache for the featured video once the Videos section is near.
+ * Mount inside VideoShowcase (or after lazy section loads) — not on initial page.
  */
 export function VideoPrefetch() {
   useEffect(() => {
-    const elements: HTMLVideoElement[] = [];
+    const featured = videoItems.find((item) => item.featured) ?? videoItems[0];
+    if (!featured?.src) return;
 
-    for (const item of videoItems) {
-      if (!item.src) continue;
+    const video = document.createElement("video");
+    video.muted = true;
+    video.playsInline = true;
+    video.preload = "metadata";
 
-      const video = document.createElement("video");
-      video.muted = true;
-      video.playsInline = true;
-      video.preload = "auto";
-
-      for (const source of getVideoSources(item)) {
-        const track = document.createElement("source");
-        track.src = source.src;
-        track.type = source.type;
-        video.appendChild(track);
-      }
-
-      video.load();
-      elements.push(video);
+    for (const source of getVideoSources(featured)) {
+      const track = document.createElement("source");
+      track.src = source.src;
+      track.type = source.type;
+      video.appendChild(track);
     }
 
+    video.load();
+
     return () => {
-      for (const video of elements) {
-        video.pause();
-        video.removeAttribute("src");
-        while (video.firstChild) {
-          video.removeChild(video.firstChild);
-        }
-        video.load();
+      video.pause();
+      video.removeAttribute("src");
+      while (video.firstChild) {
+        video.removeChild(video.firstChild);
       }
+      video.load();
     };
   }, []);
 

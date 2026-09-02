@@ -48,6 +48,30 @@ class PointerEngine {
     this.lastTarget = null;
   };
 
+  private scrollPaused = false;
+
+  setScrollPaused(paused: boolean) {
+    if (this.scrollPaused === paused) return;
+    this.scrollPaused = paused;
+
+    if (paused) {
+      if (this.rafId !== null) {
+        cancelAnimationFrame(this.rafId);
+        this.rafId = null;
+      }
+      return;
+    }
+
+    if (this.enabled && this.subscribers.size > 0 && this.rafId === null) {
+      this.lastTime = performance.now();
+      this.rafId = requestAnimationFrame(this.tick);
+    }
+  }
+
+  isScrollPaused(): boolean {
+    return this.scrollPaused;
+  }
+
   setEnabled(next: boolean) {
     if (this.enabled === next) return;
     this.enabled = next;
@@ -108,6 +132,11 @@ class PointerEngine {
   private tick = (time: number) => {
     if (!this.enabled || this.subscribers.size === 0) {
       this.stop();
+      return;
+    }
+
+    if (this.scrollPaused) {
+      this.rafId = null;
       return;
     }
 

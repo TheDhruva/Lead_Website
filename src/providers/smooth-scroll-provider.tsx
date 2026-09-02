@@ -10,17 +10,17 @@ import {
 } from "react";
 
 import type Lenis from "lenis";
-import type Snap from "lenis/snap";
 
 import { useReducedMotion } from "@/hooks/use-reduced-motion";
-import {
-  LENIS_EASING,
-  observeLenisSnapTargets,
-  refreshLenisSnapElements,
-  registerLenisSnap,
-} from "@/lib/lenis-section-snap";
+import { LENIS_EASING, getLenisOptions } from "@/lib/lenis-config";
 import { SCROLL_CONTAINER_ID, registerLenis } from "@/lib/scroll-container";
+import {
+  type ScrollDirection,
+  publishScrollMotion,
+} from "@/lib/scroll-motion-engine";
 import { useTheatreIntro } from "@/providers/theatre-intro-provider";
+
+export { LENIS_EASING };
 
 const LenisContext = createContext<Lenis | null>(null);
 
@@ -33,23 +33,55 @@ interface SmoothScrollProviderProps {
 }
 
 const MAIN_CONTENT_ID = "main-content";
+const LENIS_IDLE_FRAMES = 90;
 
 export function SmoothScrollProvider({ children }: SmoothScrollProviderProps) {
   const prefersReducedMotion = useReducedMotion();
   const { hasEntered } = useTheatreIntro();
   const [lenis, setLenis] = useState<Lenis | null>(null);
   const rafIdRef = useRef<number | null>(null);
+  const idleFramesRef = useRef(0);
+  const instanceRef = useRef<Lenis | null>(null);
 
   useEffect(() => {
     if (prefersReducedMotion || !hasEntered) return;
 
     const isCoarsePointer = window.matchMedia("(pointer: coarse)").matches;
 
-    let instance: Lenis | null = null;
-    let snap: Snap | null = null;
-    let unobserveSnap: (() => void) | null = null;
     let cancelled = false;
     let retryId = 0;
+    let wrapperEl: HTMLElement | null = null;
+
+    function rafLoop(time: number) {
+      const lenisInstance = instanceRef.current;
+      if (!lenisInstance) {
+        rafIdRef.current = null;
+        return;
+      }
+
+      lenisInstance.raf(time);
+
+      const velocity = Math.abs(lenisInstance.velocity ?? 0);
+      if (velocity > 0.02) {
+        idleFramesRef.current = 0;
+      } else {
+        idleFramesRef.current += 1;
+      }
+
+      if (idleFramesRef.current >= LENIS_IDLE_FRAMES) {
+        rafIdRef.current = null;
+        idleFramesRef.current = 0;
+        return;
+      }
+
+      rafIdRef.current = requestAnimationFrame(rafLoop);
+    }
+
+    const resumeRaf = () => {
+      if (rafIdRef.current !== null || !instanceRef.current) return;
+      idleFramesRef.current = 0;
+      rafIdRef.current = requestAnimationFrame(rafLoop);
+    };
 
     async function initLenis() {
       const wrapper = document.getElementById(SCROLL_CONTAINER_ID);
@@ -64,47 +96,53 @@ export function SmoothScrollProvider({ children }: SmoothScrollProviderProps) {
         return;
       }
 
-      const [{ default: LenisCtor }, { default: SnapCtor }] = await Promise.all(
-        [import("lenis"), import("lenis/snap")],
-      );
-
+      const { default: LenisCtor } = await import("lenis");
       if (cancelled) return;
 
-      instance = new LenisCtor({
+      const instance = new LenisCtor({
         wrapper,
         content,
-        duration: 0.95,
-        lerp: 0.1,
-        easing: LENIS_EASING,
-        orientation: "vertical",
-        smoothWheel: true,
-        wheelMultiplier: 0.9,
-        touchMultiplier: 1.15,
-        syncTouch: isCoarsePointer,
+        ...getLenisOptions(isCoarsePointer),
       });
 
-      snap = new SnapCtor(instance, {
-        type: "lock",
-        duration: prefersReducedMotion ? 0.28 : 0.82,
-        easing: LENIS_EASING,
-        debounce: 0,
-      });
+      instanceRef.current = instance;
+
+      instance.on(
+        "scroll",
+        (event: {
+          scroll: number;
+          velocity: number;
+          direction: number;
+          limit: number;
+        }) => {
+          publishScrollMotion({
+            scroll: event.scroll,
+            velocity: event.velocity,
+            direction: (event.direction ?? 0) as ScrollDirection,
+            limit: event.limit,
+            progress: event.limit > 0 ? event.scroll / event.limit : 0,
+          });
+        },
+      );
 
       registerLenis(instance);
-      registerLenisSnap(snap);
       setLenis(instance);
 
-      refreshLenisSnapElements();
-      unobserveSnap = observeLenisSnapTargets(content);
-
       instance.scrollTo(wrapper.scrollTop, { immediate: true });
+      publishScrollMotion({
+        scroll: instance.scroll,
+        velocity: 0,
+        direction: 0,
+        limit: instance.limit,
+        progress: instance.limit > 0 ? instance.scroll / instance.limit : 0,
+      });
 
-      function raf(time: number) {
-        instance?.raf(time);
-        rafIdRef.current = requestAnimationFrame(raf);
-      }
+      wrapperEl = wrapper;
+      wrapper.addEventListener("wheel", resumeRaf, { passive: true });
+      wrapper.addEventListener("touchstart", resumeRaf, { passive: true });
+      wrapper.addEventListener("scroll", resumeRaf, { passive: true });
 
-      rafIdRef.current = requestAnimationFrame(raf);
+      rafIdRef.current = requestAnimationFrame(rafLoop);
     }
 
     void initLenis();
@@ -115,14 +153,56 @@ export function SmoothScrollProvider({ children }: SmoothScrollProviderProps) {
       if (rafIdRef.current !== null) {
         cancelAnimationFrame(rafIdRef.current);
       }
-      unobserveSnap?.();
-      snap?.destroy();
-      instance?.destroy();
-      registerLenisSnap(null);
+
+      const wrapper = wrapperEl ?? document.getElementById(SCROLL_CONTAINER_ID);
+      if (wrapper) {
+        wrapper.removeEventListener("wheel", resumeRaf);
+        wrapper.removeEventListener("touchstart", resumeRaf);
+        wrapper.removeEventListener("scroll", resumeRaf);
+      }
+
+      instanceRef.current?.destroy();
+      instanceRef.current = null;
       registerLenis(null);
       setLenis(null);
+      publishScrollMotion({
+        scroll: 0,
+        velocity: 0,
+        direction: 0,
+        limit: 0,
+        progress: 0,
+      });
     };
   }, [prefersReducedMotion, hasEntered]);
+
+  useEffect(() => {
+    if (lenis || prefersReducedMotion || !hasEntered) return;
+
+    const container = document.getElementById(SCROLL_CONTAINER_ID);
+    if (!container) return;
+
+    const onNativeScroll = () => {
+      const scroll = container.scrollTop;
+      const limit = Math.max(
+        0,
+        container.scrollHeight - container.clientHeight,
+      );
+      publishScrollMotion({
+        scroll,
+        velocity: 0,
+        direction: 0,
+        limit,
+        progress: limit > 0 ? scroll / limit : 0,
+      });
+    };
+
+    container.addEventListener("scroll", onNativeScroll, { passive: true });
+    onNativeScroll();
+
+    return () => {
+      container.removeEventListener("scroll", onNativeScroll);
+    };
+  }, [lenis, prefersReducedMotion, hasEntered]);
 
   return (
     <LenisContext.Provider value={prefersReducedMotion ? null : lenis}>

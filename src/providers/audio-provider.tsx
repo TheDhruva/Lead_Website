@@ -93,21 +93,35 @@ export function AudioProvider({ children }: AudioProviderProps) {
     return SFX_MASTER;
   }, []);
 
-  useEffect(() => {
-    if (disabled) return;
+  const ensureAmbient = useCallback((): HTMLAudioElement | null => {
+    if (disabled) return null;
+    if (ambientRef.current) return ambientRef.current;
 
-    (Object.keys(SFX) as SfxKey[]).forEach((key) => {
+    const ambient = new Audio(AMBIENT_TRACK);
+    ambient.loop = true;
+    ambient.preload = "auto";
+    ambient.volume = 0;
+    ambientRef.current = ambient;
+    return ambient;
+  }, [disabled]);
+
+  const ensureSfx = useCallback(
+    (key: SfxKey): HTMLAudioElement | null => {
+      if (disabled) return null;
+
+      const existing = sfxRefs.current[key];
+      if (existing) return existing;
+
       const el = new Audio(SFX[key]);
       el.preload = "auto";
       el.volume = SFX_VOLUME[key] * SFX_MASTER;
       sfxRefs.current[key] = el;
-    });
+      return el;
+    },
+    [disabled],
+  );
 
-    const ambient = new Audio(AMBIENT_TRACK);
-    ambient.loop = true;
-    ambient.volume = 0;
-    ambientRef.current = ambient;
-
+  useEffect(() => {
     return () => {
       if (fadeFrameRef.current !== null) {
         cancelAnimationFrame(fadeFrameRef.current);
@@ -117,7 +131,7 @@ export function AudioProvider({ children }: AudioProviderProps) {
       ambientRef.current = null;
       sfxRefs.current = {};
     };
-  }, [disabled]);
+  }, []);
 
   const fadeAmbient = useCallback((toVolume: number, durationMs: number) => {
     const ambient = ambientRef.current;
@@ -149,7 +163,7 @@ export function AudioProvider({ children }: AudioProviderProps) {
   }, []);
 
   const startAmbientPlayback = useCallback(() => {
-    const ambient = ambientRef.current;
+    const ambient = ensureAmbient();
     if (!ambient) return Promise.reject(new Error("no ambient"));
 
     return ambient.play().then(() => {
@@ -157,7 +171,7 @@ export function AudioProvider({ children }: AudioProviderProps) {
       setUnlocked(true);
       fadeAmbient(getAmbientTarget(), AMBIENT_FADE_MS);
     });
-  }, [fadeAmbient, getAmbientTarget]);
+  }, [ensureAmbient, fadeAmbient, getAmbientTarget]);
 
   const unlockAudio = useCallback(() => {
     if (disabled || unlockedRef.current) {
@@ -210,7 +224,7 @@ export function AudioProvider({ children }: AudioProviderProps) {
     (key: SfxKey) => {
       if (disabled || mutedRef.current || !unlockedRef.current) return;
 
-      const el = sfxRefs.current[key];
+      const el = ensureSfx(key);
       if (!el) return;
 
       const multiplier = getSfxMultiplier();
@@ -218,7 +232,7 @@ export function AudioProvider({ children }: AudioProviderProps) {
       el.currentTime = 0;
       void el.play().catch(noop);
     },
-    [disabled, getSfxMultiplier],
+    [disabled, ensureSfx, getSfxMultiplier],
   );
 
   const value = useMemo(

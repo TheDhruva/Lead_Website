@@ -1,9 +1,10 @@
 "use client";
 
-import { type HTMLAttributes, useEffect, useRef } from "react";
+import { type HTMLAttributes, useCallback, useEffect, useRef } from "react";
 
 import { useCanPointerReact } from "@/hooks/use-can-pointer-react";
 import { lerp, pointerEngine } from "@/lib/pointer-engine";
+import { isScrollActive } from "@/lib/scroll-bus";
 import { cn } from "@/lib/utils";
 
 interface MagneticTextProps extends HTMLAttributes<HTMLSpanElement> {
@@ -12,6 +13,11 @@ interface MagneticTextProps extends HTMLAttributes<HTMLSpanElement> {
   strength?: number;
   /** Radius of influence in px */
   radius?: number;
+}
+
+interface LetterCenter {
+  cx: number;
+  cy: number;
 }
 
 /** Brand letters ease toward cursor via shared PointerEngine. */
@@ -24,6 +30,19 @@ export function MagneticText({
 }: MagneticTextProps) {
   const canReact = useCanPointerReact();
   const letterRefs = useRef<(HTMLSpanElement | null)[]>([]);
+  const letterCentersRef = useRef<LetterCenter[]>([]);
+  const rootRef = useRef<HTMLSpanElement>(null);
+
+  const measureLetterCenters = useCallback(() => {
+    letterCentersRef.current = letterRefs.current.map((el) => {
+      if (!el) return { cx: 0, cy: 0 };
+      const rect = el.getBoundingClientRect();
+      return {
+        cx: rect.left + rect.width / 2,
+        cy: rect.top + rect.height / 2,
+      };
+    });
+  }, []);
 
   useEffect(() => {
     if (!canReact) return;
@@ -31,19 +50,35 @@ export function MagneticText({
     const letters = Array.from(text).map(() => ({ x: 0, y: 0 }));
     const max = Math.min(12, Math.max(5, strength));
 
-    return pointerEngine.subscribe((frame) => {
+    measureLetterCenters();
+
+    const root = rootRef.current;
+    const resizeObserver =
+      typeof ResizeObserver !== "undefined" && root
+        ? new ResizeObserver(measureLetterCenters)
+        : null;
+    resizeObserver?.observe(root!);
+    window.addEventListener("resize", measureLetterCenters);
+    window.addEventListener("orientationchange", measureLetterCenters);
+
+    const unsubscribe = pointerEngine.subscribe((frame) => {
+      if (isScrollActive()) {
+        letterRefs.current.forEach((el) => {
+          if (el) el.style.transform = "";
+        });
+        return;
+      }
+
       letterRefs.current.forEach((el, index) => {
         if (!el) return;
         const state = letters[index]!;
+        const center = letterCentersRef.current[index];
         let targetX = 0;
         let targetY = 0;
 
-        if (frame.active) {
-          const rect = el.getBoundingClientRect();
-          const cx = rect.left + rect.width / 2;
-          const cy = rect.top + rect.height / 2;
-          const dx = frame.targetX - cx;
-          const dy = frame.targetY - cy;
+        if (frame.active && center) {
+          const dx = frame.targetX - center.cx;
+          const dy = frame.targetY - center.cy;
           const dist = Math.hypot(dx, dy);
           if (dist < radius && dist > 0.001) {
             const force = (1 - dist / radius) ** 1.25;
@@ -62,12 +97,20 @@ export function MagneticText({
         }
       });
     });
-  }, [canReact, radius, strength, text]);
+
+    return () => {
+      resizeObserver?.disconnect();
+      window.removeEventListener("resize", measureLetterCenters);
+      window.removeEventListener("orientationchange", measureLetterCenters);
+      unsubscribe();
+    };
+  }, [canReact, measureLetterCenters, radius, strength, text]);
 
   const chars = Array.from(text);
 
   return (
     <span
+      ref={rootRef}
       className={cn("magnetic-text inline-flex", className)}
       aria-label={text}
       {...props}
@@ -78,7 +121,7 @@ export function MagneticText({
           ref={(node) => {
             letterRefs.current[index] = node;
           }}
-          className="magnetic-text__letter inline-block will-change-transform"
+          className="magnetic-text__letter inline-block"
           aria-hidden="true"
         >
           {char === " " ? "\u00A0" : char}

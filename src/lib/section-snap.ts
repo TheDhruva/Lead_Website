@@ -1,9 +1,13 @@
 import {
+  getSectionAnchorScrollY,
+  getViewportFocalScrollY,
+} from "@/lib/scroll-anchor";
+import {
   getOffsetInScrollContainer,
   getScrollContainer,
   getScrollTop,
 } from "@/lib/scroll-container";
-import { getPageEndScrollY } from "@/lib/scroll-position";
+import { getNavSafeTopPx, getPageEndScrollY } from "@/lib/scroll-position";
 
 export interface SnapTarget {
   id: string;
@@ -15,21 +19,21 @@ export interface SnapTarget {
 
 const SNAP_SELECTOR = "[data-snap-frame], section#contact";
 
-/** Scroll position that best frames the section in the viewport. */
+function getViewportHeight(): number {
+  return getScrollContainer()?.clientHeight ?? window.innerHeight;
+}
+
+/** Scroll position that frames the section's visual anchor. */
 export function getSectionSnapY(
   el: HTMLElement,
   viewportH: number,
   maxScroll: number,
 ): number {
-  const top = getOffsetInScrollContainer(el);
-  const height = el.offsetHeight;
+  return getSectionAnchorScrollY(el, viewportH, maxScroll);
+}
 
-  if (height <= viewportH + 2) {
-    return Math.max(0, Math.min(top, maxScroll));
-  }
-
-  const centered = top + (height - viewportH) / 2;
-  return Math.max(0, Math.min(centered, maxScroll));
+export function getSectionVisualCenter(target: SnapTarget): number {
+  return (target.top + target.bottom) / 2;
 }
 
 export function collectSnapTargets(): SnapTarget[] {
@@ -38,6 +42,7 @@ export function collectSnapTargets(): SnapTarget[] {
 
   const viewportH = container.clientHeight;
   const maxScroll = getPageEndScrollY();
+  const navSafeTop = getNavSafeTopPx();
 
   const elements = Array.from(
     document.querySelectorAll<HTMLElement>(SNAP_SELECTOR),
@@ -53,95 +58,108 @@ export function collectSnapTargets(): SnapTarget[] {
         element,
         top,
         bottom,
-        y: getSectionSnapY(element, viewportH, maxScroll),
+        y: getSectionAnchorScrollY(element, viewportH, maxScroll, navSafeTop),
       };
     })
     .sort((a, b) => a.top - b.top);
 }
 
-export function getCurrentSectionIndex(
+/** Stable section index from scroll position — not IntersectionObserver. */
+export function getStableSectionIndex(
   targets: SnapTarget[],
   scrollY: number,
+  viewportH = getViewportHeight(),
+  navSafeTop = getNavSafeTopPx(),
 ): number {
   if (targets.length === 0) return 0;
 
-  let index = 0;
-  let nearestDistance = Math.abs(scrollY - targets[0]!.y);
+  const focalY = getViewportFocalScrollY(scrollY, viewportH, navSafeTop);
 
-  for (let i = 1; i < targets.length; i += 1) {
-    const distance = Math.abs(scrollY - targets[i]!.y);
-    if (distance < nearestDistance) {
-      index = i;
-      nearestDistance = distance;
+  for (let i = 0; i < targets.length; i += 1) {
+    const target = targets[i]!;
+    if (focalY >= target.top && focalY < target.bottom) {
+      return i;
     }
+  }
+
+  let index = 0;
+  for (let i = 0; i < targets.length; i += 1) {
+    if (targets[i]!.top <= focalY) index = i;
   }
 
   return index;
 }
 
+export function findDirectionalTargetByIndex(
+  targets: SnapTarget[],
+  originIndex: number,
+  direction: number,
+): SnapTarget | null {
+  if (targets.length === 0) return null;
+
+  if (direction > 0) {
+    return targets[Math.min(originIndex + 1, targets.length - 1)] ?? null;
+  }
+
+  if (direction < 0) {
+    return targets[Math.max(originIndex - 1, 0)] ?? null;
+  }
+
+  return targets[originIndex] ?? null;
+}
+
+/** Which section the viewport is most aligned with — center-biased, not scroll-top biased. */
 export function findNearestSnapTarget(
   targets: SnapTarget[],
   scrollY: number,
+  viewportH = getViewportHeight(),
 ): SnapTarget | null {
   if (targets.length === 0) return null;
-  return targets[getCurrentSectionIndex(targets, scrollY)] ?? null;
+
+  const viewportCenter = scrollY + viewportH / 2;
+
+  let nearest = targets[0]!;
+  let nearestDistance = Math.abs(
+    viewportCenter - getSectionVisualCenter(nearest),
+  );
+
+  for (let i = 1; i < targets.length; i += 1) {
+    const target = targets[i]!;
+    const distance = Math.abs(viewportCenter - getSectionVisualCenter(target));
+
+    if (distance < nearestDistance) {
+      nearest = target;
+      nearestDistance = distance;
+    }
+  }
+
+  return nearest;
+}
+
+export function getCurrentSectionIndex(
+  targets: SnapTarget[],
+  scrollY: number,
+  viewportH = getViewportHeight(),
+): number {
+  return getStableSectionIndex(targets, scrollY, viewportH);
 }
 
 export function findDirectionalSnapTarget(
   targets: SnapTarget[],
   scrollY: number,
   direction: number,
+  viewportH = getViewportHeight(),
 ): SnapTarget | null {
-  if (targets.length === 0) return null;
-
-  const currentIndex = getCurrentSectionIndex(targets, scrollY);
-
-  if (direction > 0) {
-    return targets[Math.min(currentIndex + 1, targets.length - 1)] ?? null;
-  }
-
-  if (direction < 0) {
-    return targets[Math.max(currentIndex - 1, 0)] ?? null;
-  }
-
-  return findNearestSnapTarget(targets, scrollY);
-}
-
-/** True when the viewport center sits on a section seam — user chose to pause between sections. */
-export function isInIntentionalMiddleZone(
-  targets: SnapTarget[],
-  viewportCenter: number,
-  viewportH: number,
-): boolean {
-  const threshold = viewportH * 0.06;
-
-  for (let i = 0; i < targets.length - 1; i += 1) {
-    const boundary = (targets[i]!.bottom + targets[i + 1]!.top) / 2;
-    if (Math.abs(viewportCenter - boundary) <= threshold) {
-      return true;
-    }
-  }
-
-  return false;
-}
-
-export function getViewportCenter(scrollY: number, viewportH: number): number {
-  return scrollY + viewportH / 2;
+  const originIndex = getStableSectionIndex(targets, scrollY, viewportH);
+  return findDirectionalTargetByIndex(targets, originIndex, direction);
 }
 
 export function shouldSkipSnap(
   targets: SnapTarget[],
   scrollY: number,
-  viewportH: number,
-  snapThreshold = 4,
+  snapThreshold = 8,
 ): boolean {
   if (targets.length === 0) return true;
-
-  const viewportCenter = getViewportCenter(scrollY, viewportH);
-
-  if (isInIntentionalMiddleZone(targets, viewportCenter, viewportH)) {
-    return true;
-  }
 
   const nearest = findNearestSnapTarget(targets, scrollY);
   if (!nearest) return true;
