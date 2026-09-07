@@ -81,8 +81,8 @@ function encodeVariants(
       `ffmpeg -y -i "${input}"`,
       `-vf "${scale}"`,
       `-c:v libx264 -preset slow -crf ${h264Crf}`,
+      `-c:a aac -b:a 96k -ar 48000`,
       "-movflags +faststart",
-      "-an",
       `"${h264Tmp}"`,
     ].join(" "),
   );
@@ -93,8 +93,8 @@ function encodeVariants(
       `ffmpeg -y -i "${input}"`,
       `-vf "${scale}"`,
       `-c:v libx265 -preset medium -crf ${hevcCrf} -tag:v hvc1`,
+      `-c:a aac -b:a 96k -ar 48000`,
       "-movflags +faststart",
-      "-an",
       `"${hevcTmp}"`,
     ].join(" "),
   );
@@ -105,7 +105,7 @@ function encodeVariants(
       `ffmpeg -y -i "${input}"`,
       `-vf "${scale}"`,
       `-c:v libvpx-vp9 -crf ${webmCrf} -b:v 0 -row-mt 1`,
-      "-an",
+      `-c:a libopus -b:a 64k`,
       `"${webmTmp}"`,
     ].join(" "),
   );
@@ -138,9 +138,9 @@ function optimizeDesktopItem({ id, aspect }) {
   const files = encodeVariants(input, aspect, {
     prefix: `showcase-${id}`,
     scale,
-    h264Crf: 28,
-    hevcCrf: 30,
-    webmCrf: 38,
+    h264Crf: 30,
+    hevcCrf: 32,
+    webmCrf: 40,
   });
 
   files.concat(posterOut).forEach((file) => {
@@ -164,9 +164,9 @@ function optimizeMobileItem({ id, aspect }) {
   const files = encodeVariants(source, aspect, {
     prefix: `showcase-${id}-mobile`,
     scale: mobileScale(aspect),
-    h264Crf: 32,
-    hevcCrf: 34,
-    webmCrf: 42,
+    h264Crf: 33,
+    hevcCrf: 35,
+    webmCrf: 43,
   });
 
   files.forEach((file) => {

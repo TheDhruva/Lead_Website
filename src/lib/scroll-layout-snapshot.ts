@@ -7,7 +7,10 @@ export interface ScrollLayoutSnapshot {
 export function createScrollLayoutSnapshot(
   elements: Iterable<HTMLElement>,
 ): ScrollLayoutSnapshot {
-  const viewportH = window.innerHeight || 1;
+  const viewportH =
+    document.getElementById("scroll-container")?.clientHeight ||
+    window.innerHeight ||
+    1;
   const rects = new Map<HTMLElement, DOMRect>();
 
   for (const element of elements) {

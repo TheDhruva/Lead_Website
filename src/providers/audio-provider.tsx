@@ -63,7 +63,14 @@ export function AudioProvider({ children }: AudioProviderProps) {
   const prefersReducedMotion = useReducedMotion();
   const disabled = prefersReducedMotion;
 
-  const [muted, setMuted] = useState(false);
+  const [muted, setMuted] = useState(() => {
+    if (typeof window === "undefined") return false;
+    try {
+      return localStorage.getItem("dhruva:muted") === "1";
+    } catch {
+      return false;
+    }
+  });
   const [unlocked, setUnlocked] = useState(false);
   const [videoAudioActive, setVideoAudioActiveState] = useState(false);
 
@@ -76,6 +83,9 @@ export function AudioProvider({ children }: AudioProviderProps) {
 
   useEffect(() => {
     mutedRef.current = muted;
+    try {
+      localStorage.setItem("dhruva:muted", muted ? "1" : "0");
+    } catch {}
   }, [muted]);
 
   useEffect(() => {
@@ -99,7 +109,7 @@ export function AudioProvider({ children }: AudioProviderProps) {
 
     const ambient = new Audio(AMBIENT_TRACK);
     ambient.loop = true;
-    ambient.preload = "auto";
+    ambient.preload = "metadata";
     ambient.volume = 0;
     ambientRef.current = ambient;
     return ambient;
@@ -113,7 +123,7 @@ export function AudioProvider({ children }: AudioProviderProps) {
       if (existing) return existing;
 
       const el = new Audio(SFX[key]);
-      el.preload = "auto";
+      el.preload = "metadata";
       el.volume = SFX_VOLUME[key] * SFX_MASTER;
       sfxRefs.current[key] = el;
       return el;
@@ -169,6 +179,9 @@ export function AudioProvider({ children }: AudioProviderProps) {
     return ambient.play().then(() => {
       unlockedRef.current = true;
       setUnlocked(true);
+      try {
+        localStorage.setItem("dhruva:unlocked", "1");
+      } catch {}
       fadeAmbient(getAmbientTarget(), AMBIENT_FADE_MS);
     });
   }, [ensureAmbient, fadeAmbient, getAmbientTarget]);

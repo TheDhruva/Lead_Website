@@ -44,7 +44,8 @@ export function getVideoSources(
     sources.push({ src: mp4, type: "video/mp4" });
   }
 
-  if (webm) {
+  // Only add VP9 if browser reports support — avoids wasted probe on Safari
+  if (webm && canPlayVp9()) {
     sources.push({ src: webm, type: "video/webm; codecs=vp9" });
   }
 
@@ -52,6 +53,7 @@ export function getVideoSources(
 }
 
 let hevcSupported: boolean | null = null;
+let vp9Supported: boolean | null = null;
 
 function canPlayHevc(): boolean {
   if (typeof document === "undefined") return false;
@@ -62,4 +64,13 @@ function canPlayHevc(): boolean {
     "";
 
   return hevcSupported;
+}
+
+function canPlayVp9(): boolean {
+  if (typeof document === "undefined") return false;
+  if (vp9Supported !== null) return vp9Supported;
+  vp9Supported =
+    document.createElement("video").canPlayType('video/webm; codecs="vp9"') !==
+    "";
+  return vp9Supported;
 }

@@ -21,22 +21,49 @@ export function useHashScroll() {
 
     const id = resolveSectionId(hash.slice(1));
     requestLazySectionMount(id);
-    let attempts = 0;
 
-    const tryScroll = () => {
+    let cancelled = false;
+    let rafId = 0;
+    let observer: MutationObserver | null = null;
+
+    const scrollOnce = () => {
+      if (cancelled) return;
       const target = document.getElementById(id);
-      if (target) {
-        scrollToSectionElement(target);
-        return;
-      }
-
-      attempts += 1;
-      if (attempts < 24) {
-        window.requestAnimationFrame(tryScroll);
-      }
+      if (!target) return false;
+      // wait one frame for layout to settle after mount
+      rafId = window.requestAnimationFrame(() => {
+        if (cancelled) return;
+        const el = document.getElementById(id);
+        if (el) scrollToSectionElement(el);
+      });
+      return true;
     };
 
-    const timer = window.setTimeout(tryScroll, 120);
-    return () => window.clearTimeout(timer);
+    // try after mount signal + rAF
+    const timer = window.setTimeout(() => {
+      if (scrollOnce()) return;
+      // fallback: observe DOM until target appears (lazy mount)
+      const main = document.getElementById("main-content");
+      if (!main) return;
+      observer = new MutationObserver(() => {
+        if (scrollOnce() && observer) {
+          observer.disconnect();
+          observer = null;
+        }
+      });
+      observer.observe(main, { childList: true, subtree: true });
+      // safety timeout 3s
+      window.setTimeout(() => {
+        observer?.disconnect();
+        observer = null;
+      }, 3000);
+    }, 80);
+
+    return () => {
+      cancelled = true;
+      window.clearTimeout(timer);
+      if (rafId) window.cancelAnimationFrame(rafId);
+      observer?.disconnect();
+    };
   }, [hasEntered]);
 }

@@ -40,13 +40,14 @@ export function getNavSettleDuration(isCoarsePointer: boolean): number {
 
 export function getLenisOptions(isCoarsePointer: boolean) {
   return {
-    duration: isCoarsePointer ? 0.85 : 0.8,
-    lerp: isCoarsePointer ? 0.105 : 0.12,
+    duration: isCoarsePointer ? 0.64 : 0.64,
+    lerp: isCoarsePointer ? 0.15 : 0.15,
     easing: LENIS_EASING,
     orientation: "vertical" as const,
     smoothWheel: true,
-    wheelMultiplier: isCoarsePointer ? 0.92 : 0.96,
-    touchMultiplier: isCoarsePointer ? 1.02 : 1,
-    syncTouch: isCoarsePointer,
+    wheelMultiplier: isCoarsePointer ? 0.92 : 0.92,
+    touchMultiplier: 1,
+    syncTouch: false,
+    touchInertiaMultiplier: 35,
   };
 }

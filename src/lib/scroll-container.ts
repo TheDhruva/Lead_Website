@@ -13,6 +13,10 @@ export function markProgrammaticScroll(durationMs = 1300): void {
   programmaticScrollUntil = performance.now() + durationMs;
 }
 
+export function clearProgrammaticScroll(): void {
+  programmaticScrollUntil = 0;
+}
+
 export function isProgrammaticScroll(): boolean {
   return performance.now() < programmaticScrollUntil;
 }

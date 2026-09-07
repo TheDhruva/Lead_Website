@@ -4,7 +4,6 @@ import {
 } from "@/lib/cinematic-scroll-coordinator";
 import { pointerEngine } from "@/lib/pointer-engine";
 import { getScrollContainer } from "@/lib/scroll-container";
-import { tickScrollGuidance } from "@/lib/scroll-intent-guidance";
 import {
   type ScrollLayoutSnapshot,
   createScrollLayoutSnapshot,
@@ -72,8 +71,6 @@ function onScrollMotion(motion: ScrollMotionFrame): void {
 
   lastScrollY = motion.scroll;
 
-  tickScrollGuidance(motion);
-
   if (shouldSkipVisualTick(motion)) {
     return;
   }
@@ -107,7 +104,6 @@ export function stopScrollBus(): void {
 export function flushScrollBus(): void {
   visualTickCounter = 0;
   const motion = getScrollMotionFrame();
-  tickScrollGuidance(motion);
   const snapshot = buildLayoutSnapshot();
   tickCinematicSections(motion, snapshot);
   tickServicesSpotlight(motion, snapshot);

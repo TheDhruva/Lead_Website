@@ -1,101 +1,205 @@
 "use client";
 
+import Image from "next/image";
 import { useRef } from "react";
 
 import { Reveal } from "@/components/animations/reveal";
 import { Container } from "@/components/ui/container";
-import { ProjectCard } from "@/components/ui/project-card";
-import { SectionTitle } from "@/components/ui/section-title";
 import { projectRows } from "@/data";
 import { useCinematicSection } from "@/hooks/use-cinematic-section";
+import { useReducedMotion } from "@/hooks/use-reduced-motion";
 import { cn } from "@/lib/utils";
+import type { Project } from "@/types";
 
-function ProjectRowSection({
-  row,
-  rowIndex,
+type GalleryItem = Project & { number: string; tier: 1 | 2 | 3 };
+
+const gallery: GalleryItem[] = (() => {
+  const flat: Project[] = [
+    projectRows[0]!.website,
+    projectRows[0]!.brands[1]!, // Product Brand Identity
+    projectRows[1]!.brands[0]!, // Apparel Typography
+    projectRows[1]!.brands[1]!, // Event Poster
+    projectRows[1]!.website,
+    projectRows[0]!.brands[0]!, // Local Restaurant
+  ];
+  // reorder to hierarchy: large → small → small → large → small → small
+  const ordered = [
+    flat[0],
+    flat[2],
+    flat[3],
+    flat[4],
+    flat[1],
+    flat[5],
+  ] as Project[];
+  return ordered.map((p, i) => ({
+    ...p,
+    number: String(i + 1).padStart(2, "0"),
+    tier: i < 2 ? 1 : i < 4 ? 2 : 3,
+  }));
+})();
+
+function ProjectFigure({
+  project,
+  priority,
 }: {
-  row: (typeof projectRows)[number];
-  rowIndex: number;
+  project: GalleryItem;
+  priority?: boolean;
 }) {
-  const sectionRef = useRef<HTMLElement>(null);
-  useCinematicSection(sectionRef, "projects");
-
-  const reverse = rowIndex % 2 === 1;
-  const isFirst = rowIndex === 0;
+  const isWebsite = project.variant === "website";
+  const href = project.href ?? "#contact";
+  const isExternal = href.startsWith("http");
+  const prefersReducedMotion = useReducedMotion();
 
   return (
-    <section
-      ref={sectionRef}
-      data-snap-frame
-      data-scroll-anchor-ratio="0.45"
-      aria-labelledby={isFirst ? "projects-heading" : undefined}
-      aria-label={isFirst ? undefined : `Web designs group ${rowIndex + 1}`}
+    <a
+      href={href}
+      target={isExternal ? "_blank" : undefined}
+      rel={isExternal ? "noopener noreferrer" : undefined}
+      aria-label={`${project.title} — ${project.category}`}
       className={cn(
-        "section-frame overflow-hidden max-md:overflow-visible",
-        !isFirst && "section-frame--projects-follow",
+        "group relative block overflow-hidden rounded-lg bg-card",
+        "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--background-secondary)]",
+        prefersReducedMotion && "transition-none",
       )}
     >
-      <Container className="flex w-full max-w-none flex-col">
-        {isFirst ? (
-          <Reveal>
-            <SectionTitle
-              as="h2"
-              id="projects-heading"
-              className="cinematic-layer cinematic-layer--heading mb-5 max-md:mb-4 md:mb-7 md:text-[34px] lg:text-[36px]"
-            >
-              Web Designs
-            </SectionTitle>
-          </Reveal>
-        ) : null}
-
-        <Reveal index={isFirst ? 1 : 0}>
-          <div
+      <figure className="m-0">
+        <div
+          className={cn(
+            "relative w-full overflow-hidden bg-muted",
+            isWebsite ? "aspect-[16/9]" : "aspect-square",
+          )}
+        >
+          <Image
+            src={project.image}
+            alt={project.imageAlt}
+            fill
+            sizes={
+              isWebsite
+                ? "(min-width: 1280px) 62vw, (min-width: 1024px) 65vw, 100vw"
+                : "(min-width: 1280px) 28vw, (min-width: 768px) 45vw, 100vw"
+            }
+            priority={priority}
+            loading={priority ? "eager" : "lazy"}
             className={cn(
-              "grid min-h-0 grid-cols-1 gap-3.5 md:gap-5",
-              "md:grid-cols-2 lg:h-[min(26rem,calc(100svh-var(--nav-safe-top)-6rem))]",
-              reverse
-                ? "lg:grid-cols-[minmax(0,1fr)_minmax(0,1.7fr)] lg:gap-5"
-                : "lg:grid-cols-[minmax(0,1.7fr)_minmax(0,1fr)] lg:gap-5",
+              "object-cover object-center transition-[transform,opacity] duration-[520ms] ease-[cubic-bezier(0.22,1,0.36,1)]",
+              prefersReducedMotion
+                ? "transition-none"
+                : "group-hover:scale-[1.015]",
             )}
-          >
-            <div
-              data-scroll-anchor
-              className={cn(
-                "cinematic-layer cinematic-layer--media relative z-0 min-h-0 min-w-0 overflow-hidden md:col-span-2 lg:col-span-1 lg:h-full",
-                reverse && "lg:order-2",
-              )}
-            >
-              <ProjectCard project={row.website} className="h-full" />
-            </div>
-
-            <div
-              className={cn(
-                "cinematic-layer cinematic-layer--detail grid min-h-0 min-w-0 grid-cols-2 gap-2.5 md:col-span-2 md:gap-4 lg:col-span-1 lg:h-full lg:grid-cols-1 lg:gap-4",
-                reverse && "lg:order-1",
-              )}
-            >
-              {row.brands.map((brand) => (
-                <div
-                  key={brand.id}
-                  className="relative z-0 min-h-0 overflow-hidden"
-                >
-                  <ProjectCard project={brand} className="h-full min-h-0" />
-                </div>
-              ))}
-            </div>
+          />
+          <span
+            aria-hidden
+            className="pointer-events-none absolute inset-0 bg-black/0 transition-colors duration-300 group-hover:bg-black/[0.04] dark:group-hover:bg-black/10"
+          />
+        </div>
+        <figcaption className="flex min-h-[78px] flex-col justify-center p-3.5 md:min-h-[84px] md:p-4">
+          <div className="flex items-center gap-2 font-mono text-[10px] tracking-[0.16em] text-foreground-secondary">
+            <span>{project.number}</span>
+            <span aria-hidden className="h-px w-4 bg-border" />
+            <span className="uppercase">{project.category}</span>
           </div>
-        </Reveal>
-      </Container>
-    </section>
+          <h3 className="mt-1.5 line-clamp-1 font-headline-lg text-[15px] font-semibold leading-tight tracking-[-0.02em] text-foreground md:text-[16px]">
+            {project.title}
+          </h3>
+          <span className="mt-2 inline-flex items-center gap-1.5 font-mono text-[10px] tracking-[0.14em] text-foreground-secondary transition-colors duration-200 group-hover:text-foreground">
+            VIEW <span aria-hidden>↗</span>
+          </span>
+        </figcaption>
+      </figure>
+    </a>
   );
 }
 
 export function Projects() {
+  const ref = useRef<HTMLElement>(null);
+  useCinematicSection(ref, "projects");
+  const prefersReducedMotion = useReducedMotion();
+
   return (
-    <div id="projects" className="section-tone-projects relative z-0">
-      {projectRows.map((row, rowIndex) => (
-        <ProjectRowSection key={row.id} row={row} rowIndex={rowIndex} />
-      ))}
-    </div>
+    <section
+      ref={ref}
+      id="projects"
+      data-scroll-anchor-ratio="0.45"
+      className="section-tone-projects relative z-0 overflow-visible scroll-mt-[var(--nav-safe-top)] px-4 pt-[calc(var(--nav-safe-top)+0.75rem)] pb-8 sm:px-5 md:px-[var(--layout-nav-inset)] md:pb-10 lg:pb-12"
+      aria-labelledby="projects-heading"
+    >
+      <Container className="w-full max-w-none">
+        <Reveal>
+          <header className="cinematic-layer cinematic-layer--heading mb-6 flex flex-col gap-2 border-b border-border pb-5 md:mb-8 md:flex-row md:items-end md:justify-between md:pb-6">
+            <div className="min-w-0">
+              <h2
+                id="projects-heading"
+                className="font-headline-lg text-headline-lg tracking-[-0.03em] text-foreground md:text-[34px] lg:text-[36px]"
+              >
+                Selected Work
+              </h2>
+              <p className="mt-1.5 max-w-[32rem] font-body-md text-[13px] leading-relaxed text-foreground-secondary md:text-[14px]">
+                Digital experiences, identities and visual systems — a curated
+                selection.
+              </p>
+            </div>
+            <span className="shrink-0 font-mono text-[11px] tracking-[0.2em] text-foreground-secondary">
+              01 — 06
+            </span>
+          </header>
+        </Reveal>
+
+        <div className="flex flex-col gap-6 md:gap-5 lg:gap-6">
+          {/* Row 1: 16:9 + 1:1 — heights equal via 1.777:1 (64/36) */}
+          <div
+            className={cn(
+              "grid grid-cols-1 gap-6 md:grid-cols-[minmax(0,1.777fr)_minmax(0,1fr)] md:gap-5 lg:gap-6",
+              "group",
+              prefersReducedMotion
+                ? ""
+                : "[&_a:hover]:opacity-100 [&:has(a:hover)_a:not(:hover)]:opacity-[0.96]",
+            )}
+          >
+            <Reveal index={0} className="min-w-0">
+              <ProjectFigure project={gallery[0]!} priority />
+            </Reveal>
+            <Reveal index={1} className="min-w-0">
+              <ProjectFigure project={gallery[1]!} />
+            </Reveal>
+          </div>
+
+          {/* Row 2: 1:1 + 16:9 — reverse 1:1.777 */}
+          <div
+            className={cn(
+              "grid grid-cols-1 gap-6 md:grid-cols-[minmax(0,1fr)_minmax(0,1.777fr)] md:gap-5 lg:gap-6",
+              "group",
+              prefersReducedMotion
+                ? ""
+                : "[&_a:hover]:opacity-100 [&:has(a:hover)_a:not(:hover)]:opacity-[0.96]",
+            )}
+          >
+            <Reveal index={1} className="min-w-0">
+              <ProjectFigure project={gallery[2]!} />
+            </Reveal>
+            <Reveal index={2} className="min-w-0">
+              <ProjectFigure project={gallery[3]!} />
+            </Reveal>
+          </div>
+
+          {/* Row 3: 1:1 + 1:1 — full container width, equal 1:1 */}
+          <div
+            className={cn(
+              "grid grid-cols-1 gap-6 md:grid-cols-2 md:gap-5 lg:gap-6",
+              "group",
+              prefersReducedMotion
+                ? ""
+                : "[&_a:hover]:opacity-100 [&:has(a:hover)_a:not(:hover)]:opacity-[0.96]",
+            )}
+          >
+            <Reveal index={2} className="min-w-0">
+              <ProjectFigure project={gallery[4]!} />
+            </Reveal>
+            <Reveal index={3} className="min-w-0">
+              <ProjectFigure project={gallery[5]!} />
+            </Reveal>
+          </div>
+        </div>
+      </Container>
+    </section>
   );
 }

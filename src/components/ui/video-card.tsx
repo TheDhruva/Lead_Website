@@ -70,10 +70,11 @@ function VideoCardComponent({
     preload: loadReady && sectionActive && mediaActive,
   });
   const showVideo = Boolean(video.src) && !videoFailed;
-  const isPortrait = featured || video.aspect === "portrait";
+  const isPortrait = video.aspect === "portrait";
 
-  const shouldLoadMedia = loadReady && mediaActive;
+  const shouldLoadMedia = loadReady && mediaActive && sectionActive;
   const videoSources = useMemo(() => getVideoSources(video), [video]);
+  // Tight: none until active+visible; metadata for preview frame; auto only after hover intent
   const videoPreload = !shouldLoadMedia
     ? "none"
     : eagerBuffer
@@ -89,7 +90,9 @@ function VideoCardComponent({
   useEffect(() => {
     const videoEl = videoRef.current;
     if (!videoEl || !shouldLoadMedia) return;
-    videoEl.load();
+    // Defer load() to next frame so poster paints first (LCP protection)
+    const id = requestAnimationFrame(() => videoEl.load());
+    return () => cancelAnimationFrame(id);
   }, [shouldLoadMedia, eagerBuffer, videoRef, videoSources]);
 
   const requestEagerBuffer = useCallback(() => {
@@ -241,13 +244,13 @@ function VideoCardComponent({
       className={cn(
         "relative h-auto w-full",
         isPortrait
-          ? "aspect-[9/16] max-h-[min(62svh,32rem)] md:max-h-[min(62svh,34rem)] lg:aspect-auto lg:max-h-none lg:h-full"
-          : "aspect-video lg:aspect-auto lg:h-full",
+          ? "aspect-[9/16] max-h-[min(62svh,32rem)] md:max-h-[min(62svh,34rem)]"
+          : "aspect-video",
         className,
       )}
     >
       <CursorSpotlight
-        className="absolute inset-0 h-full w-full rounded-2xl"
+        className="absolute inset-0 h-full w-full rounded-lg"
         size={featured ? 240 : 260}
         intensity={0.18}
       >
@@ -261,7 +264,7 @@ function VideoCardComponent({
           aria-label={ariaLabel}
           aria-busy={showBuffering || undefined}
           className={cn(
-            "media-card group relative h-full w-full cursor-pointer overflow-hidden rounded-2xl bg-black outline-none",
+            "media-card group relative h-full w-full cursor-pointer overflow-hidden rounded-lg bg-black outline-none",
             "ring-1 ring-inset ring-white/[0.08]",
             "focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--background)]",
             prefersReducedMotion && "media-card--static",
@@ -270,7 +273,7 @@ function VideoCardComponent({
           {showVideo ? (
             <video
               ref={videoRef}
-              className="media-card__media absolute inset-0 h-full w-full object-cover object-center"
+              className="media-card__media absolute inset-0 h-full w-full object-contain bg-black object-center"
               poster={video.poster}
               muted={isMuted}
               loop
@@ -300,7 +303,7 @@ function VideoCardComponent({
                   ? "(max-width: 1024px) 90vw, 46vw"
                   : "(max-width: 1024px) 100vw, 54vw"
               }
-              className="media-card__media object-cover object-center"
+              className="media-card__media object-contain bg-black object-center"
             />
           )}
 

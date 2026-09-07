@@ -65,7 +65,7 @@ export function scrollToSectionElement(target: HTMLElement): void {
       behavior: "smooth",
       duration,
       programmatic: true,
-      lock: true,
+      lock: false,
       easing: GUIDANCE_SETTLE_EASING,
     });
     return;
@@ -77,7 +77,7 @@ export function scrollToSectionElement(target: HTMLElement): void {
       behavior: "smooth",
       duration,
       programmatic: true,
-      lock: true,
+      lock: false,
       easing: GUIDANCE_SETTLE_EASING,
     },
   );

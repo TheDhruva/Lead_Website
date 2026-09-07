@@ -115,7 +115,7 @@ export const videoItems: VideoItem[] = [
     mobileSrc: "/videos/showcase-1-mobile.mp4",
     mobileHevcSrc: "/videos/showcase-1-mobile-hevc.mp4",
     mobileWebmSrc: "/videos/showcase-1-mobile.webm",
-    aspect: "portrait",
+    aspect: "landscape",
     featured: true,
   },
   {

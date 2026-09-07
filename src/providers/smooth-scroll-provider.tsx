@@ -13,7 +13,12 @@ import type Lenis from "lenis";
 
 import { useReducedMotion } from "@/hooks/use-reduced-motion";
 import { LENIS_EASING, getLenisOptions } from "@/lib/lenis-config";
-import { SCROLL_CONTAINER_ID, registerLenis } from "@/lib/scroll-container";
+import {
+  SCROLL_CONTAINER_ID,
+  clearProgrammaticScroll,
+  isProgrammaticScroll,
+  registerLenis,
+} from "@/lib/scroll-container";
 import {
   type ScrollDirection,
   publishScrollMotion,
@@ -83,6 +88,15 @@ export function SmoothScrollProvider({ children }: SmoothScrollProviderProps) {
       rafIdRef.current = requestAnimationFrame(rafLoop);
     };
 
+    const interruptProgrammatic = () => {
+      if (isProgrammaticScroll()) {
+        clearProgrammaticScroll();
+        // let user own scroll immediately — stop current Lenis animation
+        instanceRef.current?.stop();
+        instanceRef.current?.start();
+      }
+    };
+
     async function initLenis() {
       const wrapper = document.getElementById(SCROLL_CONTAINER_ID);
       const content = document.getElementById(MAIN_CONTENT_ID);
@@ -138,9 +152,26 @@ export function SmoothScrollProvider({ children }: SmoothScrollProviderProps) {
       });
 
       wrapperEl = wrapper;
-      wrapper.addEventListener("wheel", resumeRaf, { passive: true });
-      wrapper.addEventListener("touchstart", resumeRaf, { passive: true });
+      const onWheelInterrupt = () => {
+        interruptProgrammatic();
+        resumeRaf();
+      };
+      const onTouchInterrupt = () => {
+        interruptProgrammatic();
+        resumeRaf();
+      };
+      wrapper.addEventListener("wheel", onWheelInterrupt, { passive: true });
+      wrapper.addEventListener("touchstart", onTouchInterrupt, {
+        passive: true,
+      });
       wrapper.addEventListener("scroll", resumeRaf, { passive: true });
+      // keep refs for cleanup
+      (
+        wrapper as unknown as { _onWheelInterrupt?: typeof onWheelInterrupt }
+      )._onWheelInterrupt = onWheelInterrupt;
+      (
+        wrapper as unknown as { _onTouchInterrupt?: typeof onTouchInterrupt }
+      )._onTouchInterrupt = onTouchInterrupt;
 
       rafIdRef.current = requestAnimationFrame(rafLoop);
     }
@@ -156,8 +187,14 @@ export function SmoothScrollProvider({ children }: SmoothScrollProviderProps) {
 
       const wrapper = wrapperEl ?? document.getElementById(SCROLL_CONTAINER_ID);
       if (wrapper) {
-        wrapper.removeEventListener("wheel", resumeRaf);
-        wrapper.removeEventListener("touchstart", resumeRaf);
+        const w = wrapper as unknown as {
+          _onWheelInterrupt?: EventListener;
+          _onTouchInterrupt?: EventListener;
+        };
+        if (w._onWheelInterrupt)
+          wrapper.removeEventListener("wheel", w._onWheelInterrupt);
+        if (w._onTouchInterrupt)
+          wrapper.removeEventListener("touchstart", w._onTouchInterrupt);
         wrapper.removeEventListener("scroll", resumeRaf);
       }
 

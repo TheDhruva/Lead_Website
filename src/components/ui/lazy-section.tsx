@@ -48,6 +48,7 @@ export function LazySection({
     threshold: 0,
     rootMargin,
     triggerOnce: true,
+    useScrollContainerRoot: true,
   });
   const [supported] = useState(
     typeof window === "undefined" || "IntersectionObserver" in window,

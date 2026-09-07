@@ -158,9 +158,9 @@ export default function RootLayout({ children }: RootLayoutProps) {
         <Script
           id="hs-script-loader"
           src="https://js-na2.hs-scripts.com/247221692.js"
-          strategy="lazyOnload"
+          strategy="afterInteractive"
         />
-        <SpeedInsights />
+        <SpeedInsights sampleRate={0.5} />
       </body>
     </html>
   );
