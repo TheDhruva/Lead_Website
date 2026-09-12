@@ -38,13 +38,14 @@ export function VideoShowcase() {
   const [initialized, setInitialized] = useState(false);
   const [isMuted, setIsMuted] = useState(true);
   const [isPlaying, setIsPlaying] = useState(false);
-  const [showPlayAffordance, setShowPlayAffordance] = useState(false);
   const [isTransitioning, setIsTransitioning] = useState(false);
   const [autoplayBlocked, setAutoplayBlocked] = useState(false);
 
   const isMutedRef = useRef(true);
   const currentIndexRef = useRef(0);
   const isPlayingRef = useRef(false);
+  // Explicit user stop (pause) — autoplay must not override it.
+  const userPausedRef = useRef(false);
 
   const total = videoItems.length;
   const current: VideoItem = videoItems[currentIndex] ?? videoItems[0]!;
@@ -98,9 +99,14 @@ export function VideoShowcase() {
       v.pause();
       if (!isMutedRef.current) setVideoAudioActive(false);
       if (rafRef.current) cancelAnimationFrame(rafRef.current);
-    } else if (isSectionVisible && !isPlayingRef.current && !autoplayBlocked) {
-      // resume muted autoplay when returning
-      v.muted = true;
+    } else if (
+      isSectionVisible &&
+      !isPlayingRef.current &&
+      !autoplayBlocked &&
+      !userPausedRef.current
+    ) {
+      // resume autoplay when returning — unless the user explicitly stopped
+      v.muted = isMutedRef.current;
       void v.play().catch(() => setAutoplayBlocked(true));
     }
   }, [isSectionVisible, initialized, autoplayBlocked, setVideoAudioActive]);
@@ -133,7 +139,6 @@ export function VideoShowcase() {
     preloadStartedRef.current = false;
     if (progressRef.current)
       progressRef.current.style.setProperty("--progress", "0%");
-    setShowPlayAffordance(false);
     setAutoplayBlocked(false);
 
     setVideoSources(v, current);
@@ -147,11 +152,9 @@ export function VideoShowcase() {
       if (p) {
         p.then(() => {
           setIsPlaying(true);
-          setShowPlayAffordance(false);
           if (!isMutedRef.current) setVideoAudioActive(true);
         }).catch(() => {
           setIsPlaying(false);
-          setShowPlayAffordance(true);
           setAutoplayBlocked(true);
         });
       }
@@ -220,7 +223,6 @@ export function VideoShowcase() {
     if (!v) return;
     const onPlay = () => {
       setIsPlaying(true);
-      setShowPlayAffordance(false);
       startProgressLoop();
     };
     const onPause = () => {
@@ -257,7 +259,6 @@ export function VideoShowcase() {
     };
     const onError = () => {
       setIsPlaying(false);
-      setShowPlayAffordance(true);
     };
     v.addEventListener("play", onPlay);
     v.addEventListener("pause", onPause);
@@ -304,6 +305,8 @@ export function VideoShowcase() {
     (targetId: string) => {
       const idx = videoItems.findIndex((v) => v.id === targetId);
       if (idx === -1 || idx === currentIndexRef.current) return;
+      // picking a video is an explicit intent to watch — resume the autoplay chain
+      userPausedRef.current = false;
       if (prefersReducedMotion) {
         setCurrentIndex(idx);
       } else {
@@ -321,6 +324,7 @@ export function VideoShowcase() {
     const v = activeRef.current;
     if (!v) return;
     if (v.paused) {
+      userPausedRef.current = false;
       v.muted = isMutedRef.current;
       void v
         .play()
@@ -328,8 +332,12 @@ export function VideoShowcase() {
           setIsPlaying(true);
           if (!isMutedRef.current) setVideoAudioActive(true);
         })
-        .catch(() => setShowPlayAffordance(true));
+        .catch(() => {
+          setIsPlaying(false);
+        });
     } else {
+      // explicit user stop — autoplay must stay off until the user resumes
+      userPausedRef.current = true;
       v.pause();
       if (!isMutedRef.current) setVideoAudioActive(false);
     }
@@ -346,7 +354,19 @@ export function VideoShowcase() {
       setIsMuted(next);
       if (!next) {
         v.volume = VIDEO_PLAYBACK_VOLUME;
-        if (!v.paused) setVideoAudioActive(true);
+        if (v.paused) {
+          // unmuting while paused starts playback so the tap does something audible
+          userPausedRef.current = false;
+          void v
+            .play()
+            .then(() => {
+              setIsPlaying(true);
+              setVideoAudioActive(true);
+            })
+            .catch(() => {
+              setIsPlaying(false);
+            });
+        } else setVideoAudioActive(true);
       } else setVideoAudioActive(false);
     },
     [setVideoAudioActive],
@@ -488,7 +508,7 @@ export function VideoShowcase() {
               </div>
 
               {/* mobile controls + play affordance */}
-              <div className="pointer-events-auto absolute right-3 top-3 flex gap-2 md:hidden">
+              <div className="pointer-events-auto absolute right-3 top-3 z-10 flex gap-2 md:hidden">
                 <button
                   type="button"
                   onClick={toggleMute}
@@ -502,7 +522,7 @@ export function VideoShowcase() {
                   )}
                 </button>
               </div>
-              {showPlayAffordance ? (
+              {!isPlaying && !isTransitioning ? (
                 <button
                   type="button"
                   onClick={togglePlay}
