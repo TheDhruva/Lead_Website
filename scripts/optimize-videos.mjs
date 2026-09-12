@@ -27,7 +27,7 @@ const mobileOnly = process.argv.includes("--mobile");
 
 /** @type {{ id: number; aspect: "portrait" | "landscape" }[]} */
 const items = [
-  { id: 1, aspect: "portrait" },
+  { id: 1, aspect: "landscape" },
   { id: 2, aspect: "landscape" },
   { id: 3, aspect: "landscape" },
   { id: 4, aspect: "landscape" },

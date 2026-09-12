@@ -2,7 +2,7 @@
 
 Showcase videos (muted, looping):
 
-- `showcase-1.mp4` — portrait feature
+- `showcase-1.mp4` — landscape
 - `showcase-2.mp4` — landscape
 - `showcase-3.mp4` — landscape
 - `showcase-4.mp4` — landscape

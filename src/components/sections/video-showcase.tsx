@@ -218,6 +218,9 @@ export function VideoShowcase() {
   }, []);
 
   // video events
+  // NOTE: the active <video> remounts on every video change
+  // (key={video-...}), so listeners must re-bind to each new element —
+  // otherwise only the first video reports play/pause/ended.
   useEffect(() => {
     const v = activeRef.current;
     if (!v) return;
@@ -273,6 +276,8 @@ export function VideoShowcase() {
       v.removeEventListener("error", onError);
     };
   }, [
+    currentIndex,
+    initialized,
     startProgressLoop,
     stopProgressLoop,
     prefersReducedMotion,
