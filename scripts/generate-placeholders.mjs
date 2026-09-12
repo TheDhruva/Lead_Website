@@ -118,6 +118,8 @@ fs.writeFileSync(
     "- showcase-2.mp4",
     "- showcase-3.mp4",
     "- showcase-4.mp4",
+    "- showcase-5.mp4",
+    "- showcase-6.mp4",
     "",
   ].join("\n"),
 );

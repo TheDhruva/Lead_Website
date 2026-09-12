@@ -31,6 +31,8 @@ const items = [
   { id: 2, aspect: "landscape" },
   { id: 3, aspect: "landscape" },
   { id: 4, aspect: "landscape" },
+  { id: 5, aspect: "landscape" },
+  { id: 6, aspect: "portrait" },
 ];
 
 function run(command) {

@@ -6,6 +6,8 @@ Showcase videos (muted, looping):
 - `showcase-2.mp4` — landscape
 - `showcase-3.mp4` — landscape
 - `showcase-4.mp4` — landscape
+- `showcase-5.mp4` — landscape
+- `showcase-6.mp4` — portrait
 
 Each clip also has HEVC (`.mp4` with `-hevc` suffix) and WebM (`.webm`) variants for smaller delivery. Poster frames live in `public/images/videos/showcase-{n}-poster.webp`.
 
