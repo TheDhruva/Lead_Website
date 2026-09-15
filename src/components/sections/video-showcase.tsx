@@ -518,12 +518,12 @@ export function VideoShowcase() {
                   type="button"
                   onClick={toggleMute}
                   aria-label={isMuted ? "Unmute video" : "Mute video"}
-                  className="inline-flex h-8 w-8 items-center justify-center rounded-full border border-white/20 bg-black/40 text-white"
+                  className="inline-flex h-11 w-11 items-center justify-center rounded-full border border-white/20 bg-black/40 text-white"
                 >
                   {isMuted ? (
-                    <VolumeX className="h-3.5 w-3.5" />
+                    <VolumeX className="h-4 w-4" />
                   ) : (
-                    <Volume2 className="h-3.5 w-3.5" />
+                    <Volume2 className="h-4 w-4" />
                   )}
                 </button>
               </div>
@@ -598,7 +598,7 @@ export function VideoShowcase() {
                       {/* eslint-disable-next-line @next/next/no-img-element */}
                       <img
                         src={item.poster}
-                        alt=""
+                        alt={item.title}
                         loading="lazy"
                         decoding="async"
                         className="h-full w-full object-cover transition duration-300 group-hover:scale-[1.02] group-hover:brightness-[1.06]"
@@ -634,7 +634,7 @@ export function VideoShowcase() {
                         {/* eslint-disable-next-line @next/next/no-img-element */}
                         <img
                           src={item.poster}
-                          alt=""
+                          alt={item.title}
                           loading="lazy"
                           decoding="async"
                           className="h-full w-full object-cover"

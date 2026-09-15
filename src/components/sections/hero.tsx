@@ -215,10 +215,7 @@ function HeroMobile() {
             </div>
           </m.div>
 
-          <h1
-            id="hero-heading-mobile"
-            className="hero-mobile__headline cinematic-layer cinematic-layer--headline font-headline-xl font-extrabold text-foreground"
-          >
+          <p className="hero-mobile__headline cinematic-layer cinematic-layer--headline font-headline-xl font-extrabold text-foreground">
             <m.span
               className="hero-mobile__headline-line1 block"
               {...lineMotion(0.12)}
@@ -234,7 +231,7 @@ function HeroMobile() {
             >
               Presence
             </m.span>
-          </h1>
+          </p>
         </div>
 
         <m.p
@@ -309,6 +306,9 @@ export function Hero() {
       className="section-frame section-frame--hero section-tone-hero relative items-center"
       aria-labelledby="hero-heading"
     >
+      <h1 id="hero-heading" className="sr-only">
+        Make Audience Feel Your Presence
+      </h1>
       <Container className="relative w-full min-w-0 max-w-none">
         <div className="hidden lg:contents">
           <PortraitStack
@@ -331,15 +331,15 @@ export function Hero() {
               delay: prefersReducedMotion ? 0 : 0.12,
             }}
           >
-            <h1
-              id="hero-heading"
+            <p
+              id="hero-heading-visual"
               className="cinematic-layer cinematic-layer--headline mb-5 font-headline-xl text-headline-xl font-extrabold tracking-tighter text-foreground md:mb-6 md:text-[68px] md:leading-[1.08] lg:text-[72px]"
             >
               Make Audience <br />
               <span className="text-foreground-secondary">
                 Feel Your Presence
               </span>
-            </h1>
+            </p>
             <p className="cinematic-layer cinematic-layer--copy mx-auto mb-8 max-w-2xl font-body-lg text-body-lg text-foreground-secondary md:mb-9">
               Beautiful websites, powerful visuals, and videos that make your
               brand impossible to ignore. A cinematic approach to digital

@@ -4,7 +4,11 @@ import { useCallback, useEffect, useRef, useState } from "react";
 
 import { AnimatePresence, m } from "framer-motion";
 
-import { THEATRE_INTRO_LOAD_MS, THEATRE_INTRO_REVEAL_MS } from "@/constants";
+import {
+  THEATRE_INTRO_AUTO_EXIT_MS,
+  THEATRE_INTRO_LOAD_MS,
+  THEATRE_INTRO_REVEAL_MS,
+} from "@/constants";
 import { useReducedMotion } from "@/hooks/use-reduced-motion";
 import { cn } from "@/lib/utils";
 import { useAudio } from "@/providers/audio-provider";
@@ -120,11 +124,24 @@ export function TheatreIntro() {
       if (event.key === "Enter" || event.key === " ") {
         event.preventDefault();
         beginExit(true);
+      } else if (event.key === "Escape") {
+        event.preventDefault();
+        beginExit(false);
       }
     };
 
     window.addEventListener("keydown", onKeyDown);
     return () => window.removeEventListener("keydown", onKeyDown);
+  }, [prefersReducedMotion, phase, beginExit]);
+
+  useEffect(() => {
+    if (prefersReducedMotion || phase !== "ready") return;
+
+    const timer = window.setTimeout(
+      () => beginExit(false),
+      THEATRE_INTRO_AUTO_EXIT_MS,
+    );
+    return () => window.clearTimeout(timer);
   }, [prefersReducedMotion, phase, beginExit]);
 
   const exiting = phase === "exiting";

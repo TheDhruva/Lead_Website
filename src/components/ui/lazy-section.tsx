@@ -27,6 +27,8 @@ interface LazySectionProps {
   rootMargin?: string;
   /** Visual anchor ratio for scroll guidance while placeholder is mounted. */
   scrollAnchorRatio?: string;
+  /** Server-renderable summary content visible to crawlers while the section is unmounted. */
+  srContent?: ReactNode;
 }
 
 /**
@@ -42,17 +44,18 @@ export function LazySection({
   minHeight = "min(66svh, 700px)",
   rootMargin = "0px 0px 600px 0px",
   scrollAnchorRatio,
+  srContent,
 }: LazySectionProps) {
-  const [forceMount, setForceMount] = useState(() => hashTargetsSection(id));
+  const [forceMount, setForceMount] = useState(false);
+  const [supported] = useState(
+    typeof window === "undefined" || "IntersectionObserver" in window,
+  );
   const { ref, isInView } = useIntersectionObserver<HTMLElement>({
     threshold: 0,
     rootMargin,
     triggerOnce: true,
     useScrollContainerRoot: true,
   });
-  const [supported] = useState(
-    typeof window === "undefined" || "IntersectionObserver" in window,
-  );
 
   useEffect(() => {
     if (!id) return;
@@ -64,6 +67,8 @@ export function LazySection({
       if (hashTargetsSection(id)) mount();
     };
 
+    if (hashTargetsSection(id)) mount();
+
     window.addEventListener("hashchange", onHashChange);
     return () => {
       unsubMount();
@@ -73,24 +78,32 @@ export function LazySection({
 
   const shouldMount = forceMount || isInView;
 
+  const placeholder = (
+    <section
+      ref={ref}
+      id={id}
+      data-snap-frame
+      data-scroll-anchor-ratio={scrollAnchorRatio}
+      className={cn("min-h-0", className)}
+      style={{ minHeight }}
+      aria-hidden={srContent ? undefined : "true"}
+      aria-busy="true"
+      tabIndex={srContent ? undefined : -1}
+    >
+      {srContent ? <div className="sr-only">{srContent}</div> : null}
+    </section>
+  );
+
   if (!supported) {
-    return <div className={className}>{children}</div>;
+    return srContent ? (
+      placeholder
+    ) : (
+      <div className={className}>{children}</div>
+    );
   }
 
   if (!shouldMount) {
-    return (
-      <section
-        ref={ref}
-        id={id}
-        data-snap-frame
-        data-scroll-anchor-ratio={scrollAnchorRatio}
-        className={cn("min-h-0", className)}
-        style={{ minHeight }}
-        aria-hidden="true"
-        aria-busy="true"
-        tabIndex={-1}
-      />
-    );
+    return placeholder;
   }
 
   const divRef = ref as RefObject<HTMLDivElement | null>;

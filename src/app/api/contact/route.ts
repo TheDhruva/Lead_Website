@@ -1,11 +1,24 @@
 import { NextResponse } from "next/server";
 
+import { checkRateLimit, getClientIp } from "@/lib/rate-limit";
 import { resend } from "@/lib/resend";
 import { contactFormSchema } from "@/lib/validations/contact";
 
 const MAX_BODY_BYTES = 25 * 1024;
 
 export async function POST(request: Request) {
+  const ip = getClientIp(request);
+  const { limited, retryAfterSeconds } = checkRateLimit(ip);
+  if (limited) {
+    return NextResponse.json(
+      { error: "Too many requests. Please try again shortly." },
+      {
+        status: 429,
+        headers: { "Retry-After": String(retryAfterSeconds) },
+      },
+    );
+  }
+
   const contentType = request.headers.get("content-type") ?? "";
   if (!contentType.includes("application/json")) {
     return NextResponse.json(
@@ -37,6 +50,16 @@ export async function POST(request: Request) {
     body = JSON.parse(raw);
   } catch {
     return NextResponse.json({ error: "Invalid JSON body." }, { status: 400 });
+  }
+
+  if (
+    typeof body === "object" &&
+    body !== null &&
+    "website" in body &&
+    typeof (body as Record<string, unknown>).website === "string" &&
+    ((body as Record<string, unknown>).website as string).trim().length > 0
+  ) {
+    return NextResponse.json({ ok: true }, { status: 200 });
   }
 
   const parsed = contactFormSchema.safeParse(body);
@@ -92,7 +115,7 @@ export async function POST(request: Request) {
   ].join("\n");
 
   try {
-    await resend.emails.send({ from, to, subject, text });
+    await resend.emails.send({ from, to, subject, text, replyTo: email });
   } catch {
     return NextResponse.json(
       { error: "Something went wrong. Please try again." },

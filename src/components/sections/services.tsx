@@ -32,22 +32,10 @@ function ServicePanel({
 }) {
   return (
     <article
-      role="button"
-      tabIndex={0}
-      aria-expanded={isActive}
-      aria-label={`${service.title}. ${isActive ? "Expanded" : "Expand"}`}
       onMouseEnter={onActivate}
-      onFocus={onActivate}
-      onClick={onActivate}
-      onKeyDown={(e) => {
-        if (e.key === "Enter" || e.key === " ") {
-          e.preventDefault();
-          onActivate();
-        }
-      }}
       className={cn(
-        "group relative flex min-h-0 min-w-0 cursor-pointer flex-col overflow-hidden rounded-lg border border-border bg-card outline-none",
-        "focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--background-secondary)]",
+        "group relative flex min-h-0 min-w-0 flex-col overflow-hidden rounded-lg border border-border bg-card",
+        "focus-within:ring-2 focus-within:ring-ring focus-within:ring-offset-2 focus-within:ring-offset-[var(--background-secondary)]",
         prefersReducedMotion
           ? "transition-none"
           : "transition-[flex-grow,opacity,border-color,box-shadow] duration-[620ms] ease-[cubic-bezier(0.22,1,0.36,1)]",
@@ -60,6 +48,15 @@ function ServicePanel({
         opacity: 1,
       }}
     >
+      {/* keyboard & pointer control — a real button over the whole panel */}
+      <button
+        type="button"
+        aria-label={`${service.title}. ${isActive ? "Expanded" : "Expand"}`}
+        aria-expanded={isActive}
+        onClick={onActivate}
+        onFocus={onActivate}
+        className="absolute inset-0 z-20 h-full w-full cursor-pointer outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-inset"
+      />
       {/* image */}
       <div className="absolute inset-0 overflow-hidden">
         <div

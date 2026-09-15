@@ -12,6 +12,7 @@ import { LazySection } from "@/components/ui/lazy-section";
 import { MuteButton } from "@/components/ui/mute-button";
 import { SectionSkeleton } from "@/components/ui/section-skeleton";
 import { SECTION_IDS } from "@/constants";
+import { projectRows, services, videoItems } from "@/data";
 import { useHashScroll } from "@/hooks/use-hash-scroll";
 import { SCROLL_CONTAINER_ID } from "@/lib/scroll-container";
 import { useAudio } from "@/providers/audio-provider";
@@ -89,6 +90,19 @@ export function HomePageContent() {
               className="section-tone-services section-placeholder"
               minHeight="100svh"
               scrollAnchorRatio="0.44"
+              srContent={
+                <>
+                  <h2 className="sr-only">Our Services</h2>
+                  <dl className="sr-only">
+                    {services.map((service) => (
+                      <div key={service.id}>
+                        <dt>{service.title}</dt>
+                        <dd>{service.description}</dd>
+                      </div>
+                    ))}
+                  </dl>
+                </>
+              }
             >
               <Services />
             </LazySection>
@@ -97,6 +111,21 @@ export function HomePageContent() {
               className="section-tone-videos section-placeholder"
               minHeight="100svh"
               scrollAnchorRatio="0.47"
+              srContent={
+                <>
+                  <h2 className="sr-only">Video Showcase</h2>
+                  <dl className="sr-only">
+                    {videoItems.map((video) => (
+                      <div key={video.id}>
+                        <dt>{video.title}</dt>
+                        <dd>
+                          {video.category} — {video.meta}
+                        </dd>
+                      </div>
+                    ))}
+                  </dl>
+                </>
+              }
             >
               <VideoShowcase />
             </LazySection>
@@ -105,6 +134,20 @@ export function HomePageContent() {
               className="section-tone-projects section-placeholder"
               minHeight="100svh"
               scrollAnchorRatio="0.45"
+              srContent={
+                <>
+                  <h2 className="sr-only">Projects</h2>
+                  <ul className="sr-only">
+                    {projectRows
+                      .flatMap((row) => [row.website, ...row.brands])
+                      .map((project) => (
+                        <li key={project.id}>
+                          {project.title} — {project.description}
+                        </li>
+                      ))}
+                  </ul>
+                </>
+              }
             >
               <Projects />
             </LazySection>
@@ -113,6 +156,15 @@ export function HomePageContent() {
               className="section-tone-contact section-placeholder"
               minHeight="100svh"
               scrollAnchorRatio="0.42"
+              srContent={
+                <>
+                  <h2 className="sr-only">Contact</h2>
+                  <p className="sr-only">
+                    Tell us about your project — video editing, website
+                    development, or brand design.
+                  </p>
+                </>
+              }
             >
               <Contact />
             </LazySection>

@@ -4,6 +4,7 @@ import type { ReactNode } from "react";
 
 import { SpeedInsights } from "@vercel/speed-insights/next";
 
+import { JsonLd } from "@/components/seo/json-ld";
 import { siteConfig } from "@/data";
 import { heroPortraits } from "@/data";
 import { inter } from "@/lib/fonts";
@@ -32,8 +33,8 @@ export const viewport: Viewport = {
 export const metadata: Metadata = {
   metadataBase: new URL(siteConfig.url),
   title: {
-    default: "DHRUVA - Cinematic Portfolio",
-    template: "%s | DHRUVA",
+    default: "THE DHRUVA — Cinematic Digital Studio",
+    template: "%s | THE DHRUVA",
   },
   description: siteConfig.description,
   applicationName: siteConfig.name,
@@ -42,17 +43,20 @@ export const metadata: Metadata = {
   publisher: siteConfig.name,
   keywords: [
     "DHRUVA",
-    "cinematic portfolio",
     "video editing",
+    "cinematic portfolio",
     "website development",
     "graphic design",
     "brand identity",
+    "motion design",
+    "video production",
   ],
   alternates: {
     canonical: "/",
   },
+  manifest: "/manifest.webmanifest",
   openGraph: {
-    title: "DHRUVA - Cinematic Portfolio",
+    title: "THE DHRUVA — Cinematic Digital Studio",
     description: siteConfig.description,
     url: "/",
     siteName: siteConfig.name,
@@ -63,19 +67,14 @@ export const metadata: Metadata = {
         url: siteConfig.ogImage,
         width: 1200,
         height: 630,
-        alt: "DHRUVA — Cinematic Portfolio",
-      },
-      {
-        url: "/images/og-dark.svg",
-        width: 1200,
-        height: 630,
-        alt: "DHRUVA — Cinematic Portfolio",
+        type: "image/png",
+        alt: "THE DHRUVA — Cinematic Digital Studio",
       },
     ],
   },
   twitter: {
     card: "summary_large_image",
-    title: "DHRUVA - Cinematic Portfolio",
+    title: "THE DHRUVA — Cinematic Digital Studio",
     description: siteConfig.description,
     images: [siteConfig.ogImage],
   },
@@ -114,8 +113,42 @@ interface RootLayoutProps {
   children: ReactNode;
 }
 
+const structuredData: Record<string, unknown>[] = [
+  {
+    "@context": "https://schema.org",
+    "@type": "Organization",
+    "@id": `${siteConfig.url}/#organization`,
+    name: siteConfig.name,
+    url: siteConfig.url,
+    description: siteConfig.description,
+    logo: `${siteConfig.url}/favicon.png`,
+    sameAs: [
+      siteConfig.links.instagram,
+      siteConfig.links.youtube,
+      siteConfig.links.linkedin,
+      siteConfig.links.github,
+      siteConfig.links.twitter,
+    ].filter(
+      (href): href is string =>
+        typeof href === "string" && href.startsWith("http"),
+    ),
+  },
+  {
+    "@context": "https://schema.org",
+    "@type": "WebSite",
+    "@id": `${siteConfig.url}/#website`,
+    url: siteConfig.url,
+    name: siteConfig.name,
+    description: siteConfig.description,
+    publisher: { "@id": `${siteConfig.url}/#organization` },
+    inLanguage: "en",
+  },
+];
+
 export default function RootLayout({ children }: RootLayoutProps) {
   const heroPreload = heroPortraits[0]?.src;
+  const hubSpotPortalId =
+    process.env.NEXT_PUBLIC_HUBSPOT_PORTAL_ID ?? "247221692";
 
   return (
     <html lang="en" className={cn(inter.variable)} suppressHydrationWarning>
@@ -129,6 +162,11 @@ export default function RootLayout({ children }: RootLayoutProps) {
             fetchPriority="high"
           />
         ) : null}
+        <link
+          rel="preconnect"
+          href="https://js-na2.hs-scripts.com"
+          crossOrigin="anonymous"
+        />
       </head>
       <body className="antialiased">
         <div
@@ -155,11 +193,14 @@ export default function RootLayout({ children }: RootLayoutProps) {
             </TheatreIntroProvider>
           </AnimationProvider>
         </ThemeProvider>
-        <Script
-          id="hs-script-loader"
-          src="https://js-na2.hs-scripts.com/247221692.js"
-          strategy="afterInteractive"
-        />
+        <JsonLd data={structuredData} />
+        {hubSpotPortalId ? (
+          <Script
+            id="hs-script-loader"
+            src={`https://js-na2.hs-scripts.com/${hubSpotPortalId}.js`}
+            strategy="afterInteractive"
+          />
+        ) : null}
         <SpeedInsights sampleRate={0.5} />
       </body>
     </html>

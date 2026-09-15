@@ -1,8 +1,8 @@
-export const AMBIENT_TRACK = "/audio/ambient/Heavenly Music.MP3";
+export const AMBIENT_TRACK = "/audio/ambient/heavenly-music.mp3";
 
 export const SFX = {
-  buttonClick: "/audio/sfx/button-click.MP3",
-  buttonHover: "/audio/sfx/button-hover.MP3",
+  buttonClick: "/audio/sfx/button-click.mp3",
+  buttonHover: "/audio/sfx/button-hover.mp3",
   cursorHover: "/audio/sfx/cursor-hover.mp3",
   elementAppear: "/audio/sfx/element-appear.mp3",
   inputFocus: "/audio/sfx/input-focus.mp3",

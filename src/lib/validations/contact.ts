@@ -26,6 +26,8 @@ export const contactFormSchema = z.object({
       CONTACT_MESSAGE_MAX,
       `Description must be under ${CONTACT_MESSAGE_MAX} characters`,
     ),
+  /** Invisible honeypot field — must be empty when submitted. */
+  website: z.string().trim().max(100).optional(),
 });
 
 export type ContactFormValues = z.infer<typeof contactFormSchema>;

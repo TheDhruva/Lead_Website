@@ -57,6 +57,8 @@ export const CONTACT_TIMELINES = [
 export const THEATRE_INTRO_LOAD_MS = 2500;
 /** Title split reveal before the loading line starts */
 export const THEATRE_INTRO_REVEAL_MS = 1200;
+/** Idle time in "ready" state before the intro auto-advances without audio */
+export const THEATRE_INTRO_AUTO_EXIT_MS = 1600;
 /** Beat between paper-cutout expression swaps in the hero */
 export const FACE_CYCLE_INTERVAL_MS = 2400;
 

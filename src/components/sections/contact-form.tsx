@@ -37,6 +37,7 @@ const defaultValues: ContactFormValues = {
   budget: "Let's Discuss",
   timeline: "Flexible",
   message: "",
+  website: "",
 };
 
 export function ContactForm() {
@@ -292,6 +293,20 @@ export function ContactForm() {
               {submissionError}
             </p>
           ) : null}
+
+          <div
+            aria-hidden="true"
+            style={{ position: "absolute", left: "-9999px", top: "auto" }}
+          >
+            <label htmlFor="contact-website">Leave this field empty</label>
+            <input
+              id="contact-website"
+              type="text"
+              tabIndex={-1}
+              autoComplete="off"
+              {...register("website")}
+            />
+          </div>
 
           <Button
             type="submit"

@@ -11,8 +11,8 @@ export const siteConfig: SiteConfig = {
   name: "DHRUVA",
   description:
     "Beautiful websites, powerful visuals, and videos that make your brand impossible to ignore. A cinematic approach to digital presence.",
-  url: process.env.NEXT_PUBLIC_SITE_URL ?? "https://dhruva.dev",
-  ogImage: "/images/og.svg",
+  url: process.env.NEXT_PUBLIC_SITE_URL ?? "https://something.vercel.app",
+  ogImage: "/images/og-cover.png",
   links: {
     instagram: process.env.NEXT_PUBLIC_INSTAGRAM_URL ?? "#",
     youtube: process.env.NEXT_PUBLIC_YOUTUBE_URL ?? "#",
@@ -299,14 +299,20 @@ export const socialLinks: SocialLink[] = [
   {
     id: "github",
     label: "GitHub",
-    href: siteConfig.links.github ?? "#",
+    href: siteConfig.links.github ?? "",
   },
   {
     id: "email",
     label: "Email",
     href: siteConfig.links.email,
   },
-];
+].filter((link) => isUsableUrl(link.href));
+
+/** Treats placeholder/empty values as missing so dead "#" links are never rendered. */
+function isUsableUrl(value: string | undefined | null): value is string {
+  const trimmed = value?.trim() ?? "";
+  return trimmed.length > 0 && trimmed !== "#";
+}
 
 /** Opens the PDF in a new tab — file lives in /public */
 export const resumeLink = {
