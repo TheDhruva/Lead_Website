@@ -18,18 +18,23 @@ export function useCinematicSection(
 ): void {
   const prefersReducedMotion = useReducedMotion();
   const isMobile = useMediaQuery("(max-width: 767px)");
+  const isCoarsePointer = useMediaQuery("(pointer: coarse)");
+  // Cinematic scroll vars are a desktop/fine-pointer treatment: on
+  // mobile/coarse pointers the motion is intentionally absent, so skip
+  // registration entirely — no getBoundingClientRect, no CSS var writes.
+  const cinematicDisabled = prefersReducedMotion || isMobile || isCoarsePointer;
 
   useEffect(() => {
     const el = ref.current;
-    if (!el || prefersReducedMotion) {
+    if (!el || cinematicDisabled) {
       if (el) unregisterCinematicSection(el);
       return;
     }
 
-    registerCinematicSection(el, preset, isMobile);
+    registerCinematicSection(el, preset, false);
 
     return () => {
       unregisterCinematicSection(el);
     };
-  }, [ref, preset, prefersReducedMotion, isMobile]);
+  }, [ref, preset, cinematicDisabled]);
 }

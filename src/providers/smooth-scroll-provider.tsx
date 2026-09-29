@@ -1,249 +1,91 @@
 "use client";
 
-import {
-  type ReactNode,
-  createContext,
-  useContext,
-  useEffect,
-  useRef,
-  useState,
-} from "react";
+import { type ReactNode, useEffect, useRef } from "react";
 
-import type Lenis from "lenis";
-
-import { useReducedMotion } from "@/hooks/use-reduced-motion";
-import { LENIS_EASING, getLenisOptions } from "@/lib/lenis-config";
-import {
-  SCROLL_CONTAINER_ID,
-  clearProgrammaticScroll,
-  isProgrammaticScroll,
-  registerLenis,
-} from "@/lib/scroll-container";
+import { SCROLL_CONTAINER_ID } from "@/lib/scroll-container";
 import {
   type ScrollDirection,
   publishScrollMotion,
 } from "@/lib/scroll-motion-engine";
 import { useTheatreIntro } from "@/providers/theatre-intro-provider";
 
-export { LENIS_EASING };
-
-const LenisContext = createContext<Lenis | null>(null);
-
-export function useLenisContext() {
-  return useContext(LenisContext);
-}
-
 interface SmoothScrollProviderProps {
   children: ReactNode;
 }
 
-const MAIN_CONTENT_ID = "main-content";
-const LENIS_IDLE_FRAMES = 90;
-
+/**
+ * Main scroll path is 100% native browser scrolling inside
+ * #scroll-container, with deterministic CSS snap stops.
+ *
+ * Lenis was removed from this path: its RAF-driven scrollTop interpolation
+ * fought native snap (snap yanked mid-flight → Lenis re-interpolated →
+ * visible teleport), and nav targets computed for anchor-centering never
+ * matched snap-start rest positions.
+ *
+ * This provider now only publishes native scroll frames (rAF-throttled,
+ * passive listener) so the scroll-bus cinematic vars, is-scroll-active
+ * gating, and pointer pausing keep working with zero scroll ownership.
+ * Context stays (always null) so existing consumers don't break.
+ */
 export function SmoothScrollProvider({ children }: SmoothScrollProviderProps) {
-  const prefersReducedMotion = useReducedMotion();
   const { hasEntered } = useTheatreIntro();
-  const [lenis, setLenis] = useState<Lenis | null>(null);
   const rafIdRef = useRef<number | null>(null);
-  const idleFramesRef = useRef(0);
-  const instanceRef = useRef<Lenis | null>(null);
+  const lastScrollRef = useRef(0);
+  const lastTimeRef = useRef(0);
+  const lastDirectionRef = useRef<ScrollDirection>(0);
 
   useEffect(() => {
-    if (prefersReducedMotion || !hasEntered) return;
-
-    const isCoarsePointer = window.matchMedia("(pointer: coarse)").matches;
-
-    let cancelled = false;
-    let retryId = 0;
-    let wrapperEl: HTMLElement | null = null;
-
-    function rafLoop(time: number) {
-      const lenisInstance = instanceRef.current;
-      if (!lenisInstance) {
-        rafIdRef.current = null;
-        return;
-      }
-
-      lenisInstance.raf(time);
-
-      const velocity = Math.abs(lenisInstance.velocity ?? 0);
-      if (velocity > 0.02) {
-        idleFramesRef.current = 0;
-      } else {
-        idleFramesRef.current += 1;
-      }
-
-      if (idleFramesRef.current >= LENIS_IDLE_FRAMES) {
-        rafIdRef.current = null;
-        idleFramesRef.current = 0;
-        return;
-      }
-
-      rafIdRef.current = requestAnimationFrame(rafLoop);
-    }
-
-    const resumeRaf = () => {
-      if (rafIdRef.current !== null || !instanceRef.current) return;
-      idleFramesRef.current = 0;
-      rafIdRef.current = requestAnimationFrame(rafLoop);
-    };
-
-    const interruptProgrammatic = () => {
-      if (isProgrammaticScroll()) {
-        clearProgrammaticScroll();
-        // let user own scroll immediately — stop current Lenis animation
-        instanceRef.current?.stop();
-        instanceRef.current?.start();
-      }
-    };
-
-    async function initLenis() {
-      const wrapper = document.getElementById(SCROLL_CONTAINER_ID);
-      const content = document.getElementById(MAIN_CONTENT_ID);
-
-      if (!wrapper || !content) {
-        if (!cancelled) {
-          retryId = window.requestAnimationFrame(() => {
-            void initLenis();
-          });
-        }
-        return;
-      }
-
-      const { default: LenisCtor } = await import("lenis");
-      if (cancelled) return;
-
-      const instance = new LenisCtor({
-        wrapper,
-        content,
-        ...getLenisOptions(isCoarsePointer),
-      });
-
-      instanceRef.current = instance;
-
-      instance.on(
-        "scroll",
-        (event: {
-          scroll: number;
-          velocity: number;
-          direction: number;
-          limit: number;
-        }) => {
-          publishScrollMotion({
-            scroll: event.scroll,
-            velocity: event.velocity,
-            direction: (event.direction ?? 0) as ScrollDirection,
-            limit: event.limit,
-            progress: event.limit > 0 ? event.scroll / event.limit : 0,
-          });
-        },
-      );
-
-      registerLenis(instance);
-      setLenis(instance);
-
-      instance.scrollTo(wrapper.scrollTop, { immediate: true });
-      publishScrollMotion({
-        scroll: instance.scroll,
-        velocity: 0,
-        direction: 0,
-        limit: instance.limit,
-        progress: instance.limit > 0 ? instance.scroll / instance.limit : 0,
-      });
-
-      wrapperEl = wrapper;
-      const onWheelInterrupt = () => {
-        interruptProgrammatic();
-        resumeRaf();
-      };
-      const onTouchInterrupt = () => {
-        interruptProgrammatic();
-        resumeRaf();
-      };
-      wrapper.addEventListener("wheel", onWheelInterrupt, { passive: true });
-      wrapper.addEventListener("touchstart", onTouchInterrupt, {
-        passive: true,
-      });
-      wrapper.addEventListener("scroll", resumeRaf, { passive: true });
-      // keep refs for cleanup
-      (
-        wrapper as unknown as { _onWheelInterrupt?: typeof onWheelInterrupt }
-      )._onWheelInterrupt = onWheelInterrupt;
-      (
-        wrapper as unknown as { _onTouchInterrupt?: typeof onTouchInterrupt }
-      )._onTouchInterrupt = onTouchInterrupt;
-
-      rafIdRef.current = requestAnimationFrame(rafLoop);
-    }
-
-    void initLenis();
-
-    return () => {
-      cancelled = true;
-      if (retryId) window.cancelAnimationFrame(retryId);
-      if (rafIdRef.current !== null) {
-        cancelAnimationFrame(rafIdRef.current);
-      }
-
-      const wrapper = wrapperEl ?? document.getElementById(SCROLL_CONTAINER_ID);
-      if (wrapper) {
-        const w = wrapper as unknown as {
-          _onWheelInterrupt?: EventListener;
-          _onTouchInterrupt?: EventListener;
-        };
-        if (w._onWheelInterrupt)
-          wrapper.removeEventListener("wheel", w._onWheelInterrupt);
-        if (w._onTouchInterrupt)
-          wrapper.removeEventListener("touchstart", w._onTouchInterrupt);
-        wrapper.removeEventListener("scroll", resumeRaf);
-      }
-
-      instanceRef.current?.destroy();
-      instanceRef.current = null;
-      registerLenis(null);
-      setLenis(null);
-      publishScrollMotion({
-        scroll: 0,
-        velocity: 0,
-        direction: 0,
-        limit: 0,
-        progress: 0,
-      });
-    };
-  }, [prefersReducedMotion, hasEntered]);
-
-  useEffect(() => {
-    if (lenis || prefersReducedMotion || !hasEntered) return;
+    if (!hasEntered) return;
 
     const container = document.getElementById(SCROLL_CONTAINER_ID);
     if (!container) return;
 
-    const onNativeScroll = () => {
+    lastScrollRef.current = container.scrollTop;
+    lastTimeRef.current = performance.now();
+
+    const publish = () => {
+      rafIdRef.current = null;
       const scroll = container.scrollTop;
+      const now = performance.now();
+      const dtMs = Math.max(1, now - lastTimeRef.current);
+      const delta = scroll - lastScrollRef.current;
+      // Lenis-compatible unit: px per animation frame (~16.7ms).
+      const velocity = (delta / dtMs) * 16.667;
+      const direction: ScrollDirection =
+        delta > 0.01 ? 1 : delta < -0.01 ? -1 : lastDirectionRef.current;
+      lastDirectionRef.current = direction;
       const limit = Math.max(
         0,
         container.scrollHeight - container.clientHeight,
       );
+      lastScrollRef.current = scroll;
+      lastTimeRef.current = now;
       publishScrollMotion({
         scroll,
-        velocity: 0,
-        direction: 0,
+        velocity,
+        direction,
         limit,
         progress: limit > 0 ? scroll / limit : 0,
       });
     };
 
-    container.addEventListener("scroll", onNativeScroll, { passive: true });
-    onNativeScroll();
+    const onScroll = () => {
+      if (rafIdRef.current !== null) return;
+      rafIdRef.current = requestAnimationFrame(publish);
+    };
+
+    container.addEventListener("scroll", onScroll, { passive: true });
+    // Publish the resting frame so late subscribers get a valid snapshot.
+    onScroll();
 
     return () => {
-      container.removeEventListener("scroll", onNativeScroll);
+      container.removeEventListener("scroll", onScroll);
+      if (rafIdRef.current !== null) {
+        cancelAnimationFrame(rafIdRef.current);
+        rafIdRef.current = null;
+      }
     };
-  }, [lenis, prefersReducedMotion, hasEntered]);
+  }, [hasEntered]);
 
-  return (
-    <LenisContext.Provider value={prefersReducedMotion ? null : lenis}>
-      {children}
-    </LenisContext.Provider>
-  );
+  return <>{children}</>;
 }

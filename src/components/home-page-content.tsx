@@ -5,7 +5,6 @@ import dynamic from "next/dynamic";
 import { PageTransition } from "@/components/animations/page-transition";
 import { AudioGestureUnlock } from "@/components/audio-gesture-unlock";
 import { Navbar } from "@/components/layout/navbar";
-import { ScrollIntentGuidance } from "@/components/scroll/scroll-intent-guidance";
 import { Hero } from "@/components/sections/hero";
 import { TheatreIntro } from "@/components/sections/theatre-intro";
 import { LazySection } from "@/components/ui/lazy-section";
@@ -13,6 +12,7 @@ import { MuteButton } from "@/components/ui/mute-button";
 import { SectionSkeleton } from "@/components/ui/section-skeleton";
 import { SECTION_IDS } from "@/constants";
 import { projectRows, services, videoItems } from "@/data";
+import { useContainerKeyboardScroll } from "@/hooks/use-container-keyboard-scroll";
 import { useHashScroll } from "@/hooks/use-hash-scroll";
 import { SCROLL_CONTAINER_ID } from "@/lib/scroll-container";
 import { useAudio } from "@/providers/audio-provider";
@@ -56,6 +56,7 @@ const Contact = dynamic(
 
 function HashScrollSync() {
   useHashScroll();
+  useContainerKeyboardScroll();
   return null;
 }
 
@@ -68,7 +69,6 @@ export function HomePageContent() {
     <>
       {!hasEntered ? <TheatreIntro /> : null}
       <HashScrollSync />
-      <ScrollIntentGuidance />
       <AudioGestureUnlock />
       {showMute ? <MuteButton /> : null}
       <PageTransition data-page-shell className="relative h-[100svh]">
@@ -89,7 +89,6 @@ export function HomePageContent() {
               id={SECTION_IDS.services}
               className="section-tone-services section-placeholder"
               minHeight="100svh"
-              scrollAnchorRatio="0.44"
               srContent={
                 <>
                   <h2 className="sr-only">Our Services</h2>
@@ -110,7 +109,6 @@ export function HomePageContent() {
               id={SECTION_IDS.video}
               className="section-tone-videos section-placeholder"
               minHeight="100svh"
-              scrollAnchorRatio="0.47"
               srContent={
                 <>
                   <h2 className="sr-only">Video Showcase</h2>
@@ -133,7 +131,6 @@ export function HomePageContent() {
               id={SECTION_IDS.projects}
               className="section-tone-projects section-placeholder"
               minHeight="100svh"
-              scrollAnchorRatio="0.45"
               srContent={
                 <>
                   <h2 className="sr-only">Projects</h2>
@@ -155,7 +152,6 @@ export function HomePageContent() {
               id={SECTION_IDS.contact}
               className="section-tone-contact section-placeholder"
               minHeight="100svh"
-              scrollAnchorRatio="0.42"
               srContent={
                 <>
                   <h2 className="sr-only">Contact</h2>

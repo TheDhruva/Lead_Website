@@ -1,8 +1,4 @@
-import {
-  getLenis,
-  getScrollContainer,
-  getScrollTop,
-} from "@/lib/scroll-container";
+import { getScrollContainer, getScrollTop } from "@/lib/scroll-container";
 
 let lockCount = 0;
 let savedScrollTop = 0;
@@ -17,9 +13,6 @@ export function lockScrollPanel(): void {
 
   savedScrollTop = getScrollTop();
   const container = getScrollContainer();
-  const lenis = getLenis();
-
-  lenis?.stop();
 
   if (container) {
     container.style.overflow = "hidden";
@@ -34,17 +27,16 @@ export function unlockScrollPanel(): void {
   if (lockCount > 0) return;
 
   const container = getScrollContainer();
-  const lenis = getLenis();
 
   if (container) {
+    // Restore any drift while locked without animating — scroll position
+    // itself is preserved by overflow:hidden, this only guards edge cases.
+    if (Math.abs(container.scrollTop - savedScrollTop) > 1) {
+      container.scrollTop = savedScrollTop;
+    }
     container.style.overflow = "";
     delete container.dataset.scrollLocked;
   }
 
   document.body.style.overflow = "";
-
-  if (lenis) {
-    lenis.start();
-    lenis.scrollTo(savedScrollTop, { immediate: true });
-  }
 }

@@ -47,7 +47,7 @@ export function MuteButton({ className }: MuteButtonProps) {
       onMouseEnter={() => play("buttonHover")}
       className={cn(
         "fixed right-4 bottom-[max(1.25rem,env(safe-area-inset-bottom))] z-[55] flex items-center gap-2 rounded-full border border-border",
-        "bg-background/92 px-3 py-2 shadow-[var(--shadow-sm)] backdrop-blur-md",
+        "bg-background px-3 py-2 shadow-[var(--shadow-sm)]",
         "transition-colors duration-200 hover:bg-card-hover sm:right-8 sm:bottom-8 sm:px-4 sm:py-2.5",
         "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
         className,

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 
 import { AnimatePresence, m } from "framer-motion";
 
@@ -14,7 +14,7 @@ import { useFaceCycle } from "@/hooks/use-face-cycle";
 import { useMediaQuery } from "@/hooks/use-media-query";
 import { useReducedMotion } from "@/hooks/use-reduced-motion";
 import { useSmoothScroll } from "@/hooks/use-smooth-scroll";
-import { lerp, pointerEngine } from "@/lib/pointer-engine";
+import { frameAlpha, pointerEngine } from "@/lib/pointer-engine";
 import { isScrollActive } from "@/lib/scroll-bus";
 import { cn } from "@/lib/utils";
 import type { HeroPortrait } from "@/types";
@@ -90,10 +90,11 @@ function PortraitStack({
         const targetRy = Math.max(-1, Math.min(1, dx)) * 4;
         const targetRx = Math.max(-1, Math.min(1, -dy)) * 3;
 
-        current.x = lerp(current.x, targetX, 0.08);
-        current.y = lerp(current.y, targetY, 0.08);
-        current.rx = lerp(current.rx, targetRx, 0.08);
-        current.ry = lerp(current.ry, targetRy, 0.08);
+        const alpha = frameAlpha(frame.dt, 0.08);
+        current.x += (targetX - current.x) * alpha;
+        current.y += (targetY - current.y) * alpha;
+        current.rx += (targetRx - current.rx) * alpha;
+        current.ry += (targetRy - current.ry) * alpha;
 
         gaze.style.transform = `translate3d(${current.x.toFixed(2)}px, ${current.y.toFixed(2)}px, 0) rotateX(${current.rx.toFixed(2)}deg) rotateY(${current.ry.toFixed(2)}deg)`;
       }
@@ -185,10 +186,7 @@ function HeroMobile() {
 
   return (
     <div className="hero-mobile relative z-10 flex w-full flex-col lg:hidden">
-      <div
-        className="hero-mobile__stage relative flex w-full flex-col items-center"
-        data-scroll-anchor
-      >
+      <div className="hero-mobile__stage relative flex w-full flex-col items-center">
         <div className="hero-mobile__visual cinematic-layer cinematic-layer--visual relative w-full max-w-full">
           <m.div
             className="hero-mobile__portrait-bg pointer-events-none"
@@ -287,9 +285,23 @@ export function Hero() {
   const isDesktop = useMediaQuery("(min-width: 1024px)");
   const canReact = useCanPointerReact();
   useCinematicSection(sectionRef, "hero");
+  const [heroInView, setHeroInView] = useState(true);
+  // Pause the portrait cycle when the hero is fully off-screen — no
+  // interval renders or Framer crossfades for an invisible section.
+  useEffect(() => {
+    const el = sectionRef.current;
+    if (!el || typeof IntersectionObserver === "undefined") return;
+    const observer = new IntersectionObserver(
+      ([entry]) => setHeroInView(entry?.isIntersecting ?? true),
+      { threshold: 0 },
+    );
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, []);
   const { index } = useFaceCycle(
     isDesktop ? CUTOUT_COUNT : 1,
     FACE_CYCLE_INTERVAL_MS,
+    !heroInView,
   );
   const { scrollTo } = useSmoothScroll();
   const prefersReducedMotion = useReducedMotion();
@@ -302,7 +314,6 @@ export function Hero() {
       ref={sectionRef}
       id="work"
       data-snap-frame
-      data-scroll-anchor-ratio="0.4"
       className="section-frame section-frame--hero section-tone-hero relative items-center"
       aria-labelledby="hero-heading"
     >
@@ -310,65 +321,72 @@ export function Hero() {
         Make Audience Feel Your Presence
       </h1>
       <Container className="relative w-full min-w-0 max-w-none">
-        <div className="hidden lg:contents">
-          <PortraitStack
-            portraits={heroPortraits}
-            activeIndex={leftIndex}
-            side="left"
-            gazeEnabled={canReact && isDesktop}
-          />
+        {/* Desktop tree only mounts on ≥1024px viewports — the portrait
+            stacks (AnimatePresence + eager images + gaze) never mount on
+            mobile, and HeroMobile never mounts on desktop. Breakpoint matches
+            lg: so no visual gap; theatre gates first paint regardless. */}
+        {isDesktop ? (
+          <div className="hidden lg:contents">
+            <PortraitStack
+              portraits={heroPortraits}
+              activeIndex={leftIndex}
+              side="left"
+              gazeEnabled={canReact && isDesktop}
+            />
 
-          <m.div
-            data-scroll-anchor
-            className="relative z-10 mx-auto flex max-w-4xl flex-col items-center px-2 text-center sm:px-0"
-            initial={
-              prefersReducedMotion ? false : { opacity: 0, y: 40, scale: 0.97 }
-            }
-            animate={{ opacity: 1, y: 0, scale: 1 }}
-            transition={{
-              duration: MOTION.reveal.duration,
-              ease: MOTION.reveal.ease,
-              delay: prefersReducedMotion ? 0 : 0.12,
-            }}
-          >
-            <p
-              id="hero-heading-visual"
-              className="cinematic-layer cinematic-layer--headline mb-5 font-headline-xl text-headline-xl font-extrabold tracking-tighter text-foreground md:mb-6 md:text-[68px] md:leading-[1.08] lg:text-[72px]"
+            <m.div
+              className="relative z-10 mx-auto flex max-w-4xl flex-col items-center px-2 text-center sm:px-0"
+              initial={
+                prefersReducedMotion
+                  ? false
+                  : { opacity: 0, y: 40, scale: 0.97 }
+              }
+              animate={{ opacity: 1, y: 0, scale: 1 }}
+              transition={{
+                duration: MOTION.reveal.duration,
+                ease: MOTION.reveal.ease,
+                delay: prefersReducedMotion ? 0 : 0.12,
+              }}
             >
-              Make Audience <br />
-              <span className="text-foreground-secondary">
-                Feel Your Presence
-              </span>
-            </p>
-            <p className="cinematic-layer cinematic-layer--copy mx-auto mb-8 max-w-2xl font-body-lg text-body-lg text-foreground-secondary md:mb-9">
-              Beautiful websites, powerful visuals, and videos that make your
-              brand impossible to ignore. A cinematic approach to digital
-              presence.
-            </p>
-            <div className="cinematic-layer cinematic-layer--cta flex flex-col items-center justify-center gap-4 sm:flex-row">
-              <Button size="lg" sfx onClick={() => scrollTo("#contact")}>
-                I&apos;m Ready To Grow
-              </Button>
-              <Button
-                size="lg"
-                variant="ghost"
-                sfx
-                onClick={() => scrollTo("#projects")}
+              <p
+                id="hero-heading-visual"
+                className="cinematic-layer cinematic-layer--headline mb-5 font-headline-xl text-headline-xl font-extrabold tracking-tighter text-foreground md:mb-6 md:text-[68px] md:leading-[1.08] lg:text-[72px]"
               >
-                View Work
-              </Button>
-            </div>
-          </m.div>
+                Make Audience <br />
+                <span className="text-foreground-secondary">
+                  Feel Your Presence
+                </span>
+              </p>
+              <p className="cinematic-layer cinematic-layer--copy mx-auto mb-8 max-w-2xl font-body-lg text-body-lg text-foreground-secondary md:mb-9">
+                Beautiful websites, powerful visuals, and videos that make your
+                brand impossible to ignore. A cinematic approach to digital
+                presence.
+              </p>
+              <div className="cinematic-layer cinematic-layer--cta flex flex-col items-center justify-center gap-4 sm:flex-row">
+                <Button size="lg" sfx onClick={() => scrollTo("#contact")}>
+                  I&apos;m Ready To Grow
+                </Button>
+                <Button
+                  size="lg"
+                  variant="ghost"
+                  sfx
+                  onClick={() => scrollTo("#projects")}
+                >
+                  View Work
+                </Button>
+              </div>
+            </m.div>
 
-          <PortraitStack
-            portraits={heroPortraits}
-            activeIndex={rightIndex}
-            side="right"
-            gazeEnabled={canReact && isDesktop}
-          />
-        </div>
-
-        <HeroMobile />
+            <PortraitStack
+              portraits={heroPortraits}
+              activeIndex={rightIndex}
+              side="right"
+              gazeEnabled={canReact && isDesktop}
+            />
+          </div>
+        ) : (
+          <HeroMobile />
+        )}
       </Container>
     </section>
   );

@@ -1,10 +1,7 @@
 export { AnimationProvider } from "./animation-provider";
 export { AudioProvider, useAudio } from "./audio-provider";
 export { PointerEngineProvider } from "./pointer-engine-provider";
-export {
-  SmoothScrollProvider,
-  useLenisContext,
-} from "./smooth-scroll-provider";
+export { SmoothScrollProvider } from "./smooth-scroll-provider";
 export { ThemeProvider } from "./theme-provider";
 export {
   TheatreIntroProvider,

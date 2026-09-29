@@ -25,8 +25,6 @@ interface LazySectionProps {
   minHeight?: CSSProperties["minHeight"];
   /** Start loading this far before the section enters the viewport. */
   rootMargin?: string;
-  /** Visual anchor ratio for scroll guidance while placeholder is mounted. */
-  scrollAnchorRatio?: string;
   /** Server-renderable summary content visible to crawlers while the section is unmounted. */
   srContent?: ReactNode;
 }
@@ -43,7 +41,6 @@ export function LazySection({
   className,
   minHeight = "min(66svh, 700px)",
   rootMargin = "0px 0px 600px 0px",
-  scrollAnchorRatio,
   srContent,
 }: LazySectionProps) {
   const [forceMount, setForceMount] = useState(false);
@@ -83,7 +80,6 @@ export function LazySection({
       ref={ref}
       id={id}
       data-snap-frame
-      data-scroll-anchor-ratio={scrollAnchorRatio}
       className={cn("min-h-0", className)}
       style={{ minHeight }}
       aria-hidden={srContent ? undefined : "true"}

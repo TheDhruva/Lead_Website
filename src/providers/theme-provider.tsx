@@ -4,8 +4,6 @@ import { type ReactNode, useEffect } from "react";
 
 import { ThemeProvider as NextThemesProvider } from "next-themes";
 
-import { ThemeFavicon } from "@/components/ui/theme-favicon";
-
 /**
  * next-themes injects an inline <script> to prevent theme flash.
  * React 19 / Next 16 warns about script tags inside client components;
@@ -44,7 +42,6 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
       disableTransitionOnChange={false}
     >
       <ThemeTransitionGate />
-      <ThemeFavicon />
       {children}
     </NextThemesProvider>
   );

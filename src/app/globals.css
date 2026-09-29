@@ -1,5 +1,4 @@
 @import "tailwindcss";
-@import "lenis/dist/lenis.css";
 
 /* ─────────────────────────────────────────────────────────────
    Tailwind theme → semantic CSS variables (theme-agnostic utilities)
@@ -152,7 +151,7 @@
   --input: #ffffff;
   --input-border: #d4d4d8;
   --ring: #111111;
-  --nav: rgb(255 255 255 / 0.82);
+  --nav: rgb(255 255 255 / 0.96);
   --divider: #ececec;
   --overlay: rgb(0 0 0 / 0.55);
   --error: #dc2626;
@@ -231,7 +230,7 @@
   --input: #1c1b1b;
   --input-border: #444748;
   --ring: #ffffff;
-  --nav: rgb(20 19 19 / 0.8);
+  --nav: rgb(20 19 19 / 0.96);
   --divider: #444748;
   --overlay: rgb(0 0 0 / 0.6);
   --error: #ffb4ab;
@@ -258,19 +257,12 @@
 }
 
 @layer base {
-  html {
-    scroll-behavior: smooth;
-  }
-
-  html.lenis,
-  html.lenis body {
-    scroll-behavior: auto;
-  }
-
+  /* scroll-margin also offsets snap-align — keep 0 inside the snap panel
+     (sections clear the floating navbar with their own padding-top). */
   section[id],
   [data-snap-frame],
   .section-contact {
-    scroll-margin-top: var(--nav-safe-top);
+    scroll-margin-top: 0;
   }
 
   body {
@@ -283,15 +275,17 @@
     -moz-osx-font-smoothing: grayscale;
   }
 
-  /* Site-wide film grain — felt, not seen */
+  /* Site-wide film grain — felt, not seen (single restrained layer).
+     No blend mode: multiply/overlay force a fullscreen blend pass over
+     scrolled content every frame, yet measure <1.5 luma levels different
+     from plain compositing — imperceptible, so blend is pure cost. */
   body::before {
     content: "";
     position: fixed;
     inset: 0;
     z-index: 9998;
     pointer-events: none;
-    opacity: 0.028;
-    mix-blend-mode: multiply;
+    opacity: 0.022;
     background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
     background-size: 180px 180px;
   }
@@ -318,7 +312,6 @@
 
   .dark body::before {
     opacity: 0.04;
-    mix-blend-mode: overlay;
   }
 
   .dark body::after {
@@ -370,29 +363,18 @@
     background: var(--scrollbar-thumb-hover);
   }
 
+  /* Solid navbar — no backdrop-filter (persistent backdrop sampling is the
+     costliest continuous GPU work on desktop); depth comes from border +
+     shadow + scrolled tightening instead. */
   .navbar[data-scrolled="true"] {
     top: 0.75rem;
     padding-block: 0.45rem;
     border-color: rgb(228 228 231 / 0.55);
-    background: rgb(255 255 255 / 0.72);
+    background: rgb(255 255 255 / 0.96);
     box-shadow: 0 6px 28px rgb(0 0 0 / 0.05);
   }
 
-  @media (min-width: 768px) {
-    .navbar[data-scrolled="true"] {
-      backdrop-filter: blur(12px) saturate(1.08);
-      -webkit-backdrop-filter: blur(12px) saturate(1.08);
-    }
-  }
-
-  @media (max-width: 767px) {
-    .navbar[data-scrolled="true"] {
-      backdrop-filter: none;
-      -webkit-backdrop-filter: none;
-    }
-  }
-
-  /* ── Mobile perf: disable expensive fixed grain/vignette composited layers ── */
+  /* ── Mobile / coarse-pointer perf: thin out fixed grain/vignette layers ── */
   @media (max-width: 767px) {
     body::before {
       opacity: 0.015;
@@ -403,14 +385,20 @@
     }
   }
 
+  @media (pointer: coarse) {
+    body::after {
+      display: none;
+    }
+  }
+
   .dark .navbar[data-scrolled="true"] {
     border-color: rgb(255 255 255 / 0.1);
-    background: rgb(20 19 19 / 0.72);
+    background: rgb(20 19 19 / 0.96);
     box-shadow: 0 8px 32px rgb(0 0 0 / 0.35);
   }
 }
 
-/* ── Full-viewport scroll container (Lenis-smoothed) ── */
+/* ── Full-viewport scroll container (native scroll + CSS snap) ── */
 html.theatre-done body {
   overflow: hidden;
   height: 100svh;
@@ -419,7 +407,47 @@ html.theatre-done body {
 .scroll-panel {
   overscroll-behavior-y: contain;
   -webkit-overflow-scrolling: touch;
-  scroll-padding-top: var(--nav-safe-top);
+  /* Snap aligns section border-box start exactly to the snapport start.
+     Sections already carry internal padding-top: var(--nav-safe-top), so any
+     scroll-padding here would double-offset content below the navbar. */
+  scroll-padding-top: 0;
+  /* Native section rhythm — proximity on touch (natural momentum),
+     mandatory on precise desktop pointers (deterministic stops). */
+  scroll-snap-type: y proximity;
+}
+
+@media (min-width: 1024px) and (hover: hover) and (pointer: fine) {
+  .scroll-panel {
+    scroll-snap-type: y mandatory;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .scroll-panel {
+    scroll-snap-type: none;
+  }
+}
+
+/* Snap targets — major presentation sections align to container start.
+   Auto-height sections keep natural height; snap only sets the stop point. */
+section[id],
+[data-snap-frame],
+.section-frame,
+.section-contact {
+  scroll-snap-align: start;
+}
+
+@media (min-width: 1024px) and (hover: hover) and (pointer: fine) {
+  section[id],
+  [data-snap-frame],
+  .section-frame,
+  .section-contact {
+    scroll-snap-stop: always;
+  }
+  /* Long gallery content must not trap the snap position on desktop */
+  #projects {
+    scroll-snap-stop: normal;
+  }
 }
 
 /* Every major section = exactly one viewport */
@@ -583,86 +611,6 @@ html.theatre-done body {
   background-color: var(--tone-contact);
 }
 
-/* Optional faint grid in editorial sections */
-.section-grid-bg {
-  background-image:
-    linear-gradient(rgb(17 17 17 / 0.018) 1px, transparent 1px),
-    linear-gradient(90deg, rgb(17 17 17 / 0.018) 1px, transparent 1px);
-  background-size: 48px 48px;
-}
-
-.dark .section-grid-bg {
-  background-image:
-    linear-gradient(rgb(255 255 255 / 0.022) 1px, transparent 1px),
-    linear-gradient(90deg, rgb(255 255 255 / 0.022) 1px, transparent 1px);
-}
-
-/* Media cards — GPU-only hover (transform / opacity only) */
-.media-card {
-  position: relative;
-  overflow: hidden;
-  border-radius: 0.5rem;
-  isolation: isolate;
-  transition:
-    transform 0.55s var(--ease-out),
-    box-shadow 0.55s var(--ease-out);
-}
-
-.media-card__media {
-  transition: transform 0.75s var(--ease-out);
-  transform: scale3d(1, 1, 1);
-  transform-origin: center center;
-  backface-visibility: hidden;
-}
-
-.media-card:hover .media-card__media,
-.media-card:focus-within .media-card__media {
-  will-change: transform;
-}
-
-.media-card__caption {
-  transition: transform 0.5s var(--ease-out);
-}
-
-.media-card__accent {
-  transform: scaleX(0);
-  transform-origin: left center;
-  transition: transform 0.5s var(--ease-out);
-}
-
-@media (hover: hover) and (pointer: fine) {
-  .media-card:hover,
-  .media-card:focus-within {
-    transform: translate3d(0, -2px, 0);
-    box-shadow: 0 16px 36px rgb(0 0 0 / 0.14);
-  }
-
-  .media-card:hover .media-card__media,
-  .media-card:focus-within .media-card__media {
-    transform: scale3d(1.025, 1.025, 1);
-  }
-
-  .media-card:hover .media-card__caption,
-  .media-card:focus-within .media-card__caption {
-    transform: translate3d(0, -4px, 0);
-  }
-
-  .media-card:hover .media-card__accent,
-  .media-card:focus-within .media-card__accent {
-    transform: scaleX(1);
-  }
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .media-card,
-  .media-card__media,
-  .media-card__caption,
-  .media-card__accent {
-    transition: none !important;
-    transform: none !important;
-  }
-}
-
 /* Premium theme-color transitions (no layout shift) */
 html.theme-ready,
 html.theme-ready *:not([data-framer-component]),
@@ -676,14 +624,6 @@ html.theme-ready *::after {
 }
 
 @layer utilities {
-  .inner-glow {
-    box-shadow: var(--inner-glow);
-  }
-
-  .card-shadow {
-    box-shadow: var(--card-shadow);
-  }
-
   .bg-nav {
     background-color: var(--nav);
   }
@@ -692,29 +632,8 @@ html.theme-ready *::after {
     border-color: var(--divider);
   }
 
-  .letterbox {
-    position: absolute;
-    left: 0;
-    width: 100%;
-    height: 7vh;
-    z-index: 30;
-  }
-
-  .letterbox-top {
-    top: 0;
-  }
-
-  .letterbox-bottom {
-    bottom: 0;
-  }
-
   .theatre-intro {
     isolation: isolate;
-  }
-
-  .theatre-intro__title--cutout {
-    mix-blend-mode: destination-out;
-    color: #1a1a1b;
   }
 }
 
@@ -830,19 +749,6 @@ html.theme-ready *::after {
   max-width: 100%;
 }
 
-.theatre-stage__title {
-  margin: 0;
-  color: #2d2d2d;
-  font-family: var(--font-inter), ui-sans-serif, system-ui, sans-serif;
-  font-size: clamp(2.75rem, 11.5vw, 9.75rem);
-  font-weight: 800;
-  letter-spacing: -0.04em;
-  line-height: 0.88;
-  text-transform: uppercase;
-  white-space: nowrap;
-  text-align: center;
-}
-
 .theatre-stage__tagline {
   margin: clamp(1.25rem, 2.6vw, 2rem) 0 0;
   max-width: 32rem;
@@ -855,29 +761,6 @@ html.theme-ready *::after {
   text-transform: uppercase;
 }
 
-.theatre-stage__subtitle {
-  margin: clamp(1rem, 2.2vw, 1.55rem) 0 0;
-  max-width: 24rem;
-  color: #666666;
-  font-family: var(--font-inter), ui-sans-serif, system-ui, sans-serif;
-  font-size: clamp(0.62rem, 1.25vw, 0.78rem);
-  font-weight: 500;
-  letter-spacing: 0.22em;
-  line-height: 1.6;
-  text-transform: uppercase;
-}
-
-.theatre-stage__subtitle-emphasis {
-  font-style: italic;
-  font-weight: 600;
-  letter-spacing: 0.18em;
-  text-transform: none;
-}
-
-.theatre-stage__subtitle-sep {
-  opacity: 0.45;
-}
-
 @media (max-width: 480px) {
   .theatre-stage__chrome {
     letter-spacing: 0.16em;
@@ -885,8 +768,7 @@ html.theme-ready *::after {
     padding: 1.15rem 1rem;
   }
 
-  .theatre-stage__tagline,
-  .theatre-stage__subtitle {
+  .theatre-stage__tagline {
     letter-spacing: 0.16em;
   }
 }
@@ -911,10 +793,36 @@ html.theme-ready *::after {
 }
 
 .theatre-stage__progress-fill {
+  display: block;
   height: 100%;
   width: 100%;
   transform-origin: left center;
   background: var(--accent-cherry);
+}
+
+/* CSS-driven loading bar — replaces the per-frame setLoadProgress RAF loop.
+   transform-only, compositor-friendly, zero React renders while running. */
+@keyframes theatre-load-fill {
+  from {
+    transform: scaleX(0);
+  }
+  to {
+    transform: scaleX(1);
+  }
+}
+
+.theatre-load-fill {
+  transform: scaleX(0);
+  animation-name: theatre-load-fill;
+  animation-timing-function: linear;
+  animation-fill-mode: forwards;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .theatre-load-fill {
+    animation: none;
+    transform: scaleX(1);
+  }
 }
 
 .theatre-stage__enter-prompt {
@@ -939,68 +847,6 @@ html.theme-ready *::after {
   pointer-events: auto;
   cursor: pointer;
   animation: theatre-enter-pulse 2.2s ease-in-out infinite;
-}
-
-.theatre-stage__enter {
-  position: absolute;
-  right: 0;
-  bottom: clamp(1.5rem, 4.2vh, 2.6rem);
-  left: 0;
-  z-index: 20;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  gap: 0.55rem;
-  width: 100%;
-  color: rgb(26 26 27 / 0.5);
-  font-family: var(--font-inter), ui-sans-serif, system-ui, sans-serif;
-  font-size: 0.625rem;
-  font-weight: 500;
-  letter-spacing: 0.34em;
-  line-height: 1;
-  text-transform: uppercase;
-  text-align: center;
-}
-
-.theatre-stage__enter-text {
-  display: block;
-  text-indent: 0.34em;
-}
-
-.theatre-stage__enter--ready .theatre-stage__enter-text {
-  animation: theatre-enter-pulse 2.2s ease-in-out infinite;
-}
-
-.theatre-stage__enter--ready .theatre-stage__chevron {
-  animation: theatre-chevron 1.8s ease-in-out infinite;
-}
-
-.theatre-stage__chevron {
-  width: 14px;
-  height: 9px;
-}
-
-@keyframes theatre-enter-pulse {
-  0%,
-  100% {
-    opacity: 0.45;
-  }
-  50% {
-    opacity: 1;
-  }
-}
-
-@keyframes theatre-chevron {
-  0%,
-  100% {
-    transform: translateY(0);
-    opacity: 0.45;
-  }
-  50% {
-    transform: translateY(4px);
-    opacity: 1;
-  }
 }
 
 .dark .theatre-intro,
@@ -1029,68 +875,8 @@ html.theme-ready *::after {
   color: rgb(243 243 242 / 0.48);
 }
 
-.dark .theatre-stage__title {
-  color: #f3f3f2;
-}
-
-.dark .theatre-intro__title--cutout {
-  color: #f3f3f2;
-}
-
-.dark .theatre-stage__tagline,
-.dark .theatre-stage__subtitle {
+.dark .theatre-stage__tagline {
   color: #8a8a8a;
-}
-
-.dark .theatre-stage__enter {
-  color: rgb(243 243 242 / 0.48);
-}
-
-/* Intro always renders in bright paper mode */
-.theatre-stage--light,
-.theatre-stage--light.theatre-intro {
-  color: #1a1a1b;
-}
-
-.theatre-stage--light .theatre-stage__paper {
-  background: #f7f5f0;
-}
-
-.theatre-stage--light .theatre-stage__vignette {
-  background: radial-gradient(
-    ellipse 68% 58% at 50% 46%,
-    rgb(247 245 240 / 0) 35%,
-    rgb(26 26 27 / 0.05) 100%
-  );
-}
-
-.theatre-stage--light .theatre-stage__grain {
-  opacity: 0.18;
-  mix-blend-mode: multiply;
-}
-
-.theatre-stage--light .theatre-stage__chrome {
-  color: rgb(26 26 27 / 0.55);
-}
-
-.theatre-stage--light .theatre-stage__title {
-  color: #111111;
-}
-
-.theatre-stage--light .theatre-stage__tagline {
-  color: #808080;
-}
-
-.theatre-stage--light .theatre-stage__skip {
-  color: rgb(26 26 27 / 0.45);
-}
-
-.theatre-stage--light .theatre-stage__progress {
-  background: rgb(17 17 17 / 0.1);
-}
-
-.theatre-stage--light .theatre-stage__enter-prompt {
-  color: rgb(17 17 17 / 0.5);
 }
 
 /* Instant first-paint curtain — blank theme background only */
@@ -1139,13 +925,6 @@ html.theme-ready *::after {
   padding-left: 0.02em;
 }
 
-@media (prefers-reduced-motion: reduce) {
-  .theatre-stage__chevron,
-  .theatre-stage__enter--ready .theatre-stage__enter-text {
-    animation: none;
-  }
-}
-
 html.theatre-skip .theatre-boot,
 html.theatre-intro-live .theatre-boot,
 html.theatre-done .theatre-boot {
@@ -1170,93 +949,139 @@ html.theatre-settling [data-page-shell] {
   animation: none;
 }
 
-.services-container .service-card {
+/* ── Services accordion — pure CSS hover/focus (no React hover engine) ──
+   3 cards: 1:1:1 at rest, hovered/focused card expands to 4 while siblings
+   compress. First card reads expanded until the row is interacted with. */
+.services-accordion {
+  contain: layout style;
+}
+
+.services-accordion .service-acc {
   min-width: 0;
   min-height: 0;
-  flex-grow: 1;
-  flex-basis: 0;
-}
-
-/* Desktop — Framer Motion layout handles flex; keep opacity/shadow transitions */
-.services-container .service-card:not(.service-card--touch) {
+  flex: 1 1 0%;
   transition:
-    opacity 0.45s var(--ease-smooth),
-    box-shadow 0.45s var(--ease-smooth);
+    flex-grow 700ms cubic-bezier(0.16, 1, 0.3, 1),
+    opacity 450ms cubic-bezier(0.16, 1, 0.3, 1),
+    border-color 450ms cubic-bezier(0.16, 1, 0.3, 1),
+    box-shadow 450ms cubic-bezier(0.16, 1, 0.3, 1);
 }
 
-.service-card--expanded {
-  /* flex applied inline / via Framer layout */
+/* Default stage: first card expanded before any interaction */
+.services-accordion:not(:hover):not(:focus-within) .service-acc:first-child {
+  flex-grow: 4;
 }
 
-.service-card--expanded::after {
-  content: "";
-  position: absolute;
-  top: 0;
-  right: 0;
-  left: 0;
-  z-index: 30;
-  height: 2px;
-  background: var(--accent-cherry);
+.services-accordion .service-acc:hover,
+.services-accordion .service-acc:focus-within {
+  flex-grow: 4;
+}
+
+/* Inner media choreography — transform/opacity only (no layout) */
+.service-acc__media {
+  transform: scale(1.02);
+  opacity: 0.48;
+  transition:
+    transform 700ms cubic-bezier(0.16, 1, 0.3, 1),
+    opacity 700ms cubic-bezier(0.16, 1, 0.3, 1);
+  will-change: transform, opacity;
+}
+
+.services-accordion:not(:hover):not(:focus-within)
+  .service-acc:first-child
+  .service-acc__media,
+.services-accordion .service-acc:hover .service-acc__media,
+.services-accordion .service-acc:focus-within .service-acc__media {
+  transform: scale(1.05);
   opacity: 0.9;
 }
 
-/* Mobile service cards — continuous flex/opacity via CSS vars (no React re-renders) */
-.service-card--touch {
-  flex-grow: var(--spot-grow, 1);
-  flex-basis: 0;
-  opacity: var(--spot-opacity, 1);
-  transform: scale(var(--spot-scale, 1));
-  contain: layout style;
+.service-acc__inactive {
+  transition: opacity 300ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.services-accordion:not(:hover):not(:focus-within)
+  .service-acc:first-child
+  .service-acc__inactive,
+.services-accordion .service-acc:hover .service-acc__inactive,
+.services-accordion .service-acc:focus-within .service-acc__inactive {
+  opacity: 0;
+  pointer-events: none;
+}
+
+.service-acc__active {
+  opacity: 0;
+  transform: translateY(8px);
+  pointer-events: none;
   transition:
-    flex-grow 0.72s cubic-bezier(0.22, 1, 0.36, 1),
-    opacity 0.55s cubic-bezier(0.22, 1, 0.36, 1),
-    transform 0.28s cubic-bezier(0.22, 1, 0.36, 1);
+    opacity 400ms cubic-bezier(0.16, 1, 0.3, 1) 150ms,
+    transform 400ms cubic-bezier(0.16, 1, 0.3, 1) 150ms;
+}
+
+.services-accordion:not(:hover):not(:focus-within)
+  .service-acc:first-child
+  .service-acc__active,
+.services-accordion .service-acc:hover .service-acc__active,
+.services-accordion .service-acc:focus-within .service-acc__active {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.service-acc__accent {
+  opacity: 0;
+  transition: opacity 300ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.services-accordion:not(:hover):not(:focus-within)
+  .service-acc:first-child
+  .service-acc__accent,
+.services-accordion .service-acc:hover .service-acc__accent,
+.services-accordion .service-acc:focus-within .service-acc__accent {
+  opacity: 1;
+}
+
+/* ── CSS viewport reveals (IntersectionObserver + .is-visible, no Framer) ── */
+.css-reveal {
+  opacity: 0;
+  transform: translateY(22px) scale(0.99);
+}
+
+.css-reveal.is-visible {
+  opacity: 1;
+  transform: translateY(0) scale(1);
+  transition:
+    opacity 700ms cubic-bezier(0.16, 1, 0.3, 1),
+    transform 700ms cubic-bezier(0.16, 1, 0.3, 1);
+  transition-delay: var(--reveal-delay, 0ms);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .css-reveal {
+    opacity: 1;
+    transform: none;
+  }
+  .css-reveal.is-visible {
+    transition: none;
+  }
 }
 
 @media (max-width: 767px) {
   #services.section-frame {
     padding-bottom: clamp(1.25rem, 3.5vh, 2rem);
   }
-
-  .services-container--mobile {
-    min-height: min(68svh, 620px);
-    height: auto;
-  }
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .service-card--touch,
-  .service-card {
+  .services-accordion .service-acc,
+  .service-acc__media,
+  .service-acc__inactive,
+  .service-acc__active,
+  .service-acc__accent {
     transition: none !important;
   }
-}
-
-.service-card--touch.service-card--dimmed {
-  /* Spotlight opacity is applied inline; class kept for targeting */
-}
-
-.service-card__media {
-  opacity: 0.45;
-  transform: scale(1.02);
-  transition:
-    transform 0.85s var(--ease-smooth),
-    opacity 0.65s var(--ease-smooth);
-}
-
-.services-container--mobile .service-card__media--expanded,
-.service-card:hover .service-card__media,
-.scroll-panel.is-scroll-active .service-card__media {
-  will-change: transform, opacity;
-}
-
-.service-card__media--expanded {
-  opacity: 0.85;
-  transform: scale(1.06);
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .service-card__media {
-    transition: none;
+  .services-accordion .service-acc:hover,
+  .services-accordion .service-acc:focus-within {
+    flex-grow: 1;
   }
 }
 
@@ -1346,6 +1171,8 @@ html.theatre-settling [data-page-shell] {
   }
 }
 
+/* Static portrait treatment — no scroll-time filter swaps (swapping filters
+   on scroll start/stop forces full repaint churn for zero visual benefit). */
 .hero-mobile__portrait-img {
   width: auto;
   height: clamp(16rem, 72svh, 25rem);
@@ -1353,22 +1180,12 @@ html.theatre-settling [data-page-shell] {
   object-fit: contain;
   object-position: center 42%;
   opacity: 0.72;
-  filter: saturate(0.72) blur(0.35px) drop-shadow(0 22px 40px rgb(0 0 0 / 0.1));
-}
-
-.scroll-panel.is-scroll-active .hero-mobile__portrait-img,
-.scroll-panel.is-scroll-active .hero-cutout {
-  filter: none;
+  filter: saturate(0.72) drop-shadow(0 22px 40px rgb(0 0 0 / 0.1));
 }
 
 .dark .hero-mobile__portrait-img {
   opacity: 0.66;
-  filter: saturate(0.68) blur(0.4px) drop-shadow(0 24px 44px rgb(0 0 0 / 0.28));
-}
-
-.dark .scroll-panel.is-scroll-active .hero-mobile__portrait-img,
-.dark .scroll-panel.is-scroll-active .hero-cutout {
-  filter: none;
+  filter: saturate(0.68) drop-shadow(0 24px 44px rgb(0 0 0 / 0.28));
 }
 
 .hero-mobile__headline {
@@ -1845,11 +1662,6 @@ html.theatre-settling [data-page-shell] {
   padding-bottom: 0;
 }
 
-html.lenis,
-html.lenis body {
-  min-height: 0;
-}
-
 /* ── Cinematic scroll-linked motion (CSS vars from useCinematicSection) ── */
 @media (prefers-reduced-motion: no-preference) {
   [data-cinematic] {
@@ -1864,11 +1676,10 @@ html.lenis body {
     backface-visibility: hidden;
   }
 
-  /* Promote layers only while scrolling — avoids idle GPU/memory cost */
-  .scroll-panel.is-scroll-active [data-cinematic] .cinematic-layer {
-    will-change: transform, opacity;
-  }
-
+  /* NOTE: no will-change toggling on scroll start/stop here. The base rule
+     below already promotes cinematic layers via translate3d; toggling
+     will-change per gesture only churns the layer tree (a known flash/jank
+     source) for zero visual gain. */
   .magnetic:hover,
   .magnetic:focus-within {
     will-change: transform;
@@ -1879,155 +1690,133 @@ html.lenis body {
     will-change: transform;
   }
 
-  /* Hero */
+  /* Hero — restrained exit drift (translate ≤1.5rem, scale ≤1.015) */
   [data-cinematic="hero"] .cinematic-layer--headline {
-    transform: translate3d(0, calc(var(--cinematic-exit) * -2rem), 0)
-      scale(calc(1 - var(--cinematic-exit) * 0.06 * var(--cinematic-velocity)));
+    transform: translate3d(0, calc(var(--cinematic-exit) * -1.25rem), 0)
+      scale(calc(1 - var(--cinematic-exit) * 0.015));
     opacity: calc(1 - var(--cinematic-exit) * 0.32);
   }
 
   [data-cinematic="hero"] .cinematic-layer--copy {
-    transform: translate3d(0, calc(var(--cinematic-exit) * -1.1rem), 0);
+    transform: translate3d(0, calc(var(--cinematic-exit) * -0.75rem), 0);
     opacity: calc(1 - var(--cinematic-exit) * 0.48);
   }
 
   [data-cinematic="hero"] .cinematic-layer--visual {
-    transform: translate3d(0, calc(var(--cinematic-exit) * -0.65rem), 0)
-      scale(calc(1 - var(--cinematic-exit) * 0.035 * var(--cinematic-velocity)));
+    transform: translate3d(0, calc(var(--cinematic-exit) * -0.5rem), 0)
+      scale(calc(1 - var(--cinematic-exit) * 0.015));
     opacity: calc(1 - var(--cinematic-exit) * 0.22);
   }
 
   [data-cinematic="hero"] .cinematic-layer--cta {
-    transform: translate3d(0, calc(var(--cinematic-exit) * -0.5rem), 0);
+    transform: translate3d(0, calc(var(--cinematic-exit) * -0.4rem), 0);
     opacity: calc(1 - var(--cinematic-exit) * 0.38);
   }
 
   /* Hero → Services overlap: services title/grid enter as hero recedes */
   [data-cinematic="services"] .cinematic-layer--title {
-    transform: translate3d(0, calc((1 - var(--cinematic-enter)) * 1.25rem), 0);
+    transform: translate3d(0, calc((1 - var(--cinematic-enter)) * 1rem), 0);
     opacity: calc(0.55 + var(--cinematic-enter) * 0.45);
   }
 
   [data-cinematic="services"] .cinematic-layer--grid {
-    transform: translate3d(0, calc((1 - var(--cinematic-enter)) * 1.75rem), 0)
-      scale(
-        calc(0.985 + var(--cinematic-enter) * 0.015 * var(--cinematic-velocity))
-      );
-    opacity: calc(0.7 + var(--cinematic-enter) * 0.3);
+    transform: translate3d(0, calc((1 - var(--cinematic-enter)) * 1.25rem), 0)
+      scale(calc(0.99 + var(--cinematic-enter) * 0.01));
+    opacity: calc(0.85 + var(--cinematic-enter) * 0.15);
   }
 
   /* Videos */
   [data-cinematic="videos"] .cinematic-layer--header {
-    transform: translate3d(0, calc((1 - var(--cinematic-enter)) * 1rem), 0);
+    transform: translate3d(0, calc((1 - var(--cinematic-enter)) * 0.75rem), 0);
     opacity: calc(0.6 + var(--cinematic-enter) * 0.4);
   }
 
   [data-cinematic="videos"] .cinematic-layer--media {
-    transform: translate3d(0, calc((1 - var(--cinematic-enter)) * 1.5rem), 0)
-      scale(
-        calc(0.96 + var(--cinematic-enter) * 0.04 * var(--cinematic-velocity))
-      );
+    transform: translate3d(0, calc((1 - var(--cinematic-enter)) * 1.25rem), 0)
+      scale(calc(0.98 + var(--cinematic-enter) * 0.015));
     opacity: calc(0.86 + var(--cinematic-enter) * 0.14);
   }
 
   /* Projects */
   [data-cinematic="projects"] .cinematic-layer--heading {
-    transform: translate3d(0, calc((1 - var(--cinematic-enter)) * 1.1rem), 0);
+    transform: translate3d(0, calc((1 - var(--cinematic-enter)) * 0.85rem), 0);
     opacity: calc(0.62 + var(--cinematic-enter) * 0.38);
   }
 
   [data-cinematic="projects"] .cinematic-layer--media {
-    transform: translate3d(0, calc((1 - var(--cinematic-enter)) * 1.65rem), 0)
-      scale(
-        calc(0.965 + var(--cinematic-enter) * 0.035 * var(--cinematic-velocity))
-      );
+    transform: translate3d(0, calc((1 - var(--cinematic-enter)) * 1.25rem), 0)
+      scale(calc(0.985 + var(--cinematic-enter) * 0.015));
     opacity: calc(0.84 + var(--cinematic-enter) * 0.16);
   }
 
   [data-cinematic="projects"] .cinematic-layer--detail {
-    transform: translate3d(0, calc((1 - var(--cinematic-enter)) * 1rem), 0);
+    transform: translate3d(0, calc((1 - var(--cinematic-enter)) * 0.75rem), 0);
     opacity: calc(0.78 + var(--cinematic-enter) * 0.22);
   }
 
   /* Contact — final scene */
   [data-cinematic="contact"] .cinematic-layer--heading {
-    transform: translate3d(0, calc((1 - var(--cinematic-enter)) * 1.35rem), 0)
-      scale(calc(0.985 + var(--cinematic-enter) * 0.015));
+    transform: translate3d(0, calc((1 - var(--cinematic-enter)) * 1rem), 0)
+      scale(calc(0.99 + var(--cinematic-enter) * 0.01));
     opacity: calc(0.68 + var(--cinematic-enter) * 0.32);
   }
 
   [data-cinematic="contact"] .cinematic-layer--links {
-    transform: translate3d(0, calc((1 - var(--cinematic-enter)) * 0.85rem), 0);
+    transform: translate3d(0, calc((1 - var(--cinematic-enter)) * 0.6rem), 0);
     opacity: calc(0.72 + var(--cinematic-enter) * 0.28);
   }
 
   [data-cinematic="contact"] .cinematic-layer--panel {
-    transform: translate3d(0, calc((1 - var(--cinematic-enter)) * 1.1rem), 0)
-      scale(
-        calc(0.975 + var(--cinematic-enter) * 0.025 * var(--cinematic-velocity))
-      );
+    transform: translate3d(0, calc((1 - var(--cinematic-enter)) * 0.9rem), 0)
+      scale(calc(0.985 + var(--cinematic-enter) * 0.015));
     opacity: calc(0.8 + var(--cinematic-enter) * 0.2);
   }
 
-  /* Desktop — richer depth */
+  /* Desktop — restrained depth (same ≤1.5rem / ≤1.015 budget) */
   @media (min-width: 768px) {
     [data-cinematic="hero"] .cinematic-layer--headline {
       transform: translate3d(
-          calc(var(--cinematic-exit) * 0.35rem),
-          calc(var(--cinematic-exit) * -2.25rem),
+          calc(var(--cinematic-exit) * 0.25rem),
+          calc(var(--cinematic-exit) * -1.4rem),
           0
         )
-        scale(
-          calc(1 - var(--cinematic-exit) * 0.06 * var(--cinematic-velocity))
-        );
+        scale(calc(1 - var(--cinematic-exit) * 0.015));
     }
 
     [data-cinematic="hero"] .cinematic-layer--visual {
       transform: translate3d(
-          calc(var(--cinematic-exit) * -0.5rem),
-          calc(var(--cinematic-exit) * -0.85rem),
+          calc(var(--cinematic-exit) * -0.35rem),
+          calc(var(--cinematic-exit) * -0.6rem),
           0
         )
-        scale(
-          calc(1 - var(--cinematic-exit) * 0.04 * var(--cinematic-velocity))
-        );
+        scale(calc(1 - var(--cinematic-exit) * 0.015));
     }
 
     [data-cinematic="services"] .cinematic-layer--grid {
       transform: translate3d(
-          calc((1 - var(--cinematic-enter)) * -0.35rem),
-          calc((1 - var(--cinematic-enter)) * 1.5rem),
+          calc((1 - var(--cinematic-enter)) * -0.25rem),
+          calc((1 - var(--cinematic-enter)) * 1.2rem),
           0
         )
-        scale(
-          calc(
-            0.982 + var(--cinematic-enter) * 0.018 * var(--cinematic-velocity)
-          )
-        );
+        scale(calc(0.988 + var(--cinematic-enter) * 0.012));
     }
 
     [data-cinematic="videos"] .cinematic-layer--media {
       transform: translate3d(
-          calc((1 - var(--cinematic-enter)) * -0.25rem),
-          calc((1 - var(--cinematic-enter)) * 1.35rem),
+          calc((1 - var(--cinematic-enter)) * -0.2rem),
+          calc((1 - var(--cinematic-enter)) * 1.15rem),
           0
         )
-        scale(
-          calc(
-            0.955 + var(--cinematic-enter) * 0.045 * var(--cinematic-velocity)
-          )
-        );
+        scale(calc(0.982 + var(--cinematic-enter) * 0.015));
     }
 
     [data-cinematic="projects"] .cinematic-layer--media {
       transform: translate3d(
-          calc((1 - var(--cinematic-enter)) * -0.4rem),
-          calc((1 - var(--cinematic-enter)) * 1.5rem),
+          calc((1 - var(--cinematic-enter)) * -0.3rem),
+          calc((1 - var(--cinematic-enter)) * 1.2rem),
           0
         )
-        scale(
-          calc(0.96 + var(--cinematic-enter) * 0.04 * var(--cinematic-velocity))
-        );
+        scale(calc(0.985 + var(--cinematic-enter) * 0.015));
     }
   }
 
@@ -2071,12 +1860,6 @@ html.lenis body {
   body::before,
   body::after {
     display: none;
-  }
-
-  .media-card:hover,
-  .media-card:focus-within {
-    transform: none !important;
-    box-shadow: none !important;
   }
 
   html.theme-ready,

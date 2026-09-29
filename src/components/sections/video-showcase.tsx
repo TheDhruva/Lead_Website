@@ -382,7 +382,6 @@ export function VideoShowcase() {
       ref={sectionRef}
       id="video"
       data-snap-frame
-      data-scroll-anchor-ratio="0.47"
       className="section-frame section-tone-videos !h-auto !min-h-0 !max-h-none overflow-visible py-6 md:py-10 lg:py-10"
       aria-labelledby="video-heading"
     >
@@ -406,18 +405,11 @@ export function VideoShowcase() {
           <div className="relative overflow-hidden rounded-lg bg-black">
             {/* stable 16:9 frame */}
             <div className="relative aspect-video w-full overflow-hidden bg-black">
-              {/* blurred backdrop for portrait reels */}
+              {/* tonal backdrop for portrait reels — solid + gradient only (no blur filter) */}
               {isPortrait ? (
                 <div
                   aria-hidden
-                  className="absolute inset-0"
-                  style={{
-                    backgroundImage: `url(${current.poster})`,
-                    backgroundSize: "cover",
-                    backgroundPosition: "center",
-                    filter: "blur(28px) brightness(0.55)",
-                    transform: "scale(1.12)",
-                  }}
+                  className="absolute inset-0 bg-gradient-to-b from-neutral-900 via-black to-black"
                 />
               ) : null}
               {/* poster until video can play */}
@@ -449,7 +441,8 @@ export function VideoShowcase() {
                 poster={current.poster}
                 muted={isMuted}
                 playsInline
-                preload="metadata"
+                disablePictureInPicture
+                preload={initialized ? "metadata" : "none"}
                 aria-label={`${current.title}. ${current.meta}`}
                 onClick={togglePlay}
               />

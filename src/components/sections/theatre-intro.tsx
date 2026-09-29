@@ -33,11 +33,9 @@ const titleSlideExit = {
 
 export function TheatreIntro() {
   const { isReturning, enter, bootstrapped } = useTheatreIntro();
-  const { unlockAudio, tryAutoplayAmbient, play } = useAudio();
+  const { unlockAudio, play } = useAudio();
   const prefersReducedMotion = useReducedMotion();
   const [phase, setPhase] = useState<IntroPhase>("reveal");
-  const [loadProgress, setLoadProgress] = useState(0);
-  const loadFrameRef = useRef<number | null>(null);
   const handoffRef = useRef(false);
 
   useEffect(() => {
@@ -67,11 +65,12 @@ export function TheatreIntro() {
 
   const beginExit = useCallback(
     (fromUserGesture = false) => {
+      // Audio starts ONLY on explicit user gesture (click/key). No
+      // speculative ambient fetch on auto-exit — the 4MB bed downloads
+      // solely after the user opts into sound.
       if (fromUserGesture) {
         unlockFromGesture();
         requestAnimationFrame(() => play("elementAppear"));
-      } else if (isReturning) {
-        tryAutoplayAmbient();
       }
 
       setPhase((current) =>
@@ -80,42 +79,18 @@ export function TheatreIntro() {
           : current,
       );
     },
-    [isReturning, play, tryAutoplayAmbient, unlockFromGesture],
+    [play, unlockFromGesture],
   );
 
-  useEffect(() => {
-    if (prefersReducedMotion || phase !== "loading") return;
-
-    const start = performance.now();
-
-    const tick = (now: number) => {
-      const progress = Math.min(
-        100,
-        ((now - start) / THEATRE_INTRO_LOAD_MS) * 100,
-      );
-      setLoadProgress(progress);
-
-      if (progress < 100) {
-        loadFrameRef.current = requestAnimationFrame(tick);
-        return;
-      }
-
-      if (isReturning) {
-        window.setTimeout(() => beginExit(false), 120);
-      } else {
-        setPhase("ready");
-      }
-    };
-
-    loadFrameRef.current = requestAnimationFrame(tick);
-
-    return () => {
-      if (loadFrameRef.current !== null) {
-        cancelAnimationFrame(loadFrameRef.current);
-        loadFrameRef.current = null;
-      }
-    };
-  }, [prefersReducedMotion, phase, isReturning, beginExit]);
+  // Loading bar is a CSS animation (theatre-load-fill); when it finishes,
+  // advance without any per-frame React state. No RAF loop here.
+  const handleLoadAnimationEnd = useCallback(() => {
+    if (isReturning) {
+      window.setTimeout(() => beginExit(false), 120);
+    } else {
+      setPhase("ready");
+    }
+  }, [isReturning, beginExit]);
 
   useEffect(() => {
     if (prefersReducedMotion || phase !== "ready") return;
@@ -296,14 +271,14 @@ export function TheatreIntro() {
               role="progressbar"
               aria-valuemin={0}
               aria-valuemax={100}
-              aria-valuenow={Math.round(loadProgress)}
               aria-label="Loading portfolio"
             >
-              <m.div
-                className="theatre-stage__progress-fill"
-                initial={{ scaleX: 0 }}
-                animate={{ scaleX: loadProgress / 100 }}
-                transition={{ duration: 0.12, ease: "linear" }}
+              <span
+                key={phase === "loading" ? "loading-bar" : "idle-bar"}
+                className="theatre-stage__progress-fill theatre-load-fill"
+                style={{ animationDuration: `${THEATRE_INTRO_LOAD_MS}ms` }}
+                onAnimationEnd={handleLoadAnimationEnd}
+                aria-hidden="true"
               />
             </div>
 

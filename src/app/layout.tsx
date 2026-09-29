@@ -67,7 +67,7 @@ export const metadata: Metadata = {
         url: siteConfig.ogImage,
         width: 1200,
         height: 630,
-        type: "image/png",
+        type: "image/jpeg",
         alt: "THE DHRUVA — Cinematic Digital Studio",
       },
     ],
@@ -90,6 +90,9 @@ export const metadata: Metadata = {
     },
   },
   icons: {
+    // One intentional system: media-selected SVG pair + Apple touch icon.
+    // (No generic/shortcut/png duplicates: competing icon links force the
+    // browser to fetch and swap tab icons after load — the favicon flash.)
     icon: [
       {
         url: "/favicon-light.svg",
@@ -101,10 +104,9 @@ export const metadata: Metadata = {
         type: "image/svg+xml",
         media: "(prefers-color-scheme: dark)",
       },
+      // Universal fallback for browsers without media-query icon support.
       { url: "/favicon.svg", type: "image/svg+xml" },
-      { url: "/favicon.png" },
     ],
-    shortcut: ["/favicon.svg"],
     apple: [{ url: "/apple-touch-icon.png" }],
   },
 };
@@ -147,8 +149,6 @@ const structuredData: Record<string, unknown>[] = [
 
 export default function RootLayout({ children }: RootLayoutProps) {
   const heroPreload = heroPortraits[0]?.src;
-  const hubSpotPortalId =
-    process.env.NEXT_PUBLIC_HUBSPOT_PORTAL_ID ?? "247221692";
 
   return (
     <html lang="en" className={cn(inter.variable)} suppressHydrationWarning>
@@ -162,11 +162,6 @@ export default function RootLayout({ children }: RootLayoutProps) {
             fetchPriority="high"
           />
         ) : null}
-        <link
-          rel="preconnect"
-          href="https://js-na2.hs-scripts.com"
-          crossOrigin="anonymous"
-        />
       </head>
       <body className="antialiased">
         <div
@@ -194,14 +189,9 @@ export default function RootLayout({ children }: RootLayoutProps) {
           </AnimationProvider>
         </ThemeProvider>
         <JsonLd data={structuredData} />
-        {hubSpotPortalId ? (
-          <Script
-            id="hs-script-loader"
-            src={`https://js-na2.hs-scripts.com/${hubSpotPortalId}.js`}
-            strategy="afterInteractive"
-          />
+        {process.env.NODE_ENV === "production" ? (
+          <SpeedInsights sampleRate={0.1} />
         ) : null}
-        <SpeedInsights sampleRate={0.5} />
       </body>
     </html>
   );

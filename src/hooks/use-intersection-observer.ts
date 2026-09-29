@@ -9,7 +9,7 @@ interface UseIntersectionObserverOptions {
   rootMargin?: string;
   triggerOnce?: boolean;
   root?: Element | null;
-  /** Observe visibility within the main scroll panel (Lenis / mobile). */
+  /** Observe visibility within the main scroll panel (native scroll). */
   useScrollContainerRoot?: boolean;
 }
 

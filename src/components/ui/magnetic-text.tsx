@@ -3,7 +3,7 @@
 import { type HTMLAttributes, useCallback, useEffect, useRef } from "react";
 
 import { useCanPointerReact } from "@/hooks/use-can-pointer-react";
-import { lerp, pointerEngine } from "@/lib/pointer-engine";
+import { frameAlpha, pointerEngine } from "@/lib/pointer-engine";
 import { isScrollActive } from "@/lib/scroll-bus";
 import { cn } from "@/lib/utils";
 
@@ -87,8 +87,9 @@ export function MagneticText({
           }
         }
 
-        state.x = lerp(state.x, targetX, 0.15);
-        state.y = lerp(state.y, targetY, 0.15);
+        const alpha = frameAlpha(frame.dt, 0.15);
+        state.x += (targetX - state.x) * alpha;
+        state.y += (targetY - state.y) * alpha;
 
         if (Math.abs(state.x) < 0.01 && Math.abs(state.y) < 0.01) {
           el.style.transform = "";

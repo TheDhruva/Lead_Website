@@ -33,8 +33,6 @@ interface AudioContextValue {
   toggleMute: () => void;
   /** Call from a user gesture (click / key) to start ambient + SFX */
   unlockAudio: () => void;
-  /** Best-effort autoplay — may be blocked until unlockAudio */
-  tryAutoplayAmbient: () => void;
   setVideoAudioActive: (active: boolean) => void;
 }
 
@@ -47,7 +45,6 @@ const AudioContext = createContext<AudioContextValue>({
   videoAudioActive: false,
   toggleMute: noop,
   unlockAudio: noop,
-  tryAutoplayAmbient: noop,
   setVideoAudioActive: noop,
 });
 
@@ -197,11 +194,6 @@ export function AudioProvider({ children }: AudioProviderProps) {
     void startAmbientPlayback().catch(noop);
   }, [disabled, fadeAmbient, getAmbientTarget, startAmbientPlayback]);
 
-  const tryAutoplayAmbient = useCallback(() => {
-    if (disabled || unlockedRef.current) return;
-    void startAmbientPlayback().catch(noop);
-  }, [disabled, startAmbientPlayback]);
-
   const toggleMute = useCallback(() => {
     if (disabled || !unlockedRef.current) return;
 
@@ -256,7 +248,6 @@ export function AudioProvider({ children }: AudioProviderProps) {
       videoAudioActive: disabled ? false : videoAudioActive,
       toggleMute: disabled ? noop : toggleMute,
       unlockAudio: disabled ? noop : unlockAudio,
-      tryAutoplayAmbient: disabled ? noop : tryAutoplayAmbient,
       setVideoAudioActive: disabled ? noop : setVideoAudioActive,
     }),
     [
@@ -267,7 +258,6 @@ export function AudioProvider({ children }: AudioProviderProps) {
       play,
       toggleMute,
       unlockAudio,
-      tryAutoplayAmbient,
       setVideoAudioActive,
     ],
   );

@@ -10,13 +10,8 @@ import {
 } from "@/lib/scroll-layout-snapshot";
 import {
   type ScrollMotionFrame,
-  getScrollMotionFrame,
   subscribeScrollMotion,
 } from "@/lib/scroll-motion-engine";
-import {
-  collectSpotlightLayoutElements,
-  tickServicesSpotlight,
-} from "@/lib/services-mobile-spotlight";
 
 const SCROLL_ACTIVE_CLASS = "is-scroll-active";
 const SCROLL_IDLE_MS = 160;
@@ -47,7 +42,6 @@ function scheduleScrollInactive(): void {
 function buildLayoutSnapshot(): ScrollLayoutSnapshot {
   const elements: HTMLElement[] = [];
   collectCinematicLayoutElements(elements);
-  collectSpotlightLayoutElements(elements);
   return createScrollLayoutSnapshot(elements);
 }
 
@@ -77,7 +71,6 @@ function onScrollMotion(motion: ScrollMotionFrame): void {
 
   const snapshot = buildLayoutSnapshot();
   tickCinematicSections(motion, snapshot);
-  tickServicesSpotlight(motion, snapshot);
 }
 
 export function isScrollActive(): boolean {
@@ -87,24 +80,4 @@ export function isScrollActive(): boolean {
 export function ensureScrollBus(): void {
   if (unsubscribe) return;
   unsubscribe = subscribeScrollMotion(onScrollMotion);
-}
-
-export function stopScrollBus(): void {
-  unsubscribe?.();
-  unsubscribe = null;
-  if (scrollIdleTimer) {
-    clearTimeout(scrollIdleTimer);
-    scrollIdleTimer = null;
-  }
-  setScrollActive(false);
-  lastScrollY = -1;
-  visualTickCounter = 0;
-}
-
-export function flushScrollBus(): void {
-  visualTickCounter = 0;
-  const motion = getScrollMotionFrame();
-  const snapshot = buildLayoutSnapshot();
-  tickCinematicSections(motion, snapshot);
-  tickServicesSpotlight(motion, snapshot);
 }

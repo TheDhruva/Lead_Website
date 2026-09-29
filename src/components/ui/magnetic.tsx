@@ -9,7 +9,7 @@ import {
 } from "react";
 
 import { useCanPointerReact } from "@/hooks/use-can-pointer-react";
-import { lerp, pointerEngine } from "@/lib/pointer-engine";
+import { frameAlpha, pointerEngine } from "@/lib/pointer-engine";
 import { isScrollActive } from "@/lib/scroll-bus";
 import { cn } from "@/lib/utils";
 
@@ -80,8 +80,9 @@ export function Magnetic({
         }
       }
 
-      current.x = lerp(current.x, targetX, 0.16);
-      current.y = lerp(current.y, targetY, 0.16);
+      const alpha = frameAlpha(frame.dt, 0.16);
+      current.x += (targetX - current.x) * alpha;
+      current.y += (targetY - current.y) * alpha;
 
       if (Math.abs(current.x) < 0.02 && Math.abs(current.y) < 0.02) {
         el.style.transform = "";

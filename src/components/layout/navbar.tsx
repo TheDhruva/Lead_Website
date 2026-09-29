@@ -12,7 +12,6 @@ import { MagneticText } from "@/components/ui/magnetic-text";
 import { ThemeToggle } from "@/components/ui/theme-toggle";
 import { MOTION, NAV_ITEMS, SECTION_IDS } from "@/constants";
 import { useActiveSection } from "@/hooks/use-active-section";
-import { useLenis } from "@/hooks/use-lenis";
 import { useNavMetrics } from "@/hooks/use-nav-metrics";
 import { useSfxHandlers } from "@/hooks/use-sfx-handlers";
 import { getScrollContainer, getScrollTop } from "@/lib/scroll-container";
@@ -36,7 +35,6 @@ export function Navbar() {
   const menuButtonRef = useRef<HTMLButtonElement>(null);
   const scrolledRef = useRef(false);
   const { activeId, scrollToSection } = useActiveSection(SECTION_LIST);
-  const lenis = useLenis();
   const { onHover, onClick, onCursor } = useSfxHandlers();
 
   useNavMetrics(navRef);
@@ -70,23 +68,18 @@ export function Navbar() {
       });
     };
 
+    // Single native scroll source: the snap panel. No Lenis subscription —
+    // one listener, one coordinate system, no competing callbacks.
     const container = getScrollContainer();
     const onScroll = () => applyScrolled(getScrollTop());
     onScroll();
-
-    if (lenis) {
-      lenis.on("scroll", onScroll);
-      return () => {
-        lenis.off("scroll", onScroll);
-      };
-    }
 
     container?.addEventListener("scroll", onScroll, { passive: true });
 
     return () => {
       container?.removeEventListener("scroll", onScroll);
     };
-  }, [lenis]);
+  }, []);
 
   useEffect(() => {
     if (!menuOpen) return;
@@ -165,11 +158,11 @@ export function Navbar() {
         data-scrolled="false"
         className={cn(
           "navbar fixed left-1/2 z-50 flex w-[min(92%,1480px)] max-w-container-max -translate-x-1/2 items-center justify-between rounded-full border px-4 sm:px-gutter",
-          "transition-[top,padding,background-color,border-color,box-shadow,backdrop-filter] duration-300 ease-[cubic-bezier(0.22,1,0.36,1)]",
-          "top-4 py-2 md:py-2.5 md:backdrop-blur-xl",
+          "transition-[top,padding,background-color,border-color,box-shadow] duration-300 ease-[cubic-bezier(0.22,1,0.36,1)]",
+          "top-4 py-2 md:py-2.5",
           "max-md:top-3 max-md:px-3 max-md:py-1.5",
           "max-md:border-border/80 max-md:bg-background/95 max-md:shadow-[0_8px_28px_rgb(0_0_0/0.07)]",
-          "md:border-border/55 md:bg-nav/88 md:shadow-[0_8px_32px_rgb(0_0_0/0.05)]",
+          "md:border-border/55 md:bg-nav md:shadow-[0_8px_32px_rgb(0_0_0/0.05)]",
         )}
       >
         <a

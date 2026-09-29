@@ -1,9 +1,8 @@
-"use client";
-
 import { Container } from "@/components/ui/container";
-import { MagneticText } from "@/components/ui/magnetic-text";
 import { footerLinks } from "@/data";
 import { cn } from "@/lib/utils";
+
+import { FooterWordmark } from "./footer-wordmark";
 
 interface SiteFooterProps {
   className?: string;
@@ -28,7 +27,7 @@ export function SiteFooter({
             isDark ? "text-white" : "text-foreground",
           )}
         >
-          <MagneticText text="DHRUVA" strength={7} radius={100} />
+          <FooterWordmark />
         </span>
         <span className="font-body-md text-sm">© 2026</span>
       </div>

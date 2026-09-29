@@ -11,9 +11,14 @@
  *   public/videos/showcase-{n}-mobile-hevc.mp4
  *   public/videos/showcase-{n}-mobile.webm
  *
+ * Muted showcase delivery: all outputs strip audio (`-an`) and cap at 30fps.
+ * Desktop/mobile sources prefer the lossless backup originals when present
+ * to avoid generational loss.
+ *
  * Usage:
  *   node scripts/optimize-videos.mjs           — desktop + mobile
  *   node scripts/optimize-videos.mjs --mobile  — mobile variants only
+ *   node scripts/optimize-videos.mjs --only 3  — only showcase-3 (+mobile)
  */
 import { execSync } from "node:child_process";
 import fs from "node:fs";
@@ -24,6 +29,9 @@ const videosDir = path.join(root, "public", "videos");
 const postersDir = path.join(root, "public", "images", "videos");
 const backupDir = path.join(root, "assets", "videos", "originals");
 const mobileOnly = process.argv.includes("--mobile");
+const onlyArg = process.argv.indexOf("--only");
+const onlyId =
+  onlyArg !== -1 ? Number.parseInt(process.argv[onlyArg + 1] ?? "", 10) : NaN;
 
 /** @type {{ id: number; aspect: "portrait" | "landscape" }[]} */
 const items = [
@@ -54,15 +62,24 @@ function backupOriginal(srcPath, name) {
 }
 
 function desktopScale(aspect) {
-  return aspect === "portrait"
-    ? "scale='min(720,iw)':-2:flags=lanczos"
-    : "scale='min(1280,iw)':-2:flags=lanczos";
+  const base =
+    aspect === "portrait"
+      ? "scale='min(720,iw)':-2:flags=lanczos"
+      : "scale='min(1280,iw)':-2:flags=lanczos";
+  return `${base},fps=30`;
 }
 
 function mobileScale(aspect) {
-  return aspect === "portrait"
-    ? "scale='min(480,iw)':-2:flags=lanczos"
-    : "scale='min(960,iw)':-2:flags=lanczos";
+  const base =
+    aspect === "portrait"
+      ? "scale='min(480,iw)':-2:flags=lanczos"
+      : "scale='min(960,iw)':-2:flags=lanczos";
+  return `${base},fps=30`;
+}
+
+function preferBackup(id) {
+  const backup = path.join(backupDir, `showcase-${id}.mp4`);
+  return fs.existsSync(backup) ? backup : null;
 }
 
 function encodeVariants(
@@ -77,37 +94,37 @@ function encodeVariants(
   const webmOut = path.join(videosDir, `${prefix}.webm`);
   const webmTmp = path.join(videosDir, `${prefix}.tmp.webm`);
 
-  console.log("  H.264…");
+  console.log("  H.264 (no audio)…");
   run(
     [
       `ffmpeg -y -i "${input}"`,
       `-vf "${scale}"`,
       `-c:v libx264 -preset slow -crf ${h264Crf}`,
-      `-c:a aac -b:a 96k -ar 48000`,
+      "-an",
       "-movflags +faststart",
       `"${h264Tmp}"`,
     ].join(" "),
   );
 
-  console.log("  HEVC…");
+  console.log("  HEVC (no audio)…");
   run(
     [
       `ffmpeg -y -i "${input}"`,
       `-vf "${scale}"`,
       `-c:v libx265 -preset medium -crf ${hevcCrf} -tag:v hvc1`,
-      `-c:a aac -b:a 96k -ar 48000`,
+      "-an",
       "-movflags +faststart",
       `"${hevcTmp}"`,
     ].join(" "),
   );
 
-  console.log("  WebM (VP9)…");
+  console.log("  WebM (VP9, no audio)…");
   run(
     [
       `ffmpeg -y -i "${input}"`,
       `-vf "${scale}"`,
       `-c:v libvpx-vp9 -crf ${webmCrf} -b:v 0 -row-mt 1`,
-      `-c:a libopus -b:a 64k`,
+      "-an",
       `"${webmTmp}"`,
     ].join(" "),
   );
@@ -120,7 +137,7 @@ function encodeVariants(
 }
 
 function optimizeDesktopItem({ id, aspect }) {
-  const input = path.join(videosDir, `showcase-${id}.mp4`);
+  const input = preferBackup(id) ?? path.join(videosDir, `showcase-${id}.mp4`);
   if (!fs.existsSync(input)) {
     console.warn(`⚠ Skipping showcase-${id}: ${input} not found`);
     return;
@@ -192,7 +209,15 @@ function main() {
       : "Optimizing showcase videos…",
   );
 
-  for (const item of items) {
+  const queue = Number.isFinite(onlyId)
+    ? items.filter((item) => item.id === onlyId)
+    : items;
+  if (Number.isFinite(onlyId) && queue.length === 0) {
+    console.error(`No showcase item with id ${onlyId}.`);
+    process.exit(1);
+  }
+
+  for (const item of queue) {
     if (!mobileOnly) {
       optimizeDesktopItem(item);
     }

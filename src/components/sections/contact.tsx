@@ -42,15 +42,11 @@ export function Contact() {
       ref={sectionRef}
       id="contact"
       data-snap-frame
-      data-scroll-anchor-ratio="0.42"
       className="section-contact section-tone-contact contact-scene"
       aria-labelledby="contact-heading"
     >
       <Container className="contact-scene__body flex w-full min-w-0 max-w-none flex-col gap-5 md:max-h-full md:gap-3 lg:gap-4">
-        <div
-          data-scroll-anchor
-          className="contact-scene__main grid min-h-0 min-w-0 flex-1 grid-cols-1 items-start gap-4 max-md:gap-3.5 md:items-center md:gap-0"
-        >
+        <div className="contact-scene__main grid min-h-0 min-w-0 flex-1 grid-cols-1 items-start gap-4 max-md:gap-3.5 md:items-center md:gap-0">
           <Reveal className="contact-scene__intro cinematic-layer cinematic-layer--links flex min-w-0 flex-col gap-4 max-md:gap-3 md:gap-4">
             <h2
               id="contact-heading"

@@ -119,7 +119,6 @@ export function Projects() {
     <section
       ref={ref}
       id="projects"
-      data-scroll-anchor-ratio="0.45"
       className="section-tone-projects relative z-0 overflow-visible scroll-mt-[var(--nav-safe-top)] px-4 pt-[calc(var(--nav-safe-top)+0.75rem)] pb-8 sm:px-5 md:px-[var(--layout-nav-inset)] md:pb-10 lg:pb-12"
       aria-labelledby="projects-heading"
     >

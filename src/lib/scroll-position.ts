@@ -1,25 +1,9 @@
 import { requestLazySectionMount } from "@/lib/lazy-section-mount";
 import {
-  GUIDANCE_SETTLE_EASING,
-  getNavSettleDuration,
-} from "@/lib/lenis-config";
-import {
-  getSectionAnchorScrollY,
-  getNavSafeTopPx as readNavSafeTopPx,
-} from "@/lib/scroll-anchor";
-import { getScrollContainer, scrollContainerTo } from "@/lib/scroll-container";
-
-/** @deprecated Use getNavSafeTopPx from scroll-anchor */
-const NAV_SAFE_FALLBACK_PX = 108;
-
-/** Read --nav-safe-top from the document (set by useNavMetrics). */
-export function getNavSafeTopPx(): number {
-  if (typeof window === "undefined") return NAV_SAFE_FALLBACK_PX;
-  return readNavSafeTopPx();
-}
-
-/** @deprecated Use getNavSafeTopPx */
-export const NAV_CLEARANCE_PX = NAV_SAFE_FALLBACK_PX;
+  getOffsetInScrollContainer,
+  getScrollContainer,
+  scrollContainerTo,
+} from "@/lib/scroll-container";
 
 export function getPageEndScrollY(): number {
   const container = getScrollContainer();
@@ -34,51 +18,43 @@ export function getPageEndScrollY(): number {
   );
 }
 
-function isContactSection(el: HTMLElement): boolean {
-  return (
-    el.id === "contact" ||
-    el.classList.contains("section-frame--contact") ||
-    el.classList.contains("section-contact")
-  );
-}
-
-/** Snap sections align to container top — offset is 0. */
-export function getSectionScrollOffset(el: HTMLElement): number {
-  void el;
-  return 0;
-}
-
+/**
+ * Scroll to a section's SNAP position: the section's start within the
+ * container, clamped to [0, maxScroll].
+ *
+ * This must match where CSS `scroll-snap-align: start` settles (section
+ * border-box start == snapport start; internal section padding already
+ * clears the floating navbar). The previous anchor-centering math aimed
+ * mid-section and fought snap on every navigation — that mismatch was the
+ * teleport. Exactly one scroll action; snap finishes the job.
+ */
 export function scrollToSectionElement(target: HTMLElement): void {
   if (target.id) {
     requestLazySectionMount(target.id);
   }
 
-  const container = getScrollContainer();
-  const viewportH = container?.clientHeight ?? window.innerHeight;
-  const maxScroll = getPageEndScrollY();
-  const navSafeTop = getNavSafeTopPx();
-  const isCoarsePointer = window.matchMedia("(pointer: coarse)").matches;
-  const duration = getNavSettleDuration(isCoarsePointer);
+  // Re-resolve after the lazy mount signal — the placeholder may be swapped
+  // for the real section on the next tick, which changes offsets.
+  const resolveTarget = () =>
+    (target.id ? document.getElementById(target.id) : null) ?? target;
 
-  if (isContactSection(target)) {
-    scrollContainerTo(getPageEndScrollY(), {
-      behavior: "smooth",
-      duration,
-      programmatic: true,
-      lock: false,
-      easing: GUIDANCE_SETTLE_EASING,
-    });
-    return;
-  }
+  const targetTop = () => {
+    const el = resolveTarget();
+    const maxScroll = getPageEndScrollY();
+    return Math.max(0, Math.min(getOffsetInScrollContainer(el), maxScroll));
+  };
 
-  scrollContainerTo(
-    getSectionAnchorScrollY(target, viewportH, maxScroll, navSafeTop),
-    {
-      behavior: "smooth",
-      duration,
-      programmatic: true,
-      lock: false,
-      easing: GUIDANCE_SETTLE_EASING,
-    },
-  );
+  const firstTop = targetTop();
+  scrollContainerTo(firstTop, { behavior: "smooth" });
+
+  // Single re-aim ONLY if lazy mounting moved the target (placeholder →
+  // real section height change). No polling loop, no correction fighting:
+  // identical positions never trigger a second scroll action.
+  window.setTimeout(() => {
+    const el = resolveTarget();
+    if (!document.contains(el)) return;
+    if (Math.abs(targetTop() - firstTop) > 2) {
+      scrollContainerTo(targetTop(), { behavior: "smooth" });
+    }
+  }, 160);
 }

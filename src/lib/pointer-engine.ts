@@ -19,12 +19,19 @@ export interface PointerFrame {
 export type PointerSubscriber = (frame: PointerFrame) => void;
 
 const DEFAULT_EASE = 0.18;
+/** Frame-rate-independent stiffness matching ~0.18/frame at 60Hz. */
+const DEFAULT_STIFFNESS = 12;
+/** Sleep the RAF after the pointer settles this many consecutive frames. */
+const SETTLE_FRAMES = 20;
+/** Considered settled when both axes are within this distance (px). */
+const SETTLE_PX = 0.1;
 
 class PointerEngine {
   private subscribers = new Set<PointerSubscriber>();
   private rafId: number | null = null;
   private bound = false;
   private enabled = false;
+  private settledFrames = 0;
 
   private targetX = 0;
   private targetY = 0;
@@ -41,6 +48,8 @@ class PointerEngine {
     this.targetY = event.clientY;
     this.lastTarget = event.target;
     this.active = true;
+    this.settledFrames = 0;
+    this.wake();
   };
 
   private onLeave = () => {
@@ -63,9 +72,21 @@ class PointerEngine {
     }
 
     if (this.enabled && this.subscribers.size > 0 && this.rafId === null) {
-      this.lastTime = performance.now();
-      this.rafId = requestAnimationFrame(this.tick);
+      this.wake();
     }
+  }
+
+  /** Start the RAF loop on demand (pointer moved, subscriber added, scroll resumed). */
+  private wake(): void {
+    if (!this.enabled || this.subscribers.size === 0 || this.bound === false) {
+      // Listeners not bound yet — ensureRunning binds + starts.
+      this.ensureRunning();
+      return;
+    }
+    if (this.scrollPaused || this.rafId !== null) return;
+    this.lastTime = performance.now();
+    this.settledFrames = 0;
+    this.rafId = requestAnimationFrame(this.tick);
   }
 
   isScrollPaused(): boolean {
@@ -91,10 +112,6 @@ class PointerEngine {
         this.stop();
       }
     };
-  }
-
-  getFrame(): PointerFrame {
-    return this.buildFrame(16);
   }
 
   private ensureRunning() {
@@ -140,17 +157,33 @@ class PointerEngine {
       return;
     }
 
-    const dt = Math.min(32, time - this.lastTime || 16);
+    const dt = Math.min(50, Math.max(1, time - this.lastTime || 16));
     this.lastTime = time;
 
-    this.currentX += (this.targetX - this.currentX) * DEFAULT_EASE;
-    this.currentY += (this.targetY - this.currentY) * DEFAULT_EASE;
+    // Delta-time-corrected smoothing — identical settle time at 60/120Hz.
+    const alpha = dtAlpha(dt, DEFAULT_STIFFNESS);
+    this.currentX += (this.targetX - this.currentX) * alpha;
+    this.currentY += (this.targetY - this.currentY) * alpha;
 
     const frame = this.buildFrame(dt);
     this.subscribers.forEach((cb) => cb(frame));
 
     this.prevCurrentX = this.currentX;
     this.prevCurrentY = this.currentY;
+
+    // Sleep when settled so no permanent RAF loop competes for frames.
+    const dx = Math.abs(this.targetX - this.currentX);
+    const dy = Math.abs(this.targetY - this.currentY);
+    if (dx < SETTLE_PX && dy < SETTLE_PX) {
+      this.settledFrames += 1;
+      if (this.settledFrames >= SETTLE_FRAMES) {
+        this.rafId = null;
+        this.settledFrames = 0;
+        return;
+      }
+    } else {
+      this.settledFrames = 0;
+    }
 
     this.rafId = requestAnimationFrame(this.tick);
   };
@@ -180,20 +213,21 @@ class PointerEngine {
 /** Singleton pointer bus — one pointermove + one RAF for all subscribers. */
 export const pointerEngine = new PointerEngine();
 
-export function pointerLocalToElement(
-  el: HTMLElement,
-  x: number,
-  y: number,
-): { x: number; y: number; nx: number; ny: number; inside: boolean } {
-  const rect = el.getBoundingClientRect();
-  const lx = x - rect.left;
-  const ly = y - rect.top;
-  const inside = lx >= 0 && ly >= 0 && lx <= rect.width && ly <= rect.height;
-  const nx = rect.width ? (lx / rect.width) * 2 - 1 : 0;
-  const ny = rect.height ? (ly / rect.height) * 2 - 1 : 0;
-  return { x: lx, y: ly, nx, ny, inside };
+/**
+ * Delta-time smoothing factor for a stiffness-based critically-damped approach.
+ * stiffness ≈ 12 matches the legacy 0.18/frame feel at 60Hz, correctly at any Hz.
+ */
+export function dtAlpha(dtMs: number, stiffness = DEFAULT_STIFFNESS): number {
+  const dtSeconds = Math.min(50, Math.max(1, dtMs)) / 1000;
+  return 1 - Math.exp(-stiffness * dtSeconds);
 }
 
-export function lerp(current: number, target: number, ease: number): number {
-  return current + (target - current) * ease;
+/**
+ * Convert a legacy per-frame ease (tuned at 60Hz) into a frame-rate-independent
+ * alpha for the measured dt. Preserves the tuned 60Hz feel on 120Hz displays.
+ */
+export function frameAlpha(dtMs: number, baseEaseAt60 = DEFAULT_EASE): number {
+  const clamped = Math.min(1, Math.max(0, baseEaseAt60));
+  const dtRatio = Math.min(50, Math.max(1, dtMs)) / 16.667;
+  return 1 - Math.pow(1 - clamped, dtRatio);
 }

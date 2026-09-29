@@ -37,14 +37,13 @@ Requires Node.js >= 20.9.0 (see `engines` in `package.json`).
 
 ## Environment Variables
 
-| Variable                        | Required | Purpose                                                                                                                    |
-| ------------------------------- | -------- | -------------------------------------------------------------------------------------------------------------------------- |
-| `NEXT_PUBLIC_SITE_URL`          | dev only | Canonical production URL (metadata, OG, sitemap, robots, JSON-LD). Falls back to the production URL in `src/data/site.ts`. |
-| `RESEND_API_KEY`                | yes      | Server-side only. Contact form delivery.                                                                                   |
-| `CONTACT_FROM_EMAIL`            | yes      | Verified Resend sender.                                                                                                    |
-| `CONTACT_TO_EMAIL`              | yes      | Where inquiries are delivered.                                                                                             |
-| `NEXT_PUBLIC_HUBSPOT_PORTAL_ID` | no       | HubSpot analytics snippet ID. Defaults to the portal ID baked into the layout.                                             |
-| `NEXT_PUBLIC_*_URL`s            | no       | Social links; empty values hide the link from the UI and JSON-LD.                                                          |
+| Variable               | Required | Purpose                                                                                                                    |
+| ---------------------- | -------- | -------------------------------------------------------------------------------------------------------------------------- |
+| `NEXT_PUBLIC_SITE_URL` | dev only | Canonical production URL (metadata, OG, sitemap, robots, JSON-LD). Falls back to the production URL in `src/data/site.ts`. |
+| `RESEND_API_KEY`       | yes      | Server-side only. Contact form delivery.                                                                                   |
+| `CONTACT_FROM_EMAIL`   | yes      | Verified Resend sender.                                                                                                    |
+| `CONTACT_TO_EMAIL`     | yes      | Where inquiries are delivered.                                                                                             |
+| `NEXT_PUBLIC_*_URL`s   | no       | Social links; empty values hide the link from the UI and JSON-LD.                                                          |
 
 ## Contact Form (Production)
 
@@ -61,7 +60,7 @@ The `.env.example` file documents every key. Never commit real `.env.local`.
 ## SEO & Social
 
 - `src/app/layout.tsx` — full metadata (title `THE DHRUVA — Cinematic Digital Studio`, description, keywords, canonical, Open Graph + Twitter `summary_large_image`).
-- OG image: `public/images/og-cover.png` (1200×630 raster PNG) — browsed by Discord/WhatsApp/X/etc. Generated from `public/ODimage.png` (clients' original asset) with `sharp`.
+- OG image: `public/images/og-cover.jpg` (1200×630 compressed JPEG) — browsed by Discord/WhatsApp/X/etc. Generated from `public/ODimage.png` (clients' original asset).
 - `src/app/robots.ts`, `src/app/sitemap.ts`, `src/app/manifest.ts` — generated at build (`/robots.txt`, `/sitemap.xml`, `/manifest.webmanifest`).
 - JSON-LD (`src/components/seo/json-ld.tsx`): `Organization` + `WebSite` schema with only verified data (name, URL, description, logo, defined social `sameAs`) — no invented contact info.
 - Below-the-fold sections render server-side `sr-only` summaries so crawlers see real service/project/video content before the interactive (client-lazy) sections hydrate.

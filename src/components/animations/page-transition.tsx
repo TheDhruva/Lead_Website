@@ -1,5 +1,3 @@
-"use client";
-
 import { type HTMLAttributes, type ReactNode, memo } from "react";
 
 import { cn } from "@/lib/utils";
