@@ -2,19 +2,15 @@
 
 import { useCallback, useEffect, useId, useRef, useState } from "react";
 
-import { AnimatePresence, m } from "framer-motion";
-import { Menu, X } from "lucide-react";
+import { ArrowUpRight, Menu, X } from "lucide-react";
 
 import { SectionSnapSound } from "@/components/audio/section-snap-sound";
 import { Button } from "@/components/ui/button";
-import { Magnetic } from "@/components/ui/magnetic";
-import { MagneticText } from "@/components/ui/magnetic-text";
 import { ThemeToggle } from "@/components/ui/theme-toggle";
-import { MOTION, NAV_ITEMS, SECTION_IDS } from "@/constants";
+import { NAV_ITEMS, SECTION_IDS } from "@/constants";
 import { useActiveSection } from "@/hooks/use-active-section";
 import { useNavMetrics } from "@/hooks/use-nav-metrics";
 import { useSfxHandlers } from "@/hooks/use-sfx-handlers";
-import { getScrollContainer, getScrollTop } from "@/lib/scroll-container";
 import { lockScrollPanel, unlockScrollPanel } from "@/lib/scroll-lock";
 import { cn } from "@/lib/utils";
 
@@ -26,60 +22,23 @@ const SECTION_LIST = [
   SECTION_IDS.contact,
 ] as const;
 
-const SCROLL_THRESHOLD = 24;
-
+/**
+ * Minimal editorial top navigation — a transparent bar attached edge to
+ * edge at the very top (macOS menu-bar style). It scrolls away with the
+ * page: no fixed positioning, no background, no border, no shadow.
+ * Section links live in the mobile menu sheet; desktop uses CTAs.
+ */
 export function Navbar() {
   const [menuOpen, setMenuOpen] = useState(false);
   const menuId = useId();
   const navRef = useRef<HTMLElement>(null);
   const menuButtonRef = useRef<HTMLButtonElement>(null);
-  const scrolledRef = useRef(false);
   const { activeId, scrollToSection } = useActiveSection(SECTION_LIST);
-  const { onHover, onClick, onCursor } = useSfxHandlers();
+  const { onHover, onClick } = useSfxHandlers();
 
   useNavMetrics(navRef);
 
   const closeMenu = useCallback(() => setMenuOpen(false), []);
-
-  useEffect(() => {
-    const nav = navRef.current;
-    if (!nav) return;
-
-    const applyScrolled = (scrollY: number) => {
-      const next = scrollY > SCROLL_THRESHOLD;
-      if (scrolledRef.current === next) return;
-      scrolledRef.current = next;
-      nav.dataset.scrolled = next ? "true" : "false";
-      requestAnimationFrame(() => {
-        const rect = nav.getBoundingClientRect();
-        const safeTop = rect.top + rect.height + 20;
-        document.documentElement.style.setProperty(
-          "--nav-height",
-          `${rect.height}px`,
-        );
-        document.documentElement.style.setProperty(
-          "--nav-offset",
-          `${rect.top}px`,
-        );
-        document.documentElement.style.setProperty(
-          "--nav-safe-top",
-          `${safeTop}px`,
-        );
-      });
-    };
-
-    // Single native scroll source: the snap panel. No Lenis subscription —
-    // one listener, one coordinate system, no competing callbacks.
-    const container = getScrollContainer();
-    const onScroll = () => applyScrolled(getScrollTop());
-    onScroll();
-
-    container?.addEventListener("scroll", onScroll, { passive: true });
-
-    return () => {
-      container?.removeEventListener("scroll", onScroll);
-    };
-  }, []);
 
   useEffect(() => {
     if (!menuOpen) return;
@@ -128,7 +87,7 @@ export function Navbar() {
     };
   }, [menuOpen, closeMenu, menuId]);
 
-  const handleNavClick = (href: string) => {
+  const go = (href: string) => {
     onClick();
     scrollToSection(href);
     closeMenu();
@@ -137,165 +96,119 @@ export function Navbar() {
   return (
     <>
       <SectionSnapSound activeId={activeId} />
-      <AnimatePresence>
-        {menuOpen ? (
-          <m.button
-            type="button"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            transition={{ duration: 0.2 }}
-            className="fixed inset-0 z-40 bg-black/25 backdrop-blur-[2px] md:hidden"
-            aria-label="Close menu"
-            onClick={closeMenu}
-          />
-        ) : null}
-      </AnimatePresence>
-
       <nav
         ref={navRef}
         aria-label="Primary"
-        data-scrolled="false"
-        className={cn(
-          "navbar fixed left-1/2 z-50 flex w-[min(92%,1480px)] max-w-container-max -translate-x-1/2 items-center justify-between rounded-full border px-4 sm:px-gutter",
-          "transition-[top,padding,background-color,border-color,box-shadow] duration-300 ease-[cubic-bezier(0.22,1,0.36,1)]",
-          "top-4 py-2 md:py-2.5",
-          "max-md:top-3 max-md:px-3 max-md:py-1.5",
-          "max-md:border-border/80 max-md:bg-background/95 max-md:shadow-[0_8px_28px_rgb(0_0_0/0.07)]",
-          "md:border-border/55 md:bg-nav md:shadow-[0_8px_32px_rgb(0_0_0/0.05)]",
-        )}
+        className="navbar absolute top-0 right-0 left-0 z-50"
       >
-        <a
-          href="#work"
-          onClick={(event) => {
-            event.preventDefault();
-            handleNavClick("#work");
-          }}
-          onMouseEnter={onCursor}
-          className="shrink-0 font-display-lg text-[1.35rem] leading-none font-extrabold tracking-[-0.04em] text-foreground transition-opacity duration-200 hover:opacity-80 max-md:text-[1.15rem] sm:text-[1.5rem] md:text-[1.65rem]"
-        >
-          <MagneticText text="DHRUVA" strength={7} radius={120} />
-        </a>
-
-        <div className="relative hidden items-center gap-6 md:flex lg:gap-8">
-          {NAV_ITEMS.map((item) => {
-            const id = item.href.replace("#", "");
-            const isActive = activeId === id;
-
-            return (
-              <a
-                key={item.href}
-                href={item.href}
-                onClick={(event) => {
-                  event.preventDefault();
-                  handleNavClick(item.href);
-                }}
-                onMouseEnter={onHover}
-                aria-current={isActive ? "true" : undefined}
-                className={cn(
-                  "relative py-1 font-label-md text-label-md transition-colors duration-[250ms] ease-out hover:text-foreground",
-                  isActive
-                    ? "font-semibold text-foreground"
-                    : "font-medium text-foreground-secondary",
-                )}
-              >
-                {item.label}
-                {isActive ? (
-                  <m.span
-                    layoutId="nav-active-indicator"
-                    className="absolute right-0 -bottom-1 left-0 mx-auto h-px w-full max-w-[calc(100%-0.5rem)] bg-[var(--accent-cherry)]"
-                    transition={{ duration: 0.35, ease: [0.22, 1, 0.36, 1] }}
-                  />
-                ) : null}
-              </a>
-            );
-          })}
-        </div>
-
-        <div className="flex items-center gap-3">
-          <ThemeToggle className="hidden md:inline-flex" />
-          <Magnetic
-            className="hidden sm:inline-flex"
-            strength={10}
-            radius={140}
-          >
-            <Button size="md" onClick={() => handleNavClick("#contact")}>
-              Hire Me
-            </Button>
-          </Magnetic>
-
-          <button
-            ref={menuButtonRef}
-            type="button"
-            className="inline-flex min-h-11 min-w-11 items-center justify-center rounded-full border border-border p-2 text-foreground transition-all duration-[250ms] hover:bg-card-hover active:scale-[0.985] motion-reduce:active:scale-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring md:hidden"
-            aria-expanded={menuOpen}
-            aria-controls={menuId}
-            aria-label={menuOpen ? "Close menu" : "Open menu"}
-            onClick={() => {
-              onClick();
-              setMenuOpen((open) => !open);
+        <div className="relative z-10 mx-auto flex h-10 w-full items-center justify-between gap-3 px-4 sm:px-5 md:h-12 md:px-8">
+          {/* LEFT — wordmark */}
+          <a
+            href="#work"
+            onClick={(event) => {
+              event.preventDefault();
+              go("#work");
             }}
-            onMouseEnter={onHover}
+            className="shrink-0 rounded-sm font-sans text-[13px] font-bold tracking-[0.22em] text-foreground uppercase transition-opacity duration-200 hover:opacity-70 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring sm:text-sm"
+            aria-label="THE DHRUVA — back to top"
           >
-            {menuOpen ? (
-              <X className="h-6 w-6" aria-hidden="true" strokeWidth={2} />
-            ) : (
-              <Menu className="h-6 w-6" aria-hidden="true" strokeWidth={2} />
-            )}
-          </button>
+            The&nbsp;Dhruva
+          </a>
+
+          {/* RIGHT — controls */}
+          <div className="flex min-w-0 items-center gap-2 sm:gap-3">
+            <ThemeToggle />
+            <Button
+              size="sm"
+              onClick={() => go("#contact")}
+              className="group shrink-0"
+              aria-label="Hire Me — go to contact"
+            >
+              <span className="max-sm:hidden">Hire Me</span>
+              <span className="sm:hidden">Hire</span>
+              <ArrowUpRight
+                aria-hidden="true"
+                className="transition-transform duration-200 ease-out group-hover:translate-x-[3px] group-hover:-translate-y-[2px] motion-reduce:transition-none motion-reduce:group-hover:translate-x-0 motion-reduce:group-hover:translate-y-0"
+              />
+            </Button>
+            <button
+              ref={menuButtonRef}
+              type="button"
+              className="inline-flex h-9 w-9 shrink-0 cursor-pointer items-center justify-center rounded-full text-foreground transition-colors duration-200 hover:bg-card-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring md:hidden"
+              aria-expanded={menuOpen}
+              aria-controls={menuId}
+              aria-label={menuOpen ? "Close menu" : "Open menu"}
+              onClick={() => {
+                onClick();
+                setMenuOpen((open) => !open);
+              }}
+              onMouseEnter={onHover}
+            >
+              {menuOpen ? (
+                <X className="h-5 w-5" aria-hidden="true" strokeWidth={2} />
+              ) : (
+                <Menu className="h-5 w-5" aria-hidden="true" strokeWidth={2} />
+              )}
+            </button>
+          </div>
         </div>
 
-        <AnimatePresence>
-          {menuOpen ? (
-            <m.div
+        {/* Mobile menu sheet — simple overlay, no animation system */}
+        {menuOpen ? (
+          <div className="fixed inset-0 z-0 md:hidden">
+            <button
+              type="button"
+              aria-label="Close menu"
+              onClick={closeMenu}
+              className="absolute inset-0 cursor-default bg-overlay"
+            />
+            <div
               id={menuId}
               role="dialog"
               aria-modal="true"
-              aria-label="Navigation menu"
-              initial={{ opacity: 0, y: -8 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -8 }}
-              transition={{ duration: 0.22, ease: MOTION.hover.ease }}
-              className="absolute top-[calc(100%+12px)] right-0 left-0 z-10 rounded-2xl border border-border bg-background p-6 shadow-2xl md:hidden"
+              aria-label="Menu"
+              className="nav-menu-panel absolute top-0 right-0 left-0 border-b border-border bg-background px-5 pt-12 pb-6"
             >
-              <div className="flex flex-col gap-4">
+              <ul className="flex flex-col">
                 {NAV_ITEMS.map((item) => {
                   const id = item.href.replace("#", "");
                   const isActive = activeId === id;
 
                   return (
-                    <a
-                      key={item.href}
-                      href={item.href}
-                      onClick={(event) => {
-                        event.preventDefault();
-                        handleNavClick(item.href);
-                      }}
-                      onMouseEnter={onHover}
-                      aria-current={isActive ? "true" : undefined}
-                      className={cn(
-                        "font-label-md text-label-md py-2 transition-colors duration-[250ms]",
-                        isActive
-                          ? "font-bold text-foreground"
-                          : "text-foreground-secondary",
-                      )}
-                    >
-                      {item.label}
-                    </a>
+                    <li key={item.href}>
+                      <a
+                        href={item.href}
+                        onClick={(event) => {
+                          event.preventDefault();
+                          go(item.href);
+                        }}
+                        onMouseEnter={onHover}
+                        aria-current={isActive ? "true" : undefined}
+                        className={cn(
+                          "flex items-center justify-between border-b border-divider py-3 font-sans text-sm font-semibold tracking-[0.14em] uppercase transition-colors duration-200 last:border-b-0 focus-visible:rounded-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+                          isActive
+                            ? "text-lacquer dark:text-bright-lacquer"
+                            : "text-foreground",
+                        )}
+                      >
+                        {item.label}
+                        <span
+                          aria-hidden="true"
+                          className={cn(
+                            "h-1.5 w-1.5 rounded-full",
+                            isActive
+                              ? "bg-lacquer dark:bg-bright-lacquer"
+                              : "bg-transparent",
+                          )}
+                        />
+                      </a>
+                    </li>
                   );
                 })}
-                <ThemeToggle variant="full" />
-                <Button
-                  size="md"
-                  fullWidth
-                  onClick={() => handleNavClick("#contact")}
-                >
-                  Hire Me
-                </Button>
-              </div>
-            </m.div>
-          ) : null}
-        </AnimatePresence>
+              </ul>
+            </div>
+          </div>
+        ) : null}
       </nav>
     </>
   );

@@ -7,7 +7,7 @@ import { SpeedInsights } from "@vercel/speed-insights/next";
 import { JsonLd } from "@/components/seo/json-ld";
 import { siteConfig } from "@/data";
 import { heroPortraits } from "@/data";
-import { inter } from "@/lib/fonts";
+import { instrumentSerif, manrope } from "@/lib/fonts";
 import { cn } from "@/lib/utils";
 import {
   AnimationProvider,
@@ -25,8 +25,8 @@ export const viewport: Viewport = {
   initialScale: 1,
   colorScheme: "light dark",
   themeColor: [
-    { media: "(prefers-color-scheme: light)", color: "#fafafa" },
-    { media: "(prefers-color-scheme: dark)", color: "#0e0e0e" },
+    { media: "(prefers-color-scheme: light)", color: "#faf7f0" },
+    { media: "(prefers-color-scheme: dark)", color: "#171211" },
   ],
 };
 
@@ -151,7 +151,11 @@ export default function RootLayout({ children }: RootLayoutProps) {
   const heroPreload = heroPortraits[0]?.src;
 
   return (
-    <html lang="en" className={cn(inter.variable)} suppressHydrationWarning>
+    <html
+      lang="en"
+      className={cn(manrope.variable, instrumentSerif.variable)}
+      suppressHydrationWarning
+    >
       <head>
         {heroPreload ? (
           <link

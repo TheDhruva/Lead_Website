@@ -6,7 +6,6 @@ import { useRef } from "react";
 import { FileText } from "lucide-react";
 
 import { Reveal } from "@/components/animations/reveal";
-import { SiteFooter } from "@/components/layout/footer";
 import { ContactFormSkeleton } from "@/components/ui/contact-form-skeleton";
 import { Container } from "@/components/ui/container";
 import { SocialIcon } from "@/components/ui/social-icon";
@@ -117,10 +116,6 @@ export function Contact() {
           >
             <ContactFormLazy />
           </Reveal>
-        </div>
-
-        <div className="contact-scene__outro shrink-0">
-          <SiteFooter embedded />
         </div>
       </Container>
     </section>

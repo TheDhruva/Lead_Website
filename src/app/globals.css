@@ -4,7 +4,7 @@
    Tailwind theme → semantic CSS variables (theme-agnostic utilities)
    ───────────────────────────────────────────────────────────── */
 @theme inline {
-  --color-background: var(--background-secondary);
+  --color-background: var(--background);
   --color-background-secondary: var(--background-secondary);
   --color-foreground: var(--foreground);
   --color-foreground-secondary: var(--foreground-secondary);
@@ -18,6 +18,7 @@
   --color-primary: var(--primary);
   --color-primary-foreground: var(--primary-foreground);
   --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
   --color-input: var(--input);
   --color-input-border: var(--input-border);
   --color-ring: var(--ring);
@@ -29,6 +30,17 @@
   --color-error-container: var(--error-container);
   --color-on-error-container: var(--on-error-container);
   --color-accent-cherry: var(--accent-cherry);
+
+  /* Brand tokens — Paper / Ink / Lacquer system */
+  --color-paper: var(--paper);
+  --color-parchment: var(--parchment);
+  --color-ink: var(--ink);
+  --color-soft-ink: var(--soft-ink);
+  --color-lacquer: var(--lacquer);
+  --color-dark-lacquer: var(--dark-lacquer);
+  --color-bright-lacquer: var(--bright-lacquer);
+  --color-clay: var(--clay);
+  --color-brass: var(--brass);
 
   /* Backward-compatible aliases used by existing components */
   --color-surface: var(--background-secondary);
@@ -70,20 +82,22 @@
   --spacing-container-max: 1480px;
   --container-max-width: 1480px;
 
-  --radius-DEFAULT: 0.25rem;
-  --radius-lg: 0.5rem;
-  --radius-xl: 0.75rem;
-  --radius-2xl: 1rem;
+  --radius-sm: 0.625rem;
+  --radius-md: 0.875rem;
+  --radius-lg: 1.25rem;
+  --radius-xl: 1.5rem;
+  --radius-2xl: 2rem;
   --radius-full: 9999px;
 
-  --font-sans: var(--font-inter), ui-sans-serif, system-ui, sans-serif;
-  --font-display-lg: var(--font-inter), ui-sans-serif, system-ui, sans-serif;
-  --font-headline-xl: var(--font-inter), ui-sans-serif, system-ui, sans-serif;
-  --font-headline-lg: var(--font-inter), ui-sans-serif, system-ui, sans-serif;
-  --font-body-lg: var(--font-inter), ui-sans-serif, system-ui, sans-serif;
-  --font-body-md: var(--font-inter), ui-sans-serif, system-ui, sans-serif;
-  --font-label-md: var(--font-inter), ui-sans-serif, system-ui, sans-serif;
-  --font-button: var(--font-inter), ui-sans-serif, system-ui, sans-serif;
+  --font-sans: var(--font-manrope), ui-sans-serif, system-ui, sans-serif;
+  --font-display: var(--font-instrument), Georgia, serif;
+  --font-display-lg: var(--font-instrument), Georgia, serif;
+  --font-headline-xl: var(--font-sans), ui-sans-serif, system-ui, sans-serif;
+  --font-headline-lg: var(--font-sans), ui-sans-serif, system-ui, sans-serif;
+  --font-body-lg: var(--font-sans), ui-sans-serif, system-ui, sans-serif;
+  --font-body-md: var(--font-sans), ui-sans-serif, system-ui, sans-serif;
+  --font-label-md: var(--font-sans), ui-sans-serif, system-ui, sans-serif;
+  --font-button: var(--font-sans), ui-sans-serif, system-ui, sans-serif;
 
   --text-display-lg: 64px;
   --text-display-lg--line-height: 1.1;
@@ -129,50 +143,66 @@
 }
 
 /* ─────────────────────────────────────────────────────────────
-   Light theme (default / system light)
+   Light theme — Paper + Ink with Lacquer as identity accent.
+   Primary environment stays Paper/Ink; red is reserved for
+   active nav, Hire Me, progress, selected states, small accents.
    ───────────────────────────────────────────────────────────── */
 :root {
   color-scheme: light;
 
-  --background: #fafafa;
-  --background-secondary: #f4f4f5;
-  --foreground: #111111;
-  --foreground-secondary: #52525b;
-  --muted: #f4f4f5;
-  --muted-foreground: #71717a;
-  --card: #ffffff;
-  --card-hover: #f8f8f8;
-  --card-foreground: #111111;
-  --border: #e4e4e7;
-  --border-hover: #d4d4d8;
-  --primary: #111111;
-  --primary-foreground: #ffffff;
-  --accent: #111111;
-  --input: #ffffff;
-  --input-border: #d4d4d8;
-  --ring: #111111;
-  --nav: rgb(255 255 255 / 0.96);
-  --divider: #ececec;
-  --overlay: rgb(0 0 0 / 0.55);
-  --error: #dc2626;
-  --on-error: #ffffff;
-  --error-container: #fee2e2;
-  --on-error-container: #991b1b;
+  /* Brand primitives — do not scatter raw hex in components */
+  --paper: #faf7f0;
+  --parchment: #f3ebdd;
+  --ink: #171211;
+  --soft-ink: #2a2523;
+  --lacquer: #b5121b;
+  --dark-lacquer: #5a080f;
+  --bright-lacquer: #c51d25;
+  --clay: #70413a;
+  --brass: #b8955a;
+  --muted-warm: #756e68;
 
-  --inner-glow: inset 0 1px 0 0 rgb(0 0 0 / 0.04);
-  --shadow-sm: 0 1px 2px rgb(0 0 0 / 0.04);
-  --shadow-md: 0 8px 24px rgb(0 0 0 / 0.06);
-  --shadow-lg: 0 20px 40px -12px rgb(0 0 0 / 0.12);
-  --card-shadow: 0 1px 2px rgb(0 0 0 / 0.04), 0 8px 24px rgb(0 0 0 / 0.04);
-  --selection-bg: rgb(17 17 17 / 0.12);
-  --selection-fg: #111111;
-  --scrollbar-track: #f4f4f5;
-  --scrollbar-thumb: #d4d4d8;
-  --scrollbar-thumb-hover: #a1a1aa;
+  --background: var(--paper);
+  --background-secondary: var(--parchment);
+  --foreground: var(--ink);
+  --foreground-secondary: var(--soft-ink);
+  --muted: #ece3d2;
+  --muted-foreground: var(--muted-warm);
+  --card: #fffdf8;
+  --card-hover: #f7efe0;
+  --card-foreground: var(--ink);
+  --border: #d8d0c6;
+  --border-hover: #c2b7a6;
+  --primary: var(--lacquer);
+  --primary-foreground: var(--paper);
+  --accent: var(--lacquer);
+  --accent-foreground: var(--paper);
+  --input: #fffdf8;
+  --input-border: #d8d0c6;
+  --ring: var(--lacquer);
+  --nav: rgb(250 247 240 / 0.92);
+  --divider: #e7ddcc;
+  --overlay: rgb(23 18 17 / 0.55);
+  --error: #b5121b;
+  --on-error: #faf7f0;
+  --error-container: #f7dcd9;
+  --on-error-container: #5a080f;
 
-  /* Brand accent — use sparingly for interaction highlights */
-  --accent-cherry: #d2042d;
-  --accent-cherry-muted: rgb(210 4 45 / 0.12);
+  --inner-glow: inset 0 1px 0 0 rgb(23 18 17 / 0.04);
+  --shadow-sm: 0 1px 2px rgb(23 18 17 / 0.05);
+  --shadow-md: 0 8px 24px rgb(23 18 17 / 0.07);
+  --shadow-lg: 0 20px 40px -12px rgb(23 18 17 / 0.14);
+  --card-shadow:
+    0 1px 2px rgb(23 18 17 / 0.05), 0 8px 24px rgb(23 18 17 / 0.05);
+  --selection-bg: rgb(181 18 27 / 0.16);
+  --selection-fg: #171211;
+  --scrollbar-track: #f3ebdd;
+  --scrollbar-thumb: #d8d0c6;
+  --scrollbar-thumb-hover: #756e68;
+
+  /* Brand accent — Lacquer identity, used sparingly */
+  --accent-cherry: #b5121b;
+  --accent-cherry-muted: rgb(181 18 27 / 0.12);
 
   /* Shared motion language — global system */
   --ease-out: cubic-bezier(0.22, 1, 0.36, 1);
@@ -199,61 +229,66 @@
     calc((100vw - min(92vw, var(--container-max-width))) / 2)
   );
 
-  /* Subtle section tonal progression */
-  --tone-hero: #fafafa;
-  --tone-services: #f7f7f8;
-  --tone-videos: #fafafa;
-  --tone-projects: #f5f5f3;
-  --tone-contact: #fafafa;
+  /* Subtle section tonal progression — Paper-first, Parchment separation */
+  --tone-hero: #faf7f0;
+  --tone-services: #f3ebdd;
+  --tone-videos: #faf7f0;
+  --tone-projects: #f5eee0;
+  --tone-contact: #faf7f0;
 }
 
 /* ─────────────────────────────────────────────────────────────
-   Dark theme — preserves approved cinematic palette
+   Dark theme — Ink environment, Paper text, Lacquer accent.
+   Same brand primitives; semantic surfaces adapt for contrast.
    ───────────────────────────────────────────────────────────── */
 .dark {
   color-scheme: dark;
 
-  --background: #0e0e0e;
-  --background-secondary: #141313;
-  --foreground: #e5e2e1;
-  --foreground-secondary: #c4c7c8;
-  --muted: #2a2a2a;
-  --muted-foreground: #8e9192;
-  --card: #201f1f;
-  --card-hover: #1c1b1b;
-  --card-foreground: #e5e2e1;
-  --border: rgb(255 255 255 / 0.08);
-  --border-hover: rgb(255 255 255 / 0.14);
-  --primary: #ffffff;
-  --primary-foreground: #2f3131;
-  --accent: #ffffff;
-  --input: #1c1b1b;
-  --input-border: #444748;
-  --ring: #ffffff;
-  --nav: rgb(20 19 19 / 0.96);
-  --divider: #444748;
+  --background: #171211;
+  --background-secondary: #221b19;
+  --foreground: #faf7f0;
+  --foreground-secondary: #d8d0c6;
+  --muted: #2a2523;
+  --muted-foreground: #b3a89c;
+  --card: #231c1a;
+  --card-hover: #2e2624;
+  --card-foreground: #faf7f0;
+  --border: rgb(250 247 240 / 0.12);
+  --border-hover: rgb(250 247 240 / 0.22);
+  --primary: #c51d25;
+  --primary-foreground: #faf7f0;
+  --accent: #c51d25;
+  --accent-foreground: #faf7f0;
+  --input: #231c1a;
+  --input-border: #443935;
+  --ring: #c51d25;
+  --nav: rgb(23 18 17 / 0.92);
+  --divider: #3a322e;
   --overlay: rgb(0 0 0 / 0.6);
-  --error: #ffb4ab;
-  --on-error: #690005;
-  --error-container: #93000a;
-  --on-error-container: #ffdad6;
+  --error: #ff9d94;
+  --on-error: #5a080f;
+  --error-container: #5a080f;
+  --on-error-container: #f7dcd9;
 
-  --inner-glow: inset 0 1px 0 0 rgb(255 255 255 / 0.05);
-  --shadow-sm: 0 1px 2px rgb(0 0 0 / 0.3);
-  --shadow-md: 0 8px 30px rgb(0 0 0 / 0.35);
-  --shadow-lg: 0 25px 50px -12px rgb(0 0 0 / 0.5);
+  --inner-glow: inset 0 1px 0 0 rgb(250 247 240 / 0.06);
+  --shadow-sm: 0 1px 2px rgb(0 0 0 / 0.35);
+  --shadow-md: 0 8px 30px rgb(0 0 0 / 0.4);
+  --shadow-lg: 0 25px 50px -12px rgb(0 0 0 / 0.55);
   --card-shadow: none;
-  --selection-bg: rgb(255 255 255 / 0.16);
-  --selection-fg: #ffffff;
-  --scrollbar-track: #141313;
-  --scrollbar-thumb: #353434;
-  --scrollbar-thumb-hover: #444748;
+  --selection-bg: rgb(197 29 37 / 0.35);
+  --selection-fg: #faf7f0;
+  --scrollbar-track: #171211;
+  --scrollbar-thumb: #443935;
+  --scrollbar-thumb-hover: #756e68;
 
-  --tone-hero: #0e0e0e;
-  --tone-services: #101010;
-  --tone-videos: #0e0e0e;
-  --tone-projects: #111010;
-  --tone-contact: #0e0e0e;
+  --accent-cherry: #c51d25;
+  --accent-cherry-muted: rgb(197 29 37 / 0.18);
+
+  --tone-hero: #171211;
+  --tone-services: #221b19;
+  --tone-videos: #171211;
+  --tone-projects: #1e1715;
+  --tone-contact: #171211;
 }
 
 @layer base {
@@ -270,9 +305,18 @@
     background-color: var(--background);
     color: var(--foreground);
     overflow-x: hidden;
-    font-family: var(--font-sans);
+    font-family: var(--font-manrope), ui-sans-serif, system-ui, sans-serif;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
+    text-rendering: optimizeLegibility;
+  }
+
+  /* Editorial display — Instrument Serif for personality moments only */
+  .font-display,
+  .font-editorial {
+    font-family: var(--font-instrument), Georgia, serif;
+    font-weight: 400;
+    letter-spacing: -0.01em;
   }
 
   /* Site-wide film grain — felt, not seen (single restrained layer).
@@ -290,7 +334,7 @@
     background-size: 180px 180px;
   }
 
-  /* Ambient tonal lighting */
+  /* Ambient tonal lighting — warm paper glow, lacquer whisper */
   body::after {
     content: "";
     position: fixed;
@@ -300,12 +344,12 @@
     background:
       radial-gradient(
         ellipse 90% 55% at 50% -8%,
-        rgb(255 252 250 / 0.55),
+        rgb(255 253 248 / 0.55),
         transparent 62%
       ),
       radial-gradient(
         ellipse 45% 40% at 92% 88%,
-        rgb(210 4 45 / 0.025),
+        rgb(181 18 27 / 0.025),
         transparent 55%
       );
   }
@@ -318,12 +362,12 @@
     background:
       radial-gradient(
         ellipse 85% 50% at 50% -5%,
-        rgb(255 255 255 / 0.04),
+        rgb(250 247 240 / 0.04),
         transparent 60%
       ),
       radial-gradient(
         ellipse 40% 35% at 8% 92%,
-        rgb(210 4 45 / 0.035),
+        rgb(197 29 37 / 0.035),
         transparent 50%
       );
   }
@@ -363,15 +407,42 @@
     background: var(--scrollbar-thumb-hover);
   }
 
-  /* Solid navbar — no backdrop-filter (persistent backdrop sampling is the
-     costliest continuous GPU work on desktop); depth comes from border +
-     shadow + scrolled tightening instead. */
-  .navbar[data-scrolled="true"] {
-    top: 0.75rem;
-    padding-block: 0.45rem;
-    border-color: rgb(228 228 231 / 0.55);
-    background: rgb(255 255 255 / 0.96);
-    box-shadow: 0 6px 28px rgb(0 0 0 / 0.05);
+  /* Transparent editorial navbar — a bare bar attached edge to edge at
+     the top of the page. It scrolls away with content: never fixed, never
+     a card. No background, no border, no shadow. */
+  .navbar {
+    background-color: transparent;
+  }
+
+  /* ── Floating bottom nav clearance ──
+     The pill floats above content; reserve bottom space so it never
+     covers the contact form. Mobile already reserves 4.5rem. */
+  :root {
+    --floating-nav-clearance: 4.25rem;
+  }
+
+  @media (min-width: 768px) {
+    .section-contact {
+      padding-bottom: calc(
+        clamp(0.5rem, 1vh, 0.875rem) + var(--floating-nav-clearance)
+      );
+    }
+  }
+
+  /* Mobile menu sheet entrance — single lightweight keyframe, no library */
+  @keyframes nav-menu-in {
+    from {
+      opacity: 0;
+      transform: translateY(-8px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
+  .nav-menu-panel {
+    animation: nav-menu-in 180ms cubic-bezier(0.22, 1, 0.36, 1);
   }
 
   /* ── Mobile / coarse-pointer perf: thin out fixed grain/vignette layers ── */
@@ -389,12 +460,6 @@
     body::after {
       display: none;
     }
-  }
-
-  .dark .navbar[data-scrolled="true"] {
-    border-color: rgb(255 255 255 / 0.1);
-    background: rgb(20 19 19 / 0.96);
-    box-shadow: 0 8px 32px rgb(0 0 0 / 0.35);
   }
 }
 
@@ -689,7 +754,7 @@ html.theme-ready *::after {
   align-items: flex-start;
   justify-content: space-between;
   padding: clamp(1.35rem, 3.2vw, 2.35rem) clamp(1.25rem, 3.6vw, 2.75rem);
-  font-family: var(--font-inter), ui-sans-serif, system-ui, sans-serif;
+  font-family: var(--font-sans), ui-sans-serif, system-ui, sans-serif;
   font-size: 0.6875rem;
   font-weight: 500;
   letter-spacing: 0.28em;
@@ -707,7 +772,7 @@ html.theme-ready *::after {
   border: 0;
   background: transparent;
   color: rgb(26 26 27 / 0.45);
-  font-family: var(--font-inter), ui-sans-serif, system-ui, sans-serif;
+  font-family: var(--font-sans), ui-sans-serif, system-ui, sans-serif;
   font-size: 0.625rem;
   font-weight: 500;
   letter-spacing: 0.28em;
@@ -753,7 +818,7 @@ html.theme-ready *::after {
   margin: clamp(1.25rem, 2.6vw, 2rem) 0 0;
   max-width: 32rem;
   color: var(--foreground-secondary);
-  font-family: var(--font-inter), ui-sans-serif, system-ui, sans-serif;
+  font-family: var(--font-sans), ui-sans-serif, system-ui, sans-serif;
   font-size: clamp(0.56rem, 1.1vw, 0.7rem);
   font-weight: 500;
   letter-spacing: 0.34em;
@@ -829,7 +894,7 @@ html.theme-ready *::after {
   margin: 0;
   min-height: 1rem;
   color: rgb(26 26 27 / 0.5);
-  font-family: var(--font-inter), ui-sans-serif, system-ui, sans-serif;
+  font-family: var(--font-sans), ui-sans-serif, system-ui, sans-serif;
   font-size: 0.625rem;
   font-weight: 500;
   letter-spacing: 0.34em;
@@ -908,7 +973,7 @@ html.theme-ready *::after {
   display: inline-block;
   margin: 0;
   color: var(--foreground);
-  font-family: var(--font-inter), ui-sans-serif, system-ui, sans-serif;
+  font-family: var(--font-sans), ui-sans-serif, system-ui, sans-serif;
   font-size: clamp(2.75rem, 11.5vw, 9.75rem);
   font-weight: 800;
   letter-spacing: -0.04em;

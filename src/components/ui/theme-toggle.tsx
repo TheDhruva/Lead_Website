@@ -34,7 +34,9 @@ export function ThemeToggle({ variant = "icon", className }: ThemeToggleProps) {
     return (
       <span
         className={cn(
-          variant === "icon" ? "inline-flex h-10 w-10" : "block h-12 w-full",
+          variant === "icon"
+            ? "inline-flex h-9 w-9 rounded-full border border-border"
+            : "block h-12 w-full rounded-md border border-border",
           className,
         )}
         aria-hidden="true"
@@ -85,15 +87,16 @@ export function ThemeToggle({ variant = "icon", className }: ThemeToggleProps) {
       type="button"
       onClick={toggle}
       aria-label={isDark ? "Switch to light mode" : "Switch to dark mode"}
+      title={isDark ? "Switch to light mode" : "Switch to dark mode"}
       className={cn(
-        "relative inline-flex h-10 w-10 items-center justify-center rounded-full border border-border text-foreground transition-all duration-[250ms] hover:bg-card-hover active:scale-[0.985] motion-reduce:active:scale-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+        "relative inline-flex h-9 w-9 shrink-0 cursor-pointer items-center justify-center rounded-full border border-border bg-transparent text-muted-foreground transition-colors duration-200 ease-out hover:border-border-hover hover:bg-card-hover hover:text-foreground active:scale-[0.96] motion-reduce:transition-colors motion-reduce:active:scale-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--background)]",
         className,
       )}
     >
       <Sun
         aria-hidden="true"
         className={cn(
-          "absolute h-5 w-5 transition-all duration-[250ms] ease-out",
+          "absolute h-[18px] w-[18px] transition-all duration-200 ease-out motion-reduce:transition-none",
           isDark
             ? "rotate-90 scale-50 opacity-0"
             : "rotate-0 scale-100 opacity-100",
@@ -102,7 +105,7 @@ export function ThemeToggle({ variant = "icon", className }: ThemeToggleProps) {
       <Moon
         aria-hidden="true"
         className={cn(
-          "absolute h-5 w-5 transition-all duration-[250ms] ease-out",
+          "absolute h-[18px] w-[18px] transition-all duration-200 ease-out motion-reduce:transition-none",
           isDark
             ? "rotate-0 scale-100 opacity-100"
             : "-rotate-90 scale-50 opacity-0",
