@@ -4,12 +4,14 @@ import { useEffect, useRef, useState } from "react";
 
 import { AnimatePresence, m } from "framer-motion";
 
+import { AnimatedText } from "@/components/motion/animated-text";
 import { Button } from "@/components/ui/button";
 import { Container } from "@/components/ui/container";
 import { EASING_OUT, FACE_CYCLE_INTERVAL_MS, MOTION } from "@/constants";
 import { heroPortraits } from "@/data";
 import { useCanPointerReact } from "@/hooks/use-can-pointer-react";
 import { useCinematicSection } from "@/hooks/use-cinematic-section";
+import { useEnterExit } from "@/hooks/use-enter-exit";
 import { useFaceCycle } from "@/hooks/use-face-cycle";
 import { useMediaQuery } from "@/hooks/use-media-query";
 import { useReducedMotion } from "@/hooks/use-reduced-motion";
@@ -17,6 +19,7 @@ import { useSmoothScroll } from "@/hooks/use-smooth-scroll";
 import { frameAlpha, pointerEngine } from "@/lib/pointer-engine";
 import { isScrollActive } from "@/lib/scroll-bus";
 import { cn } from "@/lib/utils";
+import { useTheatreIntro } from "@/providers/theatre-intro-provider";
 import type { HeroPortrait } from "@/types";
 
 const CUTOUT_COUNT = heroPortraits.length;
@@ -26,6 +29,17 @@ const RIGHT_OFFSET = 2;
 const MOBILE_PORTRAIT_INDEX = 0;
 
 const MOBILE_LINE_EASE = [0.16, 1, 0.3, 1] as const;
+
+/** Portrait stack scroll-away: opacity only. The scroll-linked
+ * cinematic drift owns all translation on this element (framer inline
+ * transforms would override that drift permanently), so the drift moves
+ * the portrait while this fade exits it. */
+const STACK_SHOWN = { opacity: 1 };
+const STACK_EXITED = { opacity: 0 };
+
+/** CTA disengage on scroll-away: lifts slightly and settles out. */
+const CTA_SHOWN = { opacity: 1, y: 0, scale: 1 };
+const CTA_EXIT = { opacity: 0, y: -8, scale: 0.99 };
 
 function PortraitStack({
   portraits,
@@ -39,6 +53,8 @@ function PortraitStack({
   gazeEnabled: boolean;
 }) {
   const prefersReducedMotion = useReducedMotion();
+  const { ref: stackRef, state: stackState } =
+    useEnterExit<HTMLDivElement>(0.25);
   const tilt = side === "left" ? -7 : 7;
   const active = portraits[activeIndex] ?? portraits[0]!;
   const frameRef = useRef<HTMLDivElement>(null);
@@ -111,13 +127,37 @@ function PortraitStack({
   if (!active) return null;
 
   return (
-    <div
-      ref={frameRef}
+    <m.div
+      ref={(el) => {
+        frameRef.current = el;
+        stackRef(el);
+      }}
       className={cn(
-        "pointer-events-none absolute top-1/2 hidden h-[18rem] w-48 -translate-y-1/2 lg:block xl:h-[22rem] xl:w-60 cinematic-layer cinematic-layer--visual",
-        side === "left" ? "left-0 xl:-left-2" : "right-0 xl:-right-2",
+        "pointer-events-none absolute top-[44%] hidden h-[34rem] w-80 -translate-y-1/2 lg:block xl:h-[42rem] xl:w-96 cinematic-layer cinematic-layer--visual",
+        side === "left" ? "left-0" : "right-0",
       )}
       aria-hidden="true"
+      initial={false}
+      animate={
+        prefersReducedMotion
+          ? undefined
+          : stackState === "exit"
+            ? "exited"
+            : "shown"
+      }
+      variants={{
+        shown: {
+          ...STACK_SHOWN,
+          transition: { duration: 0.3, ease: EASING_OUT },
+        },
+        // Opacity only: translate/scale stay with the scroll-linked
+        // cinematic drift on this same element (inline transforms would
+        // override the drift permanently). Drift moves it, fade exits it.
+        exited: {
+          ...STACK_EXITED,
+          transition: { duration: 0.4, ease: EASING_OUT },
+        },
+      }}
       style={{
         isolation: "isolate",
         mixBlendMode: "normal",
@@ -137,18 +177,18 @@ function PortraitStack({
             initial={
               prefersReducedMotion
                 ? false
-                : { opacity: 0, scale: 0.9, rotate: tilt * 1.4, y: 16 }
+                : { opacity: 0.25, scale: 0.98, rotate: tilt * 1.1, y: 14 }
             }
             animate={{ opacity: 1, scale: 1, rotate: tilt, y: 0 }}
             exit={
               prefersReducedMotion
                 ? undefined
-                : { opacity: 0, scale: 0.9, rotate: tilt * 1.4, y: -12 }
+                : { opacity: 0, scale: 0.98, rotate: tilt, y: -10 }
             }
             transition={
               prefersReducedMotion
                 ? { duration: 0.01 }
-                : { duration: 0.55, ease: EASING_OUT }
+                : { duration: 0.6, ease: EASING_OUT }
             }
           >
             {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -166,115 +206,160 @@ function PortraitStack({
           </m.div>
         </AnimatePresence>
       </div>
-    </div>
+    </m.div>
   );
 }
 
 function HeroMobile() {
   const prefersReducedMotion = useReducedMotion();
   const { scrollTo } = useSmoothScroll();
+  const { departing, hasEntered } = useTheatreIntro();
+  const started = departing || hasEntered;
+  const { ref: ctaRef, state: ctaState } = useEnterExit<HTMLDivElement>(0.4);
+  const { ref: portraitRef, state: portraitState } =
+    useEnterExit<HTMLDivElement>(0.3);
   const portrait = heroPortraits[MOBILE_PORTRAIT_INDEX]!;
-
-  const lineMotion = (delay: number) =>
-    prefersReducedMotion
-      ? { initial: false as const, animate: { opacity: 1, y: 0 } }
-      : {
-          initial: { opacity: 0, y: 22 },
-          animate: { opacity: 1, y: 0 },
-          transition: { delay, duration: 0.68, ease: MOBILE_LINE_EASE },
-        };
 
   return (
     <div className="hero-mobile relative z-10 flex w-full flex-col lg:hidden">
       <div className="hero-mobile__stage relative flex w-full flex-col items-center">
         <div className="hero-mobile__visual cinematic-layer cinematic-layer--visual relative w-full max-w-full">
-          <m.div
-            className="hero-mobile__portrait-bg pointer-events-none"
-            aria-hidden="true"
-            initial={prefersReducedMotion ? false : { opacity: 0, scale: 1.03 }}
-            animate={{ opacity: 1, scale: 1 }}
-            transition={
-              prefersReducedMotion
-                ? { duration: 0.01 }
-                : { duration: 0.9, ease: MOBILE_LINE_EASE }
-            }
-          >
-            <div className="hero-mobile__portrait-levitate">
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img
-                src={portrait.src}
-                alt=""
-                draggable={false}
-                decoding="async"
-                loading="eager"
-                fetchPriority="high"
-                className="hero-cutout hero-mobile__portrait-img"
-              />
-            </div>
-          </m.div>
+          {/* Large portrait leads the composition; the headline overlaps
+              its lower portion (controlled, readable over the face). */}
+          <div className="hero-mobile__portrait-top">
+            <m.div
+              ref={portraitRef}
+              className="h-full"
+              aria-hidden="true"
+              initial={
+                prefersReducedMotion
+                  ? false
+                  : { opacity: 0, scale: 1.02, y: 14 }
+              }
+              animate={
+                prefersReducedMotion
+                  ? { opacity: 1, scale: 1, y: 0 }
+                  : !started
+                    ? {}
+                    : portraitState === "exit"
+                      ? { opacity: 0, y: -10, scale: 0.99 }
+                      : { opacity: 1, scale: 1, y: 0 }
+              }
+              transition={
+                portraitState === "exit" && !prefersReducedMotion
+                  ? { duration: 0.35, ease: MOBILE_LINE_EASE }
+                  : prefersReducedMotion
+                    ? { duration: 0.01 }
+                    : { duration: 0.9, ease: MOBILE_LINE_EASE }
+              }
+            >
+              <div className="hero-mobile__portrait-levitate h-full">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  src={portrait.src}
+                  alt=""
+                  draggable={false}
+                  decoding="async"
+                  loading="eager"
+                  fetchPriority="high"
+                  className="hero-cutout hero-mobile__portrait-top-img translate-y-[15px]"
+                />
+              </div>
+            </m.div>
+          </div>
 
-          <p className="hero-mobile__headline cinematic-layer cinematic-layer--headline font-headline-xl font-extrabold text-foreground">
-            <m.span
-              className="hero-mobile__headline-line1 block"
-              {...lineMotion(0.12)}
-            >
-              <span className="hero-mobile__make">Make</span> Audience
-            </m.span>
-            <m.span className="block" {...lineMotion(0.24)}>
-              Feel Your
-            </m.span>
-            <m.span
-              className="block text-foreground-secondary"
-              {...lineMotion(0.36)}
-            >
-              Presence
-            </m.span>
+          <p className="hero-mobile__headline cinematic-layer cinematic-layer--headline font-condensed font-normal text-foreground">
+            <AnimatedText
+              mode="mount"
+              start={started}
+              gentle
+              delay={0.12}
+              segments={[
+                { text: "Make", className: "hero-mobile__make" },
+                { text: "Audience" },
+              ]}
+              className="hero-mobile__headline-line1 block uppercase"
+            />
+            <AnimatedText
+              mode="mount"
+              start={started}
+              gentle
+              delay={0.28}
+              segments="Feel Your"
+              className="block uppercase"
+            />
           </p>
         </div>
 
-        <m.p
-          className="hero-mobile__copy cinematic-layer cinematic-layer--copy relative z-20 mx-auto max-w-[21rem] px-1 pt-3 text-center font-body-lg text-foreground-secondary"
-          initial={prefersReducedMotion ? false : { opacity: 0, y: 14 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={
-            prefersReducedMotion
-              ? { duration: 0.01 }
-              : { delay: 0.46, duration: 0.58, ease: MOBILE_LINE_EASE }
-          }
+        {/* PRESENCE — zero-height in-flow anchor between headline and
+            copy. The word centers itself exactly on this line, so it
+            always follows the headline: no coordinates, no clipping,
+            complete word behind everything. */}
+        <span
+          aria-hidden="true"
+          key={started ? "presence-live" : "presence-boot"}
+          className="hero-presence hero-mobile__presence-anchor select-none"
         >
-          Beautiful websites, powerful visuals, and videos that make your brand
-          impossible to ignore. A cinematic approach to digital presence.
-        </m.p>
+          <span className="hero-mobile__presence-word font-display italic">
+            Presence
+          </span>
+        </span>
 
-        <m.div
-          className="hero-mobile__cta cinematic-layer cinematic-layer--cta relative z-20 flex w-full flex-col items-center gap-2.5 px-1 pt-4 pb-[max(0.35rem,env(safe-area-inset-bottom))]"
-          initial={prefersReducedMotion ? false : { opacity: 0, y: 12 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={
-            prefersReducedMotion
-              ? { duration: 0.01 }
-              : { delay: 0.56, duration: 0.55, ease: MOBILE_LINE_EASE }
-          }
-        >
-          <Button
-            size="lg"
-            sfx
-            fullWidth
-            className="hero-mobile__cta-primary"
-            onClick={() => scrollTo("#contact")}
+        <p className="hero-mobile__copy cinematic-layer cinematic-layer--copy relative z-20 mx-auto max-w-[20rem] px-1 pt-6 text-center font-body-lg text-foreground-secondary">
+          <AnimatedText
+            mode="mount"
+            start={started}
+            gentle
+            level="word"
+            delay={0.5}
+            segments="Beautiful websites, powerful visuals, and videos that make your brand impossible to ignore. A cinematic approach to digital presence."
+          />
+        </p>
+
+        <div className="hero-mobile__cta cinematic-layer cinematic-layer--cta relative z-20 flex w-full flex-col items-center gap-2.5 px-1 pt-4 pb-[max(0.35rem,env(safe-area-inset-bottom))]">
+          <m.div
+            ref={ctaRef}
+            className="flex w-full flex-col items-center gap-2.5"
+            initial={
+              prefersReducedMotion ? false : { opacity: 0, y: 8, scale: 0.98 }
+            }
+            animate={
+              prefersReducedMotion
+                ? { opacity: 1, y: 0, scale: 1 }
+                : !started
+                  ? {}
+                  : ctaState === "exit"
+                    ? CTA_EXIT
+                    : CTA_SHOWN
+            }
+            transition={
+              ctaState === "exit" && !prefersReducedMotion
+                ? { duration: 0.35, ease: MOBILE_LINE_EASE }
+                : prefersReducedMotion
+                  ? { duration: 0.01 }
+                  : { delay: 0.62, duration: 0.5, ease: MOBILE_LINE_EASE }
+            }
           >
-            I&apos;m Ready To Grow
-          </Button>
-          <Button
-            size="lg"
-            variant="ghost"
-            sfx
-            className="hero-mobile__cta-secondary"
-            onClick={() => scrollTo("#projects")}
-          >
-            View Work
-          </Button>
-        </m.div>
+            <Button
+              size="lg"
+              sfx
+              fullWidth
+              className="hero-mobile__cta-primary"
+              onClick={() => scrollTo("#contact")}
+            >
+              I&apos;m Ready To Grow
+            </Button>
+            <Button
+              size="lg"
+              variant="ghost"
+              sfx
+              className="hero-mobile__cta-secondary"
+              onClick={() => scrollTo("#projects")}
+            >
+              View Work
+            </Button>
+          </m.div>
+        </div>
       </div>
     </div>
   );
@@ -305,6 +390,11 @@ export function Hero() {
   );
   const { scrollTo } = useSmoothScroll();
   const prefersReducedMotion = useReducedMotion();
+  const { departing, hasEntered } = useTheatreIntro();
+  // Hero assembly is gated on the intro handoff: nothing assembles
+  // behind the curtain — it emerges as DHRUVA transitions away.
+  const started = departing || hasEntered;
+  const { ref: ctaRef, state: ctaState } = useEnterExit<HTMLDivElement>(0.4);
 
   const leftIndex = index % CUTOUT_COUNT;
   const rightIndex = (index + RIGHT_OFFSET) % CUTOUT_COUNT;
@@ -327,62 +417,116 @@ export function Hero() {
             lg: so no visual gap; theatre gates first paint regardless. */}
         {isDesktop ? (
           <div className="hidden lg:contents">
-            <PortraitStack
-              portraits={heroPortraits}
-              activeIndex={leftIndex}
-              side="left"
-              gazeEnabled={canReact && isDesktop}
-            />
+            {/* PRESENCE — complete-word background layer seated between
+                headline and copy with slight overlap on both.
+                Behind portraits, headline and copy. */}
+            <span
+              aria-hidden="true"
+              key={started ? "presence-live" : "presence-boot"}
+              className="hero-presence pointer-events-none absolute inset-x-0 top-[54%] flex -translate-y-1/2 justify-center overflow-visible select-none"
+            >
+              <span className="cinematic-layer cinematic-layer--atmosphere font-display leading-none whitespace-nowrap italic text-[clamp(8rem,16vw,18rem)]">
+                Presence
+              </span>
+            </span>
+            {started ? (
+              <PortraitStack
+                portraits={heroPortraits}
+                activeIndex={leftIndex}
+                side="left"
+                gazeEnabled={canReact && isDesktop}
+              />
+            ) : null}
 
             <m.div
-              className="relative z-10 mx-auto flex max-w-4xl flex-col items-center px-2 text-center sm:px-0"
-              initial={
-                prefersReducedMotion
-                  ? false
-                  : { opacity: 0, y: 40, scale: 0.97 }
-              }
-              animate={{ opacity: 1, y: 0, scale: 1 }}
+              className="relative z-10 mx-auto flex w-full max-w-none flex-col items-center px-4 text-center sm:px-6 md:px-10"
+              initial={prefersReducedMotion ? false : { opacity: 0 }}
+              animate={started ? { opacity: 1 } : {}}
               transition={{
-                duration: MOTION.reveal.duration,
+                duration: 0.5,
                 ease: MOTION.reveal.ease,
-                delay: prefersReducedMotion ? 0 : 0.12,
+                delay: prefersReducedMotion ? 0 : 0.05,
               }}
             >
               <p
                 id="hero-heading-visual"
-                className="cinematic-layer cinematic-layer--headline mb-5 font-headline-xl text-headline-xl font-extrabold tracking-tighter text-foreground md:mb-6 md:text-[68px] md:leading-[1.08] lg:text-[72px]"
+                className="cinematic-layer cinematic-layer--headline mb-6 font-condensed text-[clamp(3rem,9vw,9.5rem)] leading-[0.88] font-normal tracking-[-0.01em] text-foreground md:mb-8"
               >
-                Make Audience <br />
-                <span className="text-foreground-secondary">
-                  Feel Your Presence
-                </span>
+                <AnimatedText
+                  mode="mount"
+                  start={started}
+                  delay={0.12}
+                  segments="Make Audience"
+                  className="block uppercase"
+                />
+                <AnimatedText
+                  mode="mount"
+                  start={started}
+                  delay={0.3}
+                  segments="Feel Your"
+                  className="block uppercase"
+                />
               </p>
-              <p className="cinematic-layer cinematic-layer--copy mx-auto mb-8 max-w-2xl font-body-lg text-body-lg text-foreground-secondary md:mb-9">
-                Beautiful websites, powerful visuals, and videos that make your
-                brand impossible to ignore. A cinematic approach to digital
-                presence.
+              <p className="cinematic-layer cinematic-layer--copy mx-auto mb-8 max-w-xl text-center font-body-lg text-body-lg text-foreground-secondary md:mb-9">
+                <AnimatedText
+                  mode="mount"
+                  start={started}
+                  level="word"
+                  delay={0.58}
+                  segments="Beautiful websites, powerful visuals, and videos that make your brand impossible to ignore. A cinematic approach to digital presence."
+                />
               </p>
               <div className="cinematic-layer cinematic-layer--cta flex flex-col items-center justify-center gap-4 sm:flex-row">
-                <Button size="lg" sfx onClick={() => scrollTo("#contact")}>
-                  I&apos;m Ready To Grow
-                </Button>
-                <Button
-                  size="lg"
-                  variant="ghost"
-                  sfx
-                  onClick={() => scrollTo("#projects")}
+                <m.div
+                  ref={ctaRef}
+                  className="flex flex-col items-center justify-center gap-4 sm:flex-row"
+                  initial={
+                    prefersReducedMotion
+                      ? false
+                      : { opacity: 0, y: 8, scale: 0.98 }
+                  }
+                  animate={
+                    prefersReducedMotion
+                      ? { opacity: 1, y: 0, scale: 1 }
+                      : !started
+                        ? {}
+                        : ctaState === "exit"
+                          ? CTA_EXIT
+                          : CTA_SHOWN
+                  }
+                  transition={
+                    ctaState === "exit" && !prefersReducedMotion
+                      ? { duration: 0.35, ease: EASING_OUT }
+                      : {
+                          duration: 0.5,
+                          ease: EASING_OUT,
+                          delay: prefersReducedMotion ? 0 : 0.76,
+                        }
+                  }
                 >
-                  View Work
-                </Button>
+                  <Button size="lg" sfx onClick={() => scrollTo("#contact")}>
+                    I&apos;m Ready To Grow
+                  </Button>
+                  <Button
+                    size="lg"
+                    variant="ghost"
+                    sfx
+                    onClick={() => scrollTo("#projects")}
+                  >
+                    View Work
+                  </Button>
+                </m.div>
               </div>
             </m.div>
 
-            <PortraitStack
-              portraits={heroPortraits}
-              activeIndex={rightIndex}
-              side="right"
-              gazeEnabled={canReact && isDesktop}
-            />
+            {started ? (
+              <PortraitStack
+                portraits={heroPortraits}
+                activeIndex={rightIndex}
+                side="right"
+                gazeEnabled={canReact && isDesktop}
+              />
+            ) : null}
           </div>
         ) : (
           <HeroMobile />

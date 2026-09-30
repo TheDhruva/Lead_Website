@@ -4,7 +4,6 @@ import { useCallback, useEffect, useId, useRef, useState } from "react";
 
 import { ArrowUpRight, Menu, X } from "lucide-react";
 
-import { SectionSnapSound } from "@/components/audio/section-snap-sound";
 import { Button } from "@/components/ui/button";
 import { ThemeToggle } from "@/components/ui/theme-toggle";
 import { NAV_ITEMS, SECTION_IDS } from "@/constants";
@@ -24,8 +23,9 @@ const SECTION_LIST = [
 
 /**
  * Minimal editorial top navigation — a transparent bar attached edge to
- * edge at the very top (macOS menu-bar style). It scrolls away with the
- * page: no fixed positioning, no background, no border, no shadow.
+ * edge at the very top (macOS menu-bar style), no background, no border,
+ * no shadow. Mobile: sticky so it stays attached while scrolling.
+ * Desktop: absolute, scrolling away with the page unchanged.
  * Section links live in the mobile menu sheet; desktop uses CTAs.
  */
 export function Navbar() {
@@ -34,7 +34,7 @@ export function Navbar() {
   const navRef = useRef<HTMLElement>(null);
   const menuButtonRef = useRef<HTMLButtonElement>(null);
   const { activeId, scrollToSection } = useActiveSection(SECTION_LIST);
-  const { onHover, onClick } = useSfxHandlers();
+  const { play, onClick } = useSfxHandlers();
 
   useNavMetrics(navRef);
 
@@ -88,20 +88,20 @@ export function Navbar() {
   }, [menuOpen, closeMenu, menuId]);
 
   const go = (href: string) => {
-    onClick();
+    // One quiet tick per user-activated navigation — never on scroll.
+    play("nav-click");
     scrollToSection(href);
     closeMenu();
   };
 
   return (
     <>
-      <SectionSnapSound activeId={activeId} />
       <nav
         ref={navRef}
         aria-label="Primary"
-        className="navbar absolute top-0 right-0 left-0 z-50"
+        className="navbar sticky top-0 right-0 left-0 z-50 md:absolute"
       >
-        <div className="relative z-10 mx-auto flex h-10 w-full items-center justify-between gap-3 px-4 sm:px-5 md:h-12 md:px-8">
+        <div className="navbar__inner relative z-10 mx-auto flex h-10 w-full items-center justify-between gap-3 px-4 sm:px-5 md:h-12 md:px-8">
           {/* LEFT — wordmark */}
           <a
             href="#work"
@@ -109,7 +109,7 @@ export function Navbar() {
               event.preventDefault();
               go("#work");
             }}
-            className="shrink-0 rounded-sm font-sans text-[13px] font-bold tracking-[0.22em] text-foreground uppercase transition-opacity duration-200 hover:opacity-70 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring sm:text-sm"
+            className="navbar__wordmark shrink-0 rounded-sm font-sans text-[13px] font-bold tracking-[0.22em] text-foreground uppercase transition-opacity duration-200 hover:opacity-70 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring sm:text-sm"
             aria-label="THE DHRUVA — back to top"
           >
             The&nbsp;Dhruva
@@ -142,7 +142,6 @@ export function Navbar() {
                 onClick();
                 setMenuOpen((open) => !open);
               }}
-              onMouseEnter={onHover}
             >
               {menuOpen ? (
                 <X className="h-5 w-5" aria-hidden="true" strokeWidth={2} />
@@ -155,7 +154,7 @@ export function Navbar() {
 
         {/* Mobile menu sheet — simple overlay, no animation system */}
         {menuOpen ? (
-          <div className="fixed inset-0 z-0 md:hidden">
+          <div className="fixed inset-0 z-20 md:hidden">
             <button
               type="button"
               aria-label="Close menu"
@@ -167,7 +166,7 @@ export function Navbar() {
               role="dialog"
               aria-modal="true"
               aria-label="Menu"
-              className="nav-menu-panel absolute top-0 right-0 left-0 border-b border-border bg-background px-5 pt-12 pb-6"
+              className="nav-menu-panel absolute top-0 right-0 left-0 border-b border-border bg-background px-5 pt-12 pb-6 z-10"
             >
               <ul className="flex flex-col">
                 {NAV_ITEMS.map((item) => {
@@ -182,7 +181,6 @@ export function Navbar() {
                           event.preventDefault();
                           go(item.href);
                         }}
-                        onMouseEnter={onHover}
                         aria-current={isActive ? "true" : undefined}
                         className={cn(
                           "flex items-center justify-between border-b border-divider py-3 font-sans text-sm font-semibold tracking-[0.14em] uppercase transition-colors duration-200 last:border-b-0 focus-visible:rounded-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",

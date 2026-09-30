@@ -20,19 +20,8 @@ const EXIT_DURATION = 0.68;
 
 type IntroPhase = "reveal" | "loading" | "ready" | "exiting" | "gone";
 
-const titleSlideEnter = {
-  initial: { opacity: 0, y: 44 },
-  animate: { opacity: 1, y: 0 },
-  transition: { delay: 0.14, duration: 0.88, ease: ENTRANCE_EASE },
-};
-
-const titleSlideExit = {
-  opacity: 0,
-  y: -44,
-};
-
 export function TheatreIntro() {
-  const { isReturning, enter, bootstrapped } = useTheatreIntro();
+  const { isReturning, enter, bootstrapped, markDeparting } = useTheatreIntro();
   const { unlockAudio, play } = useAudio();
   const prefersReducedMotion = useReducedMotion();
   const [phase, setPhase] = useState<IntroPhase>("reveal");
@@ -70,16 +59,28 @@ export function TheatreIntro() {
       // solely after the user opts into sound.
       if (fromUserGesture) {
         unlockFromGesture();
-        requestAnimationFrame(() => play("elementAppear"));
+        requestAnimationFrame(() => {
+          // Layer A (low swell) + Layer B (transition air) together,
+          // resolving across the ~0.9s exit into the hero.
+          play("intro-swell");
+          play("hero-transition");
+        });
       }
 
+      // Signal the hero to begin assembling during this exit transition
+      // so the handoff feels like one continuous composition. Deferred
+      // ~450ms so the intro owns the first beat of the exit: the curtain
+      // is already lifting when the hero stirs, never before.
+      // Fire-and-forget is safe: markDeparting only touches the module
+      // snapshot (idempotent), never component state.
+      window.setTimeout(() => markDeparting(), 450);
       setPhase((current) =>
         current === "reveal" || current === "loading" || current === "ready"
           ? "exiting"
           : current,
       );
     },
-    [play, unlockFromGesture],
+    [play, unlockFromGesture, markDeparting],
   );
 
   // Loading bar is a CSS animation (theatre-load-fill); when it finishes,
@@ -155,8 +156,8 @@ export function TheatreIntro() {
           initial={{ opacity: 1 }}
           animate={{ opacity: exiting ? 0 : 1 }}
           transition={{
-            duration: exiting ? 0.35 : 0,
-            delay: exiting ? 0.42 : 0,
+            duration: exiting ? 0.4 : 0,
+            delay: exiting ? 0.55 : 0,
             ease: EXIT_EASE,
           }}
           onAnimationComplete={() => {
@@ -215,24 +216,93 @@ export function TheatreIntro() {
 
           <div className="theatre-stage__center">
             <div className="theatre-stage__brand">
-              <m.div
-                className="theatre-stage__title-row"
-                aria-label="THE DHRUVA"
-                initial={titleSlideEnter.initial}
-                animate={exiting ? titleSlideExit : titleSlideEnter.animate}
-                transition={
-                  exiting
-                    ? { duration: EXIT_DURATION, ease: EXIT_EASE }
-                    : titleSlideEnter.transition
-                }
-              >
-                <span className="theatre-stage__title-part theatre-stage__title-part--left">
-                  THE
-                </span>
-                <span className="theatre-stage__title-part theatre-stage__title-part--right">
-                  DHRUVA
-                </span>
-              </m.div>
+              <div className="theatre-stage__title-row" aria-label="THE DHRUVA">
+                <m.div
+                  className="theatre-stage__the"
+                  aria-hidden="true"
+                  initial={{ opacity: 0 }}
+                  animate={
+                    exiting ? { opacity: 0, y: -12 } : { opacity: 1, y: 0 }
+                  }
+                  transition={
+                    exiting
+                      ? { duration: 0.4, ease: ENTRANCE_EASE }
+                      : { duration: 0.55, ease: ENTRANCE_EASE }
+                  }
+                >
+                  {"THE".split("").map((letter, index) => (
+                    <m.span
+                      key={index}
+                      aria-hidden="true"
+                      className="theatre-stage__the-letter"
+                      initial={{ opacity: 0, y: 10, filter: "blur(3px)" }}
+                      animate={{ opacity: 1, y: 0, filter: "blur(0px)" }}
+                      transition={{
+                        duration: 0.55,
+                        ease: ENTRANCE_EASE,
+                        delay: index * 0.02,
+                      }}
+                    >
+                      {letter}
+                    </m.span>
+                  ))}
+                </m.div>
+
+                <m.div
+                  className="theatre-stage__dhruva-row"
+                  aria-hidden="true"
+                  initial={{ letterSpacing: "0.03em", scale: 1, y: 0 }}
+                  animate={
+                    exiting
+                      ? { letterSpacing: "-0.02em", scale: 1.05, y: -30 }
+                      : { letterSpacing: "0em", scale: 1, y: 0 }
+                  }
+                  transition={
+                    exiting
+                      ? { duration: 0.9, ease: ENTRANCE_EASE }
+                      : { duration: 0.7, ease: ENTRANCE_EASE }
+                  }
+                >
+                  <m.div
+                    className="theatre-stage__dhruva-fade"
+                    aria-hidden="true"
+                    initial={false}
+                    animate={exiting ? { opacity: 0 } : { opacity: 1 }}
+                    transition={
+                      exiting
+                        ? { delay: 0.55, duration: 0.35, ease: EXIT_EASE }
+                        : { duration: 0.01 }
+                    }
+                  >
+                    {"DHRUVA".split("").map((letter, index) => (
+                      <m.span
+                        key={index}
+                        aria-hidden="true"
+                        className="theatre-stage__dhruva-letter"
+                        initial={{
+                          opacity: 0,
+                          y: 14,
+                          scale: 0.96,
+                          filter: "blur(3px)",
+                        }}
+                        animate={{
+                          opacity: 1,
+                          y: 0,
+                          scale: 1,
+                          filter: "blur(0px)",
+                        }}
+                        transition={{
+                          duration: 0.6,
+                          ease: ENTRANCE_EASE,
+                          delay: 0.08 + index * 0.022,
+                        }}
+                      >
+                        {letter}
+                      </m.span>
+                    ))}
+                  </m.div>
+                </m.div>
+              </div>
 
               <m.p
                 className="theatre-stage__tagline"

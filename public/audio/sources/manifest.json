@@ -1,0 +1,76 @@
+{
+  "assets": [
+    {
+      "local": "Computer_mouse_single_click.ogg",
+      "title": "Computer mouse single click",
+      "author": "Darklanlan (Wikimedia Commons)",
+      "license": "CC0 1.0 Universal",
+      "licenseUrl": "http://creativecommons.org/publicdomain/zero/1.0/deed.en",
+      "source": "https://upload.wikimedia.org/wikipedia/commons/2/26/Computer_mouse_single_click.ogg",
+      "file": "sfx/ui-click.mp3",
+      "durationMs": 168,
+      "peakDb": -2.8,
+      "downloadedAt": "2026-09-30"
+    },
+    {
+      "local": "Computer_mouse_single_click.ogg (derived)",
+      "title": "Computer mouse single click (derived softer tick)",
+      "author": "Darklanlan (Wikimedia Commons), derived processing by THE DHRUVA",
+      "license": "CC0 1.0 Universal",
+      "licenseUrl": "http://creativecommons.org/publicdomain/zero/1.0/deed.en",
+      "source": "https://upload.wikimedia.org/wikipedia/commons/2/26/Computer_mouse_single_click.ogg",
+      "file": "sfx/nav-click.mp3",
+      "durationMs": 168,
+      "peakDb": -2.8,
+      "downloadedAt": "2026-09-30"
+    },
+    {
+      "local": "Computer_mouse_right_click.ogg",
+      "title": "Computer mouse right click",
+      "author": "Darklanlan (Wikimedia Commons)",
+      "license": "CC0 1.0 Universal",
+      "licenseUrl": "http://creativecommons.org/publicdomain/zero/1.0/deed.en",
+      "source": "https://upload.wikimedia.org/wikipedia/commons/4/4a/Computer_mouse_right_click.ogg",
+      "file": "sfx/video-control.mp3",
+      "durationMs": 169,
+      "peakDb": -2.9,
+      "downloadedAt": "2026-09-30"
+    },
+    {
+      "local": null,
+      "title": "Soft card air movement (synthesized)",
+      "author": "THE DHRUVA (procedural synthesis, original work)",
+      "license": "Original work created for this project — no third-party rights",
+      "licenseUrl": null,
+      "source": "synthesized locally with FFmpeg (deterministic seed 11)",
+      "file": "sfx/service-expand.mp3",
+      "durationMs": 400,
+      "peakDb": -6.2,
+      "downloadedAt": null
+    },
+    {
+      "local": null,
+      "title": "Cinematic transition air (synthesized)",
+      "author": "THE DHRUVA (procedural synthesis, original work)",
+      "license": "Original work created for this project — no third-party rights",
+      "licenseUrl": null,
+      "source": "synthesized locally with FFmpeg (deterministic seed 23)",
+      "file": "sfx/hero-transition.mp3",
+      "durationMs": 650,
+      "peakDb": -6.1,
+      "downloadedAt": null
+    },
+    {
+      "local": null,
+      "title": "Low cinematic swell (synthesized)",
+      "author": "THE DHRUVA (procedural synthesis, original work)",
+      "license": "Original work created for this project — no third-party rights",
+      "licenseUrl": null,
+      "source": "synthesized locally with FFmpeg (110/164.81/220 Hz)",
+      "file": "sfx/intro-swell.mp3",
+      "durationMs": 1700,
+      "peakDb": -6,
+      "downloadedAt": null
+    }
+  ]
+}

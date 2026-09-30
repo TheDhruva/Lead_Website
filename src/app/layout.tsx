@@ -7,7 +7,7 @@ import { SpeedInsights } from "@vercel/speed-insights/next";
 import { JsonLd } from "@/components/seo/json-ld";
 import { siteConfig } from "@/data";
 import { heroPortraits } from "@/data";
-import { instrumentSerif, manrope } from "@/lib/fonts";
+import { anton, instrumentSerif, manrope } from "@/lib/fonts";
 import { cn } from "@/lib/utils";
 import {
   AnimationProvider,
@@ -33,8 +33,8 @@ export const viewport: Viewport = {
 export const metadata: Metadata = {
   metadataBase: new URL(siteConfig.url),
   title: {
-    default: "THE DHRUVA — Cinematic Digital Studio",
-    template: "%s | THE DHRUVA",
+    default: "The Dhruva",
+    template: "%s | The Dhruva",
   },
   description: siteConfig.description,
   applicationName: siteConfig.name,
@@ -56,7 +56,7 @@ export const metadata: Metadata = {
   },
   manifest: "/manifest.webmanifest",
   openGraph: {
-    title: "THE DHRUVA — Cinematic Digital Studio",
+    title: "The Dhruva",
     description: siteConfig.description,
     url: "/",
     siteName: siteConfig.name,
@@ -68,13 +68,13 @@ export const metadata: Metadata = {
         width: 1200,
         height: 630,
         type: "image/jpeg",
-        alt: "THE DHRUVA — Cinematic Digital Studio",
+        alt: "The Dhruva",
       },
     ],
   },
   twitter: {
     card: "summary_large_image",
-    title: "THE DHRUVA — Cinematic Digital Studio",
+    title: "The Dhruva",
     description: siteConfig.description,
     images: [siteConfig.ogImage],
   },
@@ -90,23 +90,8 @@ export const metadata: Metadata = {
     },
   },
   icons: {
-    // One intentional system: media-selected SVG pair + Apple touch icon.
-    // (No generic/shortcut/png duplicates: competing icon links force the
-    // browser to fetch and swap tab icons after load — the favicon flash.)
-    icon: [
-      {
-        url: "/favicon-light.svg",
-        type: "image/svg+xml",
-        media: "(prefers-color-scheme: light)",
-      },
-      {
-        url: "/favicon-dark.svg",
-        type: "image/svg+xml",
-        media: "(prefers-color-scheme: dark)",
-      },
-      // Universal fallback for browsers without media-query icon support.
-      { url: "/favicon.svg", type: "image/svg+xml" },
-    ],
+    // Single bright-mode logo — no media-selected variants.
+    icon: [{ url: "/favicon-light.svg", type: "image/svg+xml" }],
     apple: [{ url: "/apple-touch-icon.png" }],
   },
 };
@@ -153,7 +138,7 @@ export default function RootLayout({ children }: RootLayoutProps) {
   return (
     <html
       lang="en"
-      className={cn(manrope.variable, instrumentSerif.variable)}
+      className={cn(manrope.variable, instrumentSerif.variable, anton.variable)}
       suppressHydrationWarning
     >
       <head>
@@ -166,6 +151,10 @@ export default function RootLayout({ children }: RootLayoutProps) {
             fetchPriority="high"
           />
         ) : null}
+        {/* Basic layout must never depend on JavaScript: reveal gates off */}
+        <noscript>
+          <style>{`.st,.css-reveal{opacity:1!important;transform:none!important;filter:none!important;clip-path:none!important}`}</style>
+        </noscript>
       </head>
       <body className="antialiased">
         <div

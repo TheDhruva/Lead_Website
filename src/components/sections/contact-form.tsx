@@ -113,7 +113,7 @@ export function ContactForm() {
       }
 
       setSubmitted(true);
-      play("submitSuccess");
+      play("ui-click");
     } catch (error) {
       if (error instanceof DOMException && error.name === "AbortError") {
         setSubmissionError(

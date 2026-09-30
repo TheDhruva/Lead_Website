@@ -23,11 +23,7 @@ export function MuteButton({ className }: MuteButtonProps) {
     <m.button
       type="button"
       aria-label={
-        !unlocked
-          ? "Enable ambient audio"
-          : muted
-            ? "Unmute ambient audio"
-            : "Mute ambient audio"
+        !unlocked ? "Enable sound" : muted ? "Unmute sound" : "Mute sound"
       }
       aria-pressed={unlocked ? muted : undefined}
       initial={prefersReducedMotion ? false : { opacity: 0, y: 8 }}
@@ -41,10 +37,9 @@ export function MuteButton({ className }: MuteButtonProps) {
           return;
         }
 
-        play("buttonClick");
+        play("ui-click");
         toggleMute();
       }}
-      onMouseEnter={() => play("buttonHover")}
       className={cn(
         "fixed right-4 bottom-[max(1.25rem,env(safe-area-inset-bottom))] z-[55] flex items-center gap-2 rounded-full border border-border",
         "bg-background px-3 py-2 shadow-[var(--shadow-sm)]",

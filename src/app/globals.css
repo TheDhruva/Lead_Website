@@ -19,6 +19,9 @@
   --color-primary-foreground: var(--primary-foreground);
   --color-accent: var(--accent);
   --color-accent-foreground: var(--accent-foreground);
+  --color-accent-dark: var(--accent-dark);
+  --color-dark: var(--dark);
+  --color-white: var(--white);
   --color-input: var(--input);
   --color-input-border: var(--input-border);
   --color-ring: var(--ring);
@@ -91,6 +94,8 @@
 
   --font-sans: var(--font-manrope), ui-sans-serif, system-ui, sans-serif;
   --font-display: var(--font-instrument), Georgia, serif;
+  --font-condensed:
+    var(--font-anton), "Arial Narrow", ui-sans-serif, sans-serif;
   --font-display-lg: var(--font-instrument), Georgia, serif;
   --font-headline-xl: var(--font-sans), ui-sans-serif, system-ui, sans-serif;
   --font-headline-lg: var(--font-sans), ui-sans-serif, system-ui, sans-serif;
@@ -143,66 +148,72 @@
 }
 
 /* ─────────────────────────────────────────────────────────────
-   Light theme — Paper + Ink with Lacquer as identity accent.
-   Primary environment stays Paper/Ink; red is reserved for
-   active nav, Hire Me, progress, selected states, small accents.
+   Light theme — restrained premium neutral canvas.
+   One continuous background; section atmosphere is painted by
+   GlobalCanvas washes, never by hard per-section backgrounds.
+   Lacquer red is the identity accent: nav, CTA, selections.
    ───────────────────────────────────────────────────────────── */
 :root {
   color-scheme: light;
 
   /* Brand primitives — do not scatter raw hex in components */
-  --paper: #faf7f0;
-  --parchment: #f3ebdd;
-  --ink: #171211;
+  --paper: #f5f4f0;
+  --parchment: #eae6de;
+  --ink: #171515;
   --soft-ink: #2a2523;
-  --lacquer: #b5121b;
-  --dark-lacquer: #5a080f;
-  --bright-lacquer: #c51d25;
+  --lacquer: #c91524;
+  --dark-lacquer: #780a12;
+  --bright-lacquer: #d62533;
   --clay: #70413a;
   --brass: #b8955a;
-  --muted-warm: #756e68;
+  --muted-warm: #6f6a67;
+
+  /* Central palette tokens */
+  --accent-dark: #780a12;
+  --dark: #171313;
+  --white: #ffffff;
 
   --background: var(--paper);
-  --background-secondary: var(--parchment);
+  --background-secondary: #ece9e2;
   --foreground: var(--ink);
-  --foreground-secondary: var(--soft-ink);
-  --muted: #ece3d2;
+  --foreground-secondary: #3a3532;
+  --muted: #e8e5df;
   --muted-foreground: var(--muted-warm);
-  --card: #fffdf8;
-  --card-hover: #f7efe0;
+  --card: #ffffff;
+  --card-hover: #f1eee8;
   --card-foreground: var(--ink);
-  --border: #d8d0c6;
-  --border-hover: #c2b7a6;
+  --border: rgb(23 21 21 / 0.14);
+  --border-hover: rgb(23 21 21 / 0.28);
   --primary: var(--lacquer);
-  --primary-foreground: var(--paper);
+  --primary-foreground: #ffffff;
   --accent: var(--lacquer);
-  --accent-foreground: var(--paper);
-  --input: #fffdf8;
-  --input-border: #d8d0c6;
+  --accent-foreground: #ffffff;
+  --input: #ffffff;
+  --input-border: rgb(23 21 21 / 0.14);
   --ring: var(--lacquer);
-  --nav: rgb(250 247 240 / 0.92);
-  --divider: #e7ddcc;
-  --overlay: rgb(23 18 17 / 0.55);
-  --error: #b5121b;
-  --on-error: #faf7f0;
-  --error-container: #f7dcd9;
-  --on-error-container: #5a080f;
+  --nav: rgb(245 244 240 / 0.92);
+  --divider: #e3dfd7;
+  --overlay: rgb(23 19 19 / 0.55);
+  --error: #c91524;
+  --on-error: #ffffff;
+  --error-container: #f6d9db;
+  --on-error-container: #780a12;
 
-  --inner-glow: inset 0 1px 0 0 rgb(23 18 17 / 0.04);
-  --shadow-sm: 0 1px 2px rgb(23 18 17 / 0.05);
-  --shadow-md: 0 8px 24px rgb(23 18 17 / 0.07);
-  --shadow-lg: 0 20px 40px -12px rgb(23 18 17 / 0.14);
+  --inner-glow: inset 0 1px 0 0 rgb(23 21 21 / 0.04);
+  --shadow-sm: 0 1px 2px rgb(23 21 21 / 0.05);
+  --shadow-md: 0 8px 24px rgb(23 21 21 / 0.07);
+  --shadow-lg: 0 20px 40px -12px rgb(23 21 21 / 0.14);
   --card-shadow:
-    0 1px 2px rgb(23 18 17 / 0.05), 0 8px 24px rgb(23 18 17 / 0.05);
-  --selection-bg: rgb(181 18 27 / 0.16);
-  --selection-fg: #171211;
-  --scrollbar-track: #f3ebdd;
-  --scrollbar-thumb: #d8d0c6;
-  --scrollbar-thumb-hover: #756e68;
+    0 1px 2px rgb(23 21 21 / 0.05), 0 8px 24px rgb(23 21 21 / 0.05);
+  --selection-bg: rgb(201 21 36 / 0.16);
+  --selection-fg: #171515;
+  --scrollbar-track: #ece9e2;
+  --scrollbar-thumb: #d8d3c9;
+  --scrollbar-thumb-hover: #6f6a67;
 
   /* Brand accent — Lacquer identity, used sparingly */
-  --accent-cherry: #b5121b;
-  --accent-cherry-muted: rgb(181 18 27 / 0.12);
+  --accent-cherry: #c91524;
+  --accent-cherry-muted: rgb(201 21 36 / 0.12);
 
   /* Shared motion language — global system */
   --ease-out: cubic-bezier(0.22, 1, 0.36, 1);
@@ -229,66 +240,67 @@
     calc((100vw - min(92vw, var(--container-max-width))) / 2)
   );
 
-  /* Subtle section tonal progression — Paper-first, Parchment separation */
-  --tone-hero: #faf7f0;
-  --tone-services: #f3ebdd;
-  --tone-videos: #faf7f0;
-  --tone-projects: #f5eee0;
-  --tone-contact: #faf7f0;
+  /* One continuous canvas — sections stay transparent; GlobalCanvas
+     paints the atmosphere so chapters blend instead of cutting. */
+  --tone-hero: transparent;
+  --tone-services: transparent;
+  --tone-videos: transparent;
+  --tone-projects: transparent;
+  --tone-contact: transparent;
 }
 
 /* ─────────────────────────────────────────────────────────────
-   Dark theme — Ink environment, Paper text, Lacquer accent.
+   Dark theme — deep cinematic Ink, neutral text, Lacquer accent.
    Same brand primitives; semantic surfaces adapt for contrast.
    ───────────────────────────────────────────────────────────── */
 .dark {
   color-scheme: dark;
 
-  --background: #171211;
-  --background-secondary: #221b19;
-  --foreground: #faf7f0;
-  --foreground-secondary: #d8d0c6;
-  --muted: #2a2523;
-  --muted-foreground: #b3a89c;
-  --card: #231c1a;
-  --card-hover: #2e2624;
-  --card-foreground: #faf7f0;
-  --border: rgb(250 247 240 / 0.12);
-  --border-hover: rgb(250 247 240 / 0.22);
-  --primary: #c51d25;
-  --primary-foreground: #faf7f0;
-  --accent: #c51d25;
-  --accent-foreground: #faf7f0;
-  --input: #231c1a;
+  --background: #171313;
+  --background-secondary: #201b1a;
+  --foreground: #f5f4f0;
+  --foreground-secondary: #cfc9c2;
+  --muted: #26211f;
+  --muted-foreground: #a29a92;
+  --card: #211c1b;
+  --card-hover: #2a2423;
+  --card-foreground: #f5f4f0;
+  --border: rgb(245 244 240 / 0.14);
+  --border-hover: rgb(245 244 240 / 0.24);
+  --primary: #d92636;
+  --primary-foreground: #ffffff;
+  --accent: #d92636;
+  --accent-foreground: #ffffff;
+  --input: #211c1b;
   --input-border: #443935;
-  --ring: #c51d25;
-  --nav: rgb(23 18 17 / 0.92);
-  --divider: #3a322e;
+  --ring: #d92636;
+  --nav: rgb(23 19 19 / 0.92);
+  --divider: #38302d;
   --overlay: rgb(0 0 0 / 0.6);
   --error: #ff9d94;
-  --on-error: #5a080f;
-  --error-container: #5a080f;
-  --on-error-container: #f7dcd9;
+  --on-error: #780a12;
+  --error-container: #780a12;
+  --on-error-container: #f6d9db;
 
-  --inner-glow: inset 0 1px 0 0 rgb(250 247 240 / 0.06);
+  --inner-glow: inset 0 1px 0 0 rgb(245 244 240 / 0.06);
   --shadow-sm: 0 1px 2px rgb(0 0 0 / 0.35);
   --shadow-md: 0 8px 30px rgb(0 0 0 / 0.4);
   --shadow-lg: 0 25px 50px -12px rgb(0 0 0 / 0.55);
   --card-shadow: none;
-  --selection-bg: rgb(197 29 37 / 0.35);
-  --selection-fg: #faf7f0;
-  --scrollbar-track: #171211;
-  --scrollbar-thumb: #443935;
-  --scrollbar-thumb-hover: #756e68;
+  --selection-bg: rgb(217 38 54 / 0.35);
+  --selection-fg: #f5f4f0;
+  --scrollbar-track: #171313;
+  --scrollbar-thumb: #3e3634;
+  --scrollbar-thumb-hover: #6f6a67;
 
-  --accent-cherry: #c51d25;
-  --accent-cherry-muted: rgb(197 29 37 / 0.18);
+  --accent-cherry: #d92636;
+  --accent-cherry-muted: rgb(217 38 54 / 0.2);
 
-  --tone-hero: #171211;
-  --tone-services: #221b19;
-  --tone-videos: #171211;
-  --tone-projects: #1e1715;
-  --tone-contact: #171211;
+  --tone-hero: transparent;
+  --tone-services: transparent;
+  --tone-videos: transparent;
+  --tone-projects: transparent;
+  --tone-contact: transparent;
 }
 
 @layer base {
@@ -445,6 +457,25 @@
     animation: nav-menu-in 180ms cubic-bezier(0.22, 1, 0.36, 1);
   }
 
+  /* Mobile navbar: same 40px bar, transparent wash + blur only —
+     keeps the wordmark readable over the portrait with no panel. */
+  .navbar {
+    background-color: color-mix(in srgb, var(--background) 55%, transparent);
+    -webkit-backdrop-filter: blur(8px);
+    backdrop-filter: blur(8px);
+  }
+
+  /* Squeeze guard for very narrow screens — controls stay compact. */
+  @media (max-width: 380px) {
+    .navbar__inner {
+      gap: 0.5rem;
+    }
+    .navbar__wordmark {
+      font-size: 12px;
+      letter-spacing: 0.16em;
+    }
+  }
+
   /* ── Mobile / coarse-pointer perf: thin out fixed grain/vignette layers ── */
   @media (max-width: 767px) {
     body::before {
@@ -476,15 +507,10 @@ html.theatre-done body {
      Sections already carry internal padding-top: var(--nav-safe-top), so any
      scroll-padding here would double-offset content below the navbar. */
   scroll-padding-top: 0;
-  /* Native section rhythm — proximity on touch (natural momentum),
-     mandatory on precise desktop pointers (deterministic stops). */
+  /* Native section rhythm — gentle proximity everywhere so the page
+     scrolls naturally with wheel, trackpad, touch and keyboard.
+     Never mandatory: the site must not fight scroll input. */
   scroll-snap-type: y proximity;
-}
-
-@media (min-width: 1024px) and (hover: hover) and (pointer: fine) {
-  .scroll-panel {
-    scroll-snap-type: y mandatory;
-  }
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -507,7 +533,7 @@ section[id],
   [data-snap-frame],
   .section-frame,
   .section-contact {
-    scroll-snap-stop: always;
+    scroll-snap-stop: normal;
   }
   /* Long gallery content must not trap the snap position on desktop */
   #projects {
@@ -533,6 +559,14 @@ section[id],
 
 .section-frame--hero {
   justify-content: center;
+}
+
+/* Desktop hero reserves clearance above the fixed bottom navigation
+   so the CTA can never collide with it. */
+@media (min-width: 768px) {
+  #work.section-frame--hero {
+    padding-bottom: max(6rem, clamp(1.25rem, 3vh, 2rem));
+  }
 }
 
 /* Desktop — align all sections to navbar outer edges */
@@ -575,7 +609,7 @@ section[id],
 
   #work.section-frame--hero {
     overflow: visible;
-    min-height: auto;
+    min-height: 100svh;
   }
 
   #video.section-frame,
@@ -655,25 +689,157 @@ section[id],
   min-height: 100svh;
 }
 
-/* Section tonal backgrounds */
+/* Section tonal backgrounds — intentionally transparent.
+   GlobalCanvas paints the atmosphere so the page reads as one
+   continuous canvas instead of hard-cut color blocks. */
 .section-tone-hero {
-  background-color: var(--tone-hero);
+  background-color: transparent;
 }
 
 .section-tone-services {
-  background-color: var(--tone-services);
+  background-color: transparent;
 }
 
 .section-tone-videos {
-  background-color: var(--tone-videos);
+  background-color: transparent;
 }
 
 .section-tone-projects {
-  background-color: var(--tone-projects);
+  background-color: transparent;
 }
 
 .section-tone-contact {
-  background-color: var(--tone-contact);
+  background-color: transparent;
+}
+
+/* ── SectionTransition — chapter changes (rise / clip / scale) ──
+   Fire-once .is-visible; transform/opacity/blur/clip only, never layout.
+   Delay via --st-delay. Reduced motion renders the final state. */
+.st {
+  opacity: 0;
+  transition:
+    opacity 0.8s ease,
+    transform 0.9s var(--ease-out),
+    filter 0.8s ease,
+    clip-path 0.9s var(--ease-out);
+  transition-delay: var(--st-delay, 0ms);
+}
+
+.st--rise {
+  transform: translateY(28px);
+  filter: blur(6px);
+}
+
+.st--scale {
+  transform: translateY(16px) scale(0.96);
+  filter: blur(4px);
+}
+
+.st--clip {
+  clip-path: inset(0 0 100% 0);
+  transform: translateY(14px);
+}
+
+.st.is-visible {
+  opacity: 1;
+  transform: none;
+  filter: blur(0);
+  clip-path: inset(0 0 0 0);
+}
+
+/* ── Controlled media entrance (video switching) ──
+   Incoming media rises through opacity + restrained scale, never a
+   hard cut. Elements remount per video, replaying the entrance. */
+@keyframes media-in {
+  from {
+    opacity: 0;
+    transform: scale(0.985);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+.media-in {
+  animation: media-in 0.55s var(--ease-out);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .st {
+    opacity: 1;
+    transform: none;
+    filter: none;
+    clip-path: none;
+    transition: none;
+  }
+  .media-in {
+    animation: none;
+  }
+}
+
+/* ── GlobalCanvas — continuous atmosphere behind content ──
+   Fixed, negative z (above body paint, below all content),
+   pointer-transparent. Washes crossfade on section change via
+   opacity transitions only — zero per-frame cost. */
+.global-canvas {
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  overflow: hidden;
+}
+
+.global-canvas__wash {
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  transition: opacity 1.1s ease;
+}
+
+.global-canvas__wash--lacquer {
+  background:
+    radial-gradient(58% 42% at 80% 10%, rgb(201 21 36 / 0.1), transparent 70%),
+    radial-gradient(46% 38% at 10% 90%, rgb(120 10 18 / 0.08), transparent 70%);
+}
+
+.global-canvas__wash--veil {
+  background:
+    linear-gradient(180deg, transparent 30%, rgb(23 19 19 / 0.1) 100%),
+    radial-gradient(70% 55% at 50% 110%, rgb(23 19 19 / 0.12), transparent 70%);
+}
+
+/* Hero: quiet neutral — canvas rests on the base background */
+.global-canvas[data-wash="services"] .global-canvas__wash--lacquer {
+  opacity: 1;
+}
+.global-canvas[data-wash="video"] .global-canvas__wash--lacquer,
+.global-canvas[data-wash="video"] .global-canvas__wash--veil {
+  opacity: 1;
+}
+.global-canvas[data-wash="projects"] .global-canvas__wash--veil {
+  opacity: 0.55;
+}
+.global-canvas[data-wash="contact"] .global-canvas__wash--lacquer {
+  opacity: 0.35;
+}
+
+.dark .global-canvas__wash--lacquer {
+  background:
+    radial-gradient(58% 42% at 80% 10%, rgb(217 38 54 / 0.14), transparent 70%),
+    radial-gradient(46% 38% at 10% 90%, rgb(217 38 54 / 0.08), transparent 70%);
+}
+
+.dark .global-canvas__wash--veil {
+  background:
+    linear-gradient(180deg, transparent 30%, rgb(0 0 0 / 0.22) 100%),
+    radial-gradient(70% 55% at 50% 110%, rgb(0 0 0 / 0.28), transparent 70%);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .global-canvas__wash {
+    transition: none;
+  }
 }
 
 /* Premium theme-color transitions (no layout shift) */
@@ -760,7 +926,7 @@ html.theme-ready *::after {
   letter-spacing: 0.28em;
   line-height: 1;
   text-transform: uppercase;
-  color: rgb(26 26 27 / 0.55);
+  color: rgb(26 26 27 / 0.4);
 }
 
 .theatre-stage__skip {
@@ -815,7 +981,7 @@ html.theme-ready *::after {
 }
 
 .theatre-stage__tagline {
-  margin: clamp(1.25rem, 2.6vw, 2rem) 0 0;
+  margin: clamp(0.75rem, 1.8vw, 1.25rem) 0 0;
   max-width: 32rem;
   color: var(--foreground-secondary);
   font-family: var(--font-sans), ui-sans-serif, system-ui, sans-serif;
@@ -937,7 +1103,7 @@ html.theme-ready *::after {
 }
 
 .dark .theatre-stage__chrome {
-  color: rgb(243 243 242 / 0.48);
+  color: rgb(243 243 242 / 0.36);
 }
 
 .dark .theatre-stage__tagline {
@@ -959,35 +1125,58 @@ html.theme-ready *::after {
   user-select: none;
 }
 
+/* Intro title — one lockup, one line: THE + DHRUVA share the same
+   dominant Anton voice. Same condensed voice as the hero. */
 .theatre-stage__title-row {
   display: flex;
+  flex-direction: row;
   flex-wrap: nowrap;
   align-items: baseline;
   justify-content: center;
-  gap: clamp(0.35rem, 1.2vw, 0.65rem);
-  overflow: hidden;
-  will-change: transform, opacity;
+  gap: clamp(0.75rem, 2vw, 1.5rem);
+  max-width: 100%;
 }
 
-.theatre-stage__title-part {
-  display: inline-block;
+.theatre-stage__the {
   margin: 0;
+  flex-shrink: 0;
   color: var(--foreground);
-  font-family: var(--font-sans), ui-sans-serif, system-ui, sans-serif;
-  font-size: clamp(2.75rem, 11.5vw, 9.75rem);
-  font-weight: 800;
-  letter-spacing: -0.04em;
-  line-height: 0.88;
+  font-family: var(--font-condensed), "Arial Narrow", ui-sans-serif, sans-serif;
+  font-size: min(clamp(3rem, 13vw, 13rem), calc((100vw - 2rem) / 6));
+  font-weight: 400;
+  line-height: 0.9;
   text-transform: uppercase;
   white-space: nowrap;
 }
 
-.theatre-stage__title-part--left {
-  padding-right: 0.02em;
+.theatre-stage__the-letter {
+  display: inline-block;
 }
 
-.theatre-stage__title-part--right {
-  padding-left: 0.02em;
+.theatre-stage__dhruva-row {
+  min-width: 0;
+  will-change: transform, opacity;
+}
+
+.theatre-stage__dhruva-fade {
+  display: flex;
+  flex-wrap: nowrap;
+  align-items: baseline;
+  justify-content: center;
+}
+
+.theatre-stage__dhruva-letter {
+  display: inline-block;
+  color: var(--foreground);
+  font-family: var(--font-condensed), "Arial Narrow", ui-sans-serif, sans-serif;
+  /* Fit-guaranteed single line: the vw term scales up, the calc cap
+     keeps THE DHRUVA inside the viewport on narrow screens. */
+  font-size: min(clamp(3rem, 13vw, 13rem), calc((100vw - 2rem) / 6));
+  font-weight: 400;
+  line-height: 0.9;
+  text-transform: uppercase;
+  white-space: nowrap;
+  will-change: transform, opacity;
 }
 
 html.theatre-skip .theatre-boot,
@@ -1032,14 +1221,12 @@ html.theatre-settling [data-page-shell] {
     box-shadow 450ms cubic-bezier(0.16, 1, 0.3, 1);
 }
 
-/* Default stage: first card expanded before any interaction */
-.services-accordion:not(:hover):not(:focus-within) .service-acc:first-child {
-  flex-grow: 4;
-}
-
+/* Default: three equal cards with identical visual weight.
+   One card expands on hover/focus to ~61% while siblings compress
+   to ~19% — never slivers. Pure CSS: no React renders on hover. */
 .services-accordion .service-acc:hover,
 .services-accordion .service-acc:focus-within {
-  flex-grow: 4;
+  flex-grow: 3.2;
 }
 
 /* Inner media choreography — transform/opacity only (no layout) */
@@ -1052,9 +1239,6 @@ html.theatre-settling [data-page-shell] {
   will-change: transform, opacity;
 }
 
-.services-accordion:not(:hover):not(:focus-within)
-  .service-acc:first-child
-  .service-acc__media,
 .services-accordion .service-acc:hover .service-acc__media,
 .services-accordion .service-acc:focus-within .service-acc__media {
   transform: scale(1.05);
@@ -1065,9 +1249,6 @@ html.theatre-settling [data-page-shell] {
   transition: opacity 300ms cubic-bezier(0.16, 1, 0.3, 1);
 }
 
-.services-accordion:not(:hover):not(:focus-within)
-  .service-acc:first-child
-  .service-acc__inactive,
 .services-accordion .service-acc:hover .service-acc__inactive,
 .services-accordion .service-acc:focus-within .service-acc__inactive {
   opacity: 0;
@@ -1083,9 +1264,6 @@ html.theatre-settling [data-page-shell] {
     transform 400ms cubic-bezier(0.16, 1, 0.3, 1) 150ms;
 }
 
-.services-accordion:not(:hover):not(:focus-within)
-  .service-acc:first-child
-  .service-acc__active,
 .services-accordion .service-acc:hover .service-acc__active,
 .services-accordion .service-acc:focus-within .service-acc__active {
   opacity: 1;
@@ -1097,9 +1275,6 @@ html.theatre-settling [data-page-shell] {
   transition: opacity 300ms cubic-bezier(0.16, 1, 0.3, 1);
 }
 
-.services-accordion:not(:hover):not(:focus-within)
-  .service-acc:first-child
-  .service-acc__accent,
 .services-accordion .service-acc:hover .service-acc__accent,
 .services-accordion .service-acc:focus-within .service-acc__accent {
   opacity: 1;
@@ -1167,11 +1342,96 @@ html.theatre-settling [data-page-shell] {
   filter: drop-shadow(0 18px 32px rgb(0 0 0 / 0.55));
 }
 
-/* ── Mobile hero — portrait backdrop + centered type (lg+ unchanged) ── */
+/* PRESENCE — giant editorial background layer.
+   Instrument Serif, faint (never dominant), settles once on mount.
+   Entrance lives on the outer wrapper; scroll drift on the inner
+   cinematic layer — never combined on one element. */
+.hero-presence {
+  --presence-opacity: 0.12;
+  opacity: 0;
+  animation: presence-in 1.4s var(--ease-out) 0.15s forwards;
+}
+
+.dark .hero-presence {
+  --presence-opacity: 0.16;
+}
+
+@keyframes presence-in {
+  from {
+    opacity: 0;
+    transform: scale(0.985) translateY(12px);
+  }
+  to {
+    opacity: var(--presence-opacity);
+    transform: none;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .hero-presence {
+    animation: none;
+    opacity: var(--presence-opacity);
+  }
+}
+
+/* ── Mobile hero — portrait leads, headline overlaps, type centered ── */
 .hero-mobile {
   width: 100%;
-  max-width: 100%;
+  max-width: 30rem;
+  margin-inline: auto;
   overflow: visible;
+  justify-content: center;
+}
+
+/* Large in-flow portrait block topping the mobile composition.
+   The headline pulls up over its lower portion (controlled overlap);
+   the face stays recognizable above the type. */
+.hero-mobile__portrait-top {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  justify-content: center;
+  width: 100%;
+  max-width: 100%;
+  height: clamp(13rem, 52vw, 20rem);
+  margin-top: clamp(0.25rem, 1vh, 0.75rem);
+  overflow: visible;
+}
+
+.hero-mobile__portrait-top-img {
+  height: 100%;
+  width: auto;
+  max-width: 94vw;
+  object-fit: contain;
+  object-position: center bottom;
+  opacity: 0.88;
+  filter: saturate(0.8) drop-shadow(0 22px 40px rgb(0 0 0 / 0.12));
+}
+
+.dark .hero-mobile__portrait-top-img {
+  opacity: 0.82;
+  filter: saturate(0.76) drop-shadow(0 24px 44px rgb(0 0 0 / 0.28));
+}
+
+/* PRESENCE anchor — zero-height in-flow marker between headline and
+   copy. The word centers itself exactly on this line (half above,
+   half below), tracking the composition with zero coordinates. */
+.hero-mobile__presence-anchor {
+  position: relative;
+  z-index: -1;
+  display: block;
+  width: 100%;
+  height: 0;
+}
+
+.hero-mobile__presence-anchor > span {
+  position: absolute;
+  top: 0;
+  left: 50%;
+  translate: -50% -50%;
+  white-space: nowrap;
+  font-size: clamp(2.25rem, 12vw, 4rem);
+  line-height: 1;
 }
 
 .hero-mobile__stage {
@@ -1184,6 +1444,7 @@ html.theatre-settling [data-page-shell] {
 .hero-mobile__visual {
   position: relative;
   display: flex;
+  flex-direction: column;
   width: 100%;
   max-width: 100%;
   align-items: center;
@@ -1192,6 +1453,7 @@ html.theatre-settling [data-page-shell] {
   margin-bottom: clamp(0.375rem, 1vh, 0.75rem);
   padding-inline: clamp(0.5rem, 3vw, 1rem);
   overflow: visible;
+  overflow-x: clip;
 }
 
 .hero-mobile__portrait-bg {
@@ -1240,7 +1502,7 @@ html.theatre-settling [data-page-shell] {
    on scroll start/stop forces full repaint churn for zero visual benefit). */
 .hero-mobile__portrait-img {
   width: auto;
-  height: clamp(16rem, 72svh, 25rem);
+  height: clamp(22rem, 82svh, 32rem);
   max-width: 108%;
   object-fit: contain;
   object-position: center 42%;
@@ -1259,11 +1521,20 @@ html.theatre-settling [data-page-shell] {
   width: 100%;
   max-width: 100%;
   margin: 0;
+  /* Controlled overlap onto the portrait's lower portion. Unlayered on
+     purpose: layered utilities lose to this rule, so the offset must
+     live here to apply deterministically. */
+  margin-top: clamp(-4.5rem, -15vw, -3rem);
   padding-inline: 0;
   overflow: visible;
-  font-size: clamp(2.65rem, 9.2vw + 0.5rem, 3.5rem);
-  line-height: 0.92;
-  letter-spacing: -0.04em;
+  /* Fit-guaranteed: the vw term scales type up, the calc cap keeps the
+     widest line ("MAKE AUDIENCE") inside the viewport at every width. */
+  font-size: min(
+    clamp(3rem, 14vw + 0.4rem, 4.5rem),
+    calc((100vw - 2rem) / 6.8)
+  );
+  line-height: 0.9;
+  letter-spacing: -0.02em;
   text-align: center;
   text-shadow:
     0 0 42px color-mix(in srgb, var(--background) 92%, transparent),
@@ -1278,11 +1549,7 @@ html.theatre-settling [data-page-shell] {
 
 .hero-mobile__headline-line1 {
   white-space: nowrap;
-  font-size: min(
-    clamp(2.35rem, 8vw + 0.4rem, 3rem),
-    calc((100vw - 2.75rem) / 6.6)
-  );
-  letter-spacing: -0.036em;
+  /* Inherits the fit-guaranteed headline size — never sized alone. */
 }
 
 .hero-mobile__make {
@@ -1313,8 +1580,8 @@ html.theatre-settling [data-page-shell] {
 }
 
 .hero-mobile__copy {
-  font-size: clamp(0.875rem, 3.5vw, 0.96875rem);
-  line-height: 1.55;
+  font-size: clamp(0.7rem, 3vw, 0.85rem);
+  line-height: 1.6;
 }
 
 .hero-mobile__cta-primary {
@@ -1334,25 +1601,16 @@ html.theatre-settling [data-page-shell] {
 }
 
 @media (max-width: 380px) {
-  .theatre-stage__title-part {
-    font-size: clamp(2.25rem, 10.5vw, 3.25rem);
-  }
-
-  .theatre-stage__title-row {
-    gap: 0.25rem;
-  }
-
   .hero-mobile__headline {
-    font-size: clamp(2.45rem, 8.8vw + 0.45rem, 3.15rem);
-    letter-spacing: -0.038em;
+    font-size: min(
+      clamp(2.9rem, 13vw + 0.4rem, 4.2rem),
+      calc((100vw - 2rem) / 6.8)
+    );
+    letter-spacing: -0.02em;
   }
 
   .hero-mobile__headline-line1 {
-    font-size: min(
-      clamp(2.2rem, 7.5vw + 0.35rem, 2.85rem),
-      calc((100vw - 2.5rem) / 6.6)
-    );
-    letter-spacing: -0.034em;
+    white-space: nowrap;
   }
 
   .hero-mobile__visual {
@@ -1361,7 +1619,7 @@ html.theatre-settling [data-page-shell] {
   }
 
   .hero-mobile__portrait-img {
-    height: clamp(15rem, 68svh, 22rem);
+    height: clamp(21rem, 80svh, 30rem);
   }
 }
 
@@ -1384,14 +1642,14 @@ html.theatre-settling [data-page-shell] {
   }
 
   .hero-mobile__headline {
-    font-size: clamp(2.25rem, 7.5vw + 0.5rem, 3rem);
+    font-size: min(
+      clamp(2.4rem, 9vw + 0.4rem, 3.4rem),
+      calc((100vw - 2rem) / 6.8)
+    );
   }
 
   .hero-mobile__headline-line1 {
-    font-size: min(
-      clamp(2.05rem, 6.8vw + 0.4rem, 2.65rem),
-      calc((100vw - 2.25rem) / 6.6)
-    );
+    white-space: nowrap;
   }
 
   .hero-mobile__cta {
@@ -1680,12 +1938,9 @@ html.theatre-settling [data-page-shell] {
 }
 
 .contact-scene {
-  background: linear-gradient(
-    180deg,
-    var(--tone-contact) 0%,
-    var(--background-secondary) 38%,
-    var(--background-secondary) 100%
-  );
+  /* Continuous canvas — the section stays transparent; GlobalCanvas
+     paints the quiet neutral + red-whisper atmosphere. */
+  background: transparent;
 }
 
 .contact-scene__heading {
@@ -1755,7 +2010,8 @@ html.theatre-settling [data-page-shell] {
     will-change: transform;
   }
 
-  /* Hero — restrained exit drift (translate ≤1.5rem, scale ≤1.015) */
+  /* Hero — layered exit drift: headline leads, portrait travels
+     furthest (multi-speed parallax), PRESENCE atmosphere slowest */
   [data-cinematic="hero"] .cinematic-layer--headline {
     transform: translate3d(0, calc(var(--cinematic-exit) * -1.25rem), 0)
       scale(calc(1 - var(--cinematic-exit) * 0.015));
@@ -1768,7 +2024,7 @@ html.theatre-settling [data-page-shell] {
   }
 
   [data-cinematic="hero"] .cinematic-layer--visual {
-    transform: translate3d(0, calc(var(--cinematic-exit) * -0.5rem), 0)
+    transform: translate3d(0, calc(var(--cinematic-exit) * -1rem), 0)
       scale(calc(1 - var(--cinematic-exit) * 0.015));
     opacity: calc(1 - var(--cinematic-exit) * 0.22);
   }
@@ -1776,6 +2032,10 @@ html.theatre-settling [data-page-shell] {
   [data-cinematic="hero"] .cinematic-layer--cta {
     transform: translate3d(0, calc(var(--cinematic-exit) * -0.4rem), 0);
     opacity: calc(1 - var(--cinematic-exit) * 0.38);
+  }
+
+  [data-cinematic="hero"] .cinematic-layer--atmosphere {
+    transform: translate3d(0, calc(var(--cinematic-exit) * -0.75rem), 0);
   }
 
   /* Hero → Services overlap: services title/grid enter as hero recedes */
@@ -1851,10 +2111,14 @@ html.theatre-settling [data-page-shell] {
     [data-cinematic="hero"] .cinematic-layer--visual {
       transform: translate3d(
           calc(var(--cinematic-exit) * -0.35rem),
-          calc(var(--cinematic-exit) * -0.6rem),
+          calc(var(--cinematic-exit) * -1.5rem),
           0
         )
         scale(calc(1 - var(--cinematic-exit) * 0.015));
+    }
+
+    [data-cinematic="hero"] .cinematic-layer--atmosphere {
+      transform: translate3d(0, calc(var(--cinematic-exit) * -0.75rem), 0);
     }
 
     [data-cinematic="services"] .cinematic-layer--grid {
@@ -1896,8 +2160,12 @@ html.theatre-settling [data-page-shell] {
     }
 
     [data-cinematic="hero"] .cinematic-layer--visual {
-      transform: translate3d(0, calc(var(--cinematic-exit) * -0.45rem), 0)
+      transform: translate3d(0, calc(var(--cinematic-exit) * -1rem), 0)
         scale(calc(1 - var(--cinematic-exit) * 0.02));
+    }
+
+    [data-cinematic="hero"] .cinematic-layer--atmosphere {
+      transform: translate3d(0, calc(var(--cinematic-exit) * -0.5rem), 0);
     }
 
     [data-cinematic="services"] .cinematic-layer--grid {

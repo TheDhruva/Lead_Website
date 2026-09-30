@@ -8,7 +8,7 @@ import type {
 } from "@/types";
 
 export const siteConfig: SiteConfig = {
-  name: "DHRUVA",
+  name: "The Dhruva",
   description:
     "Beautiful websites, powerful visuals, and videos that make your brand impossible to ignore. A cinematic approach to digital presence.",
   url: process.env.NEXT_PUBLIC_SITE_URL ?? "https://something.vercel.app",
@@ -52,13 +52,13 @@ export const services: Service[] = [
     id: "video-editing",
     title: "Video Editing",
     description:
-      "Narrative-driven cinematic cuts that hold attention and build emotional resonance.",
+      "Turn raw footage into videos that feel intentional, cinematic, and built to hold attention.",
     approach:
-      "We treat every cut as intentional storytelling — pacing, sound design, and visual rhythm work together so your brand feels cinematic, not just polished.",
+      "Turn raw footage into videos that feel intentional, cinematic, and built to hold attention.",
     focus: [
-      "Story-first pacing & emotional beats",
-      "Color grade & sound that elevate mood",
-      "Platform-ready delivery for ads & social",
+      "Story-driven pacing",
+      "Cinematic color & sound",
+      "Ready for social & ads",
     ],
     icon: "movie",
     image: "/images/services/video-editing.webp",
@@ -69,13 +69,13 @@ export const services: Service[] = [
     id: "website-development",
     title: "Website Development",
     description:
-      "High-performance, beautifully interactive digital experiences engineered for conversion.",
+      "Fast, purposeful websites designed to look distinctive, feel effortless, and turn visitors into clients.",
     approach:
-      "We build fast, accessible sites with motion that feels weighted — every interaction supports clarity, trust, and conversion without visual noise.",
+      "Fast, purposeful websites designed to look distinctive, feel effortless, and turn visitors into clients.",
     focus: [
-      "Performance-first architecture",
-      "Cinematic motion & micro-interactions",
-      "Conversion-focused UX & SEO foundations",
+      "Fast, responsive builds",
+      "Motion with purpose",
+      "SEO & conversion ready",
     ],
     icon: "code",
     image: "/images/services/web-development.webp",
@@ -86,13 +86,13 @@ export const services: Service[] = [
     id: "graphic-design",
     title: "Graphic Design",
     description:
-      "Striking visual identities that command authority and communicate quality.",
+      "Visual systems built with strong typography, spacing, and direction so your brand feels instantly recognizable.",
     approach:
-      "We craft identities with restraint and precision — typography, spacing, and imagery that signal premium quality at a glance.",
+      "Visual systems built with strong typography, spacing, and direction so your brand feels instantly recognizable.",
     focus: [
-      "Brand systems built for longevity",
-      "Typography & layout with editorial clarity",
-      "Assets ready for print, web & campaigns",
+      "Distinctive brand systems",
+      "Editorial typography & layout",
+      "Ready for web & campaigns",
     ],
     icon: "design_services",
     image: "/images/services/graphic-design.webp",

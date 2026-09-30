@@ -1,4 +1,4 @@
-import { Instrument_Serif, Manrope } from "next/font/google";
+import { Anton, Instrument_Serif, Manrope } from "next/font/google";
 
 /**
  * Phase 1 design system — exactly two families:
@@ -24,6 +24,19 @@ export const manrope = Manrope({
   display: "swap",
   preload: true,
   fallback: ["system-ui", "sans-serif"],
+});
+
+/**
+ * Hero display voice only — massive condensed poster typography.
+ * Anton ships a single 400 weight; never synthesize bold.
+ */
+export const anton = Anton({
+  subsets: ["latin"],
+  variable: "--font-anton",
+  weight: "400",
+  display: "swap",
+  preload: true,
+  fallback: ["Arial Narrow", "sans-serif"],
 });
 
 /** @deprecated Use `manrope` — kept for incremental migration safety. */

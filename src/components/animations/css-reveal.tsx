@@ -14,8 +14,11 @@ interface CssRevealProps {
 
 /**
  * Viewport-entry reveal without Framer Motion:
- * IntersectionObserver (fire-once) adds .is-visible, CSS owns the motion.
- * Respects prefers-reduced-motion via CSS (content always visible).
+ * IntersectionObserver toggles .is-visible, CSS owns the motion.
+ * Replays in both scroll directions (arrival assembles, departure
+ * reverses); the distinctive exit choreography lives in AnimatedText
+ * and the cinematic layers. Respects prefers-reduced-motion via CSS
+ * (content always visible).
  */
 export function CssReveal({ children, className, delay = 0 }: CssRevealProps) {
   const ref = useRef<HTMLDivElement>(null);
@@ -23,7 +26,6 @@ export function CssReveal({ children, className, delay = 0 }: CssRevealProps) {
   useEffect(() => {
     const el = ref.current;
     if (!el) return;
-    if (el.classList.contains("is-visible")) return;
     if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
       el.classList.add("is-visible");
       return;
@@ -32,10 +34,10 @@ export function CssReveal({ children, className, delay = 0 }: CssRevealProps) {
     const root = getScrollContainer();
     const observer = new IntersectionObserver(
       ([entry]) => {
-        if (entry?.isIntersecting) {
-          el.classList.add("is-visible");
-          observer.disconnect();
-        }
+        if (!entry) return;
+        // Toggle (never disconnect): replays on re-entry in both
+        // scroll directions. Threshold crossings only — no per-frame work.
+        el.classList.toggle("is-visible", entry.isIntersecting);
       },
       { threshold: 0.15, rootMargin: "0px 0px -6% 0px", root: root ?? null },
     );

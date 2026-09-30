@@ -4,6 +4,7 @@ import Image from "next/image";
 import { useRef } from "react";
 
 import { Reveal } from "@/components/animations/reveal";
+import { AnimatedText } from "@/components/motion/animated-text";
 import { Container } from "@/components/ui/container";
 import { projectRows } from "@/data";
 import { useCinematicSection } from "@/hooks/use-cinematic-section";
@@ -93,7 +94,7 @@ function ProjectFigure({
           />
         </div>
         <figcaption className="flex min-h-[78px] flex-col justify-center p-3.5 md:min-h-[84px] md:p-4">
-          <div className="flex items-center gap-2 font-mono text-[10px] tracking-[0.16em] text-foreground-secondary">
+          <div className="flex items-center gap-2 font-sans text-[10px] tracking-[0.16em] text-foreground-secondary">
             <span>{project.number}</span>
             <span aria-hidden className="h-px w-4 bg-border" />
             <span className="uppercase">{project.category}</span>
@@ -101,8 +102,14 @@ function ProjectFigure({
           <h3 className="mt-1.5 line-clamp-1 font-headline-lg text-[15px] font-semibold leading-tight tracking-[-0.02em] text-foreground md:text-[16px]">
             {project.title}
           </h3>
-          <span className="mt-2 inline-flex items-center gap-1.5 font-mono text-[10px] tracking-[0.14em] text-foreground-secondary transition-colors duration-200 group-hover:text-foreground">
-            VIEW <span aria-hidden>↗</span>
+          <span className="mt-2 inline-flex items-center gap-1.5 font-sans text-[10px] tracking-[0.14em] text-foreground-secondary transition-colors duration-200 group-hover:text-foreground">
+            VIEW{" "}
+            <span
+              aria-hidden
+              className="inline-block transition-transform duration-300 ease-out group-hover:-translate-y-px group-hover:translate-x-px motion-reduce:transition-none"
+            >
+              ↗
+            </span>
           </span>
         </figcaption>
       </figure>
@@ -123,41 +130,39 @@ export function Projects() {
       aria-labelledby="projects-heading"
     >
       <Container className="w-full max-w-none">
-        <Reveal>
-          <header className="cinematic-layer cinematic-layer--heading mb-6 flex flex-col gap-2 border-b border-border pb-5 md:mb-8 md:flex-row md:items-end md:justify-between md:pb-6">
-            <div className="min-w-0">
-              <h2
-                id="projects-heading"
-                className="font-headline-lg text-headline-lg tracking-[-0.03em] text-foreground md:text-[34px] lg:text-[36px]"
-              >
-                Selected Work
-              </h2>
-              <p className="mt-1.5 max-w-[32rem] font-body-md text-[13px] leading-relaxed text-foreground-secondary md:text-[14px]">
-                Digital experiences, identities and visual systems — a curated
-                selection.
-              </p>
-            </div>
-            <span className="shrink-0 font-mono text-[11px] tracking-[0.2em] text-foreground-secondary">
-              01 — 06
-            </span>
-          </header>
-        </Reveal>
+        <header className="cinematic-layer cinematic-layer--heading mb-6 flex flex-col gap-2 border-b border-border pb-5 md:mb-8 md:flex-row md:items-end md:justify-between md:pb-6">
+          <div className="min-w-0">
+            <h2
+              id="projects-heading"
+              className="font-sans text-[clamp(2.25rem,5vw,3.75rem)] leading-[1.02] font-extrabold tracking-[-0.03em] text-foreground"
+            >
+              <AnimatedText segments="Selected Work" />
+            </h2>
+            <p className="mt-1.5 max-w-[32rem] font-body-md text-[13px] leading-relaxed text-foreground-secondary md:text-[14px]">
+              Digital experiences, identities and visual systems — a curated
+              selection.
+            </p>
+          </div>
+          <span className="shrink-0 font-sans text-[11px] font-semibold tracking-[0.2em] text-foreground-secondary">
+            01 — 06
+          </span>
+        </header>
 
         <div className="flex flex-col gap-6 md:gap-5 lg:gap-6">
           {/* Row 1: 16:9 + 1:1 — heights equal via 1.777:1 (64/36) */}
           <div
             className={cn(
-              "grid grid-cols-1 gap-6 md:grid-cols-[minmax(0,1.777fr)_minmax(0,1fr)] md:gap-5 lg:gap-6",
+              "cinematic-layer cinematic-layer--media grid grid-cols-1 gap-6 md:grid-cols-[minmax(0,1.777fr)_minmax(0,1fr)] md:gap-5 lg:gap-6",
               "group",
               prefersReducedMotion
                 ? ""
                 : "[&_a:hover]:opacity-100 [&:has(a:hover)_a:not(:hover)]:opacity-[0.96]",
             )}
           >
-            <Reveal index={0} className="min-w-0">
+            <Reveal index={0} clip className="min-w-0">
               <ProjectFigure project={gallery[0]!} priority />
             </Reveal>
-            <Reveal index={1} className="min-w-0">
+            <Reveal index={1} clip className="min-w-0">
               <ProjectFigure project={gallery[1]!} />
             </Reveal>
           </div>
@@ -165,17 +170,17 @@ export function Projects() {
           {/* Row 2: 1:1 + 16:9 — reverse 1:1.777 */}
           <div
             className={cn(
-              "grid grid-cols-1 gap-6 md:grid-cols-[minmax(0,1fr)_minmax(0,1.777fr)] md:gap-5 lg:gap-6",
+              "cinematic-layer cinematic-layer--media grid grid-cols-1 gap-6 md:grid-cols-[minmax(0,1fr)_minmax(0,1.777fr)] md:gap-5 lg:gap-6",
               "group",
               prefersReducedMotion
                 ? ""
                 : "[&_a:hover]:opacity-100 [&:has(a:hover)_a:not(:hover)]:opacity-[0.96]",
             )}
           >
-            <Reveal index={1} className="min-w-0">
+            <Reveal index={1} clip className="min-w-0">
               <ProjectFigure project={gallery[2]!} />
             </Reveal>
-            <Reveal index={2} className="min-w-0">
+            <Reveal index={2} clip className="min-w-0">
               <ProjectFigure project={gallery[3]!} />
             </Reveal>
           </div>
@@ -183,17 +188,17 @@ export function Projects() {
           {/* Row 3: 1:1 + 1:1 — full container width, equal 1:1 */}
           <div
             className={cn(
-              "grid grid-cols-1 gap-6 md:grid-cols-2 md:gap-5 lg:gap-6",
+              "cinematic-layer cinematic-layer--media grid grid-cols-1 gap-6 md:grid-cols-2 md:gap-5 lg:gap-6",
               "group",
               prefersReducedMotion
                 ? ""
                 : "[&_a:hover]:opacity-100 [&:has(a:hover)_a:not(:hover)]:opacity-[0.96]",
             )}
           >
-            <Reveal index={2} className="min-w-0">
+            <Reveal index={2} clip className="min-w-0">
               <ProjectFigure project={gallery[4]!} />
             </Reveal>
-            <Reveal index={3} className="min-w-0">
+            <Reveal index={3} clip className="min-w-0">
               <ProjectFigure project={gallery[5]!} />
             </Reveal>
           </div>

@@ -6,6 +6,7 @@ import { Moon, Sun } from "lucide-react";
 import { useTheme } from "next-themes";
 
 import { cn } from "@/lib/utils";
+import { useAudio } from "@/providers/audio-provider";
 
 interface ThemeToggleProps {
   variant?: "icon" | "full";
@@ -18,6 +19,7 @@ function subscribe() {
 
 export function ThemeToggle({ variant = "icon", className }: ThemeToggleProps) {
   const { resolvedTheme, setTheme } = useTheme();
+  const { play } = useAudio();
   const mounted = useSyncExternalStore(
     subscribe,
     () => true,
@@ -27,6 +29,8 @@ export function ThemeToggle({ variant = "icon", className }: ThemeToggleProps) {
   const isDark = resolvedTheme === "dark";
 
   const toggle = () => {
+    // Tiny tactile confirmation for a meaningful control.
+    play("ui-click");
     setTheme(isDark ? "light" : "dark");
   };
 

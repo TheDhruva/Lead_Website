@@ -5,6 +5,7 @@ import dynamic from "next/dynamic";
 import { PageTransition } from "@/components/animations/page-transition";
 import { AudioGestureUnlock } from "@/components/audio-gesture-unlock";
 import { FloatingNav } from "@/components/layout/floating-nav";
+import { GlobalCanvas } from "@/components/layout/global-canvas";
 import { Navbar } from "@/components/layout/navbar";
 import { Hero } from "@/components/sections/hero";
 import { TheatreIntro } from "@/components/sections/theatre-intro";
@@ -79,6 +80,7 @@ export function HomePageContent() {
         >
           Skip to content
         </a>
+        <GlobalCanvas />
         <div
           id={SCROLL_CONTAINER_ID}
           className="scroll-panel relative h-[100svh] w-full overflow-x-hidden overflow-y-auto"

@@ -19,13 +19,14 @@ const SHORT_LABELS: Record<string, string> = {
 };
 
 /**
- * Floating bottom section nav.
- * Persistent pill, Lacquer active state, Manrope uppercase.
+ * Floating bottom section nav — desktop and tablet only.
+ * Mobile navigates via the top bar menu sheet.
+ * Compact pill, Lacquer active state, Manrope uppercase.
  * (Section-snap audio lives in the top Navbar.)
  */
 export function FloatingNav() {
   const { activeId, scrollToSection } = useActiveSection(SECTION_LIST);
-  const { onHover, onClick } = useSfxHandlers();
+  const { play } = useSfxHandlers();
 
   return (
     <nav
@@ -51,10 +52,10 @@ export function FloatingNav() {
                   href={item.href}
                   onClick={(event) => {
                     event.preventDefault();
-                    onClick();
+                    // One quiet tick per user-activated navigation.
+                    play("nav-click");
                     scrollToSection(item.href);
                   }}
-                  onMouseEnter={onHover}
                   aria-current={isActive ? "true" : undefined}
                   className={cn(
                     "block rounded-full px-3.5 py-2 font-sans text-[11px] font-semibold tracking-[0.18em] whitespace-nowrap uppercase transition-colors duration-200 ease-out",

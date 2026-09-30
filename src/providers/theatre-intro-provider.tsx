@@ -14,7 +14,14 @@ interface TheatreIntroContextValue {
   hasEntered: boolean;
   isReturning: boolean;
   bootstrapped: boolean;
+  /**
+   * True from the moment the intro begins its exit transition until it
+   * is gone. Lets the hero assemble *during* the handoff instead of
+   * behind an opaque curtain. Stays true once set.
+   */
+  departing: boolean;
   enter: () => void;
+  markDeparting: () => void;
 }
 
 const TheatreIntroContext = createContext<TheatreIntroContextValue | null>(
@@ -39,12 +46,14 @@ type IntroBootState = {
   bootstrapped: boolean;
   hasEntered: boolean;
   isReturning: boolean;
+  departing: boolean;
 };
 
 const INITIAL_INTRO: IntroBootState = {
   bootstrapped: false,
   hasEntered: false,
   isReturning: false,
+  departing: false,
 };
 
 function readIntroSeen() {
@@ -78,6 +87,7 @@ function computeIntroState(): IntroBootState {
       bootstrapped: true,
       isReturning: false,
       hasEntered: true,
+      departing: true,
     };
   }
 
@@ -88,6 +98,7 @@ function computeIntroState(): IntroBootState {
     bootstrapped: true,
     isReturning: returning,
     hasEntered: false,
+    departing: false,
   };
 }
 
@@ -146,6 +157,12 @@ export function TheatreIntroProvider({ children }: TheatreIntroProviderProps) {
     }
   }, []);
 
+  const markDeparting = useCallback(() => {
+    if (introSnapshot.departing) return;
+    introSnapshot = { ...introSnapshot, departing: true };
+    emitIntroChange();
+  }, []);
+
   useEffect(() => {
     if (!intro.bootstrapped || intro.hasEntered) return;
 
@@ -170,9 +187,11 @@ export function TheatreIntroProvider({ children }: TheatreIntroProviderProps) {
       hasEntered: intro.hasEntered,
       isReturning: intro.isReturning,
       bootstrapped: intro.bootstrapped,
+      departing: intro.departing,
       enter,
+      markDeparting,
     }),
-    [intro, enter],
+    [intro, enter, markDeparting],
   );
 
   return (

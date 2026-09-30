@@ -2,12 +2,14 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 
-import { m } from "framer-motion";
+import { AnimatePresence, m } from "framer-motion";
 import { Pause, Play, Volume2, VolumeX } from "lucide-react";
 
+import { AnimatedText } from "@/components/motion/animated-text";
 import { Container } from "@/components/ui/container";
 import { VIDEO_PLAYBACK_VOLUME } from "@/constants/audio";
 import { videoItems } from "@/data";
+import { useCinematicSection } from "@/hooks/use-cinematic-section";
 import { useReducedMotion } from "@/hooks/use-reduced-motion";
 import { getScrollContainer } from "@/lib/scroll-container";
 import { cn } from "@/lib/utils";
@@ -25,13 +27,14 @@ function formatIndex(n: number, total: number) {
 
 export function VideoShowcase() {
   const sectionRef = useRef<HTMLElement>(null);
+  useCinematicSection(sectionRef, "videos");
   const activeRef = useRef<HTMLVideoElement>(null);
   const nextRef = useRef<HTMLVideoElement>(null);
   const progressRef = useRef<HTMLDivElement>(null);
   const rafRef = useRef<number | null>(null);
   const preloadStartedRef = useRef(false);
   const prefersReducedMotion = useReducedMotion();
-  const { setVideoAudioActive } = useAudio();
+  const { play, setVideoAudioActive } = useAudio();
 
   const [currentIndex, setCurrentIndex] = useState(0);
   const [isSectionVisible, setIsSectionVisible] = useState(false);
@@ -310,6 +313,7 @@ export function VideoShowcase() {
     (targetId: string) => {
       const idx = videoItems.findIndex((v) => v.id === targetId);
       if (idx === -1 || idx === currentIndexRef.current) return;
+      play("video-control");
       // picking a video is an explicit intent to watch — resume the autoplay chain
       userPausedRef.current = false;
       if (prefersReducedMotion) {
@@ -322,12 +326,13 @@ export function VideoShowcase() {
         }, TRANSITION_MS * 0.6);
       }
     },
-    [prefersReducedMotion],
+    [play, prefersReducedMotion],
   );
 
   const togglePlay = useCallback(() => {
     const v = activeRef.current;
     if (!v) return;
+    play("video-control");
     if (v.paused) {
       userPausedRef.current = false;
       v.muted = isMutedRef.current;
@@ -346,13 +351,14 @@ export function VideoShowcase() {
       v.pause();
       if (!isMutedRef.current) setVideoAudioActive(false);
     }
-  }, [setVideoAudioActive]);
+  }, [play, setVideoAudioActive]);
 
   const toggleMute = useCallback(
     (e?: React.MouseEvent) => {
       e?.stopPropagation();
       const v = activeRef.current;
       if (!v) return;
+      play("video-control");
       const next = !v.muted;
       v.muted = next;
       isMutedRef.current = next;
@@ -374,7 +380,7 @@ export function VideoShowcase() {
         } else setVideoAudioActive(true);
       } else setVideoAudioActive(false);
     },
-    [setVideoAudioActive],
+    [play, setVideoAudioActive],
   );
 
   return (
@@ -387,20 +393,20 @@ export function VideoShowcase() {
     >
       <Container className="w-full max-w-none">
         {/* header */}
-        <div className="mb-5 flex items-end justify-between gap-4 md:mb-7">
+        <div className="cinematic-layer cinematic-layer--header mb-5 flex items-end justify-between gap-4 md:mb-7">
           <h2
             id="video-heading"
-            className="font-headline-lg text-headline-lg tracking-[-0.03em] text-foreground"
+            className="font-sans text-[clamp(2.25rem,5vw,3.75rem)] leading-[1.02] font-extrabold tracking-[-0.03em] text-foreground"
           >
-            Videos
+            <AnimatedText segments="Videos" />
           </h2>
-          <span className="font-mono text-[11px] tracking-[0.18em] text-foreground-secondary tabular-nums">
+          <span className="font-sans text-[11px] font-semibold tracking-[0.18em] text-foreground-secondary tabular-nums">
             {formatIndex(currentIndex + 1, total)}
           </span>
         </div>
 
         {/* showcase */}
-        <div className="grid grid-cols-1 gap-4 lg:grid-cols-[minmax(0,1.75fr)_minmax(280px,0.72fr)] lg:gap-6 lg:items-start">
+        <div className="cinematic-layer cinematic-layer--media grid grid-cols-1 gap-4 lg:grid-cols-[minmax(0,1.75fr)_minmax(280px,0.72fr)] lg:gap-6 lg:items-start">
           {/* active */}
           <div className="relative overflow-hidden rounded-lg bg-black">
             {/* stable 16:9 frame */}
@@ -412,40 +418,60 @@ export function VideoShowcase() {
                   className="absolute inset-0 bg-gradient-to-b from-neutral-900 via-black to-black"
                 />
               ) : null}
-              {/* poster until video can play */}
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img
-                key={`poster-${current.id}`}
-                src={current.poster}
-                alt=""
-                aria-hidden
-                className={cn(
-                  "absolute inset-0 h-full w-full object-cover transition-opacity duration-500 ease-[cubic-bezier(0.22,1,0.36,1)]",
-                  prefersReducedMotion ? "transition-none" : "",
-                  isPlaying && !isTransitioning ? "opacity-0" : "opacity-100",
-                )}
-                loading="eager"
-                decoding="async"
-              />
-              <video
-                ref={activeRef}
-                key={`video-${current.id}`}
-                className={cn(
-                  "absolute inset-0 h-full w-full bg-black transition-opacity duration-[600ms]",
-                  prefersReducedMotion
-                    ? "transition-none"
-                    : "ease-[cubic-bezier(0.22,1,0.36,1)]",
-                  isPortrait ? "object-contain p-0" : "object-cover",
-                  isTransitioning ? "opacity-0" : "opacity-100",
-                )}
-                poster={current.poster}
-                muted={isMuted}
-                playsInline
-                disablePictureInPicture
-                preload={initialized ? "metadata" : "none"}
-                aria-label={`${current.title}. ${current.meta}`}
-                onClick={togglePlay}
-              />
+              {/* poster until video can play — outgoing recedes, incoming assembles */}
+              <AnimatePresence initial={false}>
+                <m.img
+                  key={`poster-${current.id}`}
+                  src={current.poster}
+                  alt=""
+                  aria-hidden
+                  exit={
+                    prefersReducedMotion
+                      ? { opacity: 0, transition: { duration: 0.01 } }
+                      : { opacity: 0, transition: { duration: 0.4 } }
+                  }
+                  className={cn(
+                    "media-in absolute inset-0 h-full w-full object-cover transition-opacity duration-500 ease-[cubic-bezier(0.22,1,0.36,1)]",
+                    prefersReducedMotion ? "transition-none" : "",
+                    isPlaying && !isTransitioning ? "opacity-0" : "opacity-100",
+                  )}
+                  loading="eager"
+                  decoding="async"
+                />
+              </AnimatePresence>
+              <AnimatePresence initial={false}>
+                <m.video
+                  ref={activeRef}
+                  key={`video-${current.id}`}
+                  exit={
+                    prefersReducedMotion
+                      ? { opacity: 0, transition: { duration: 0.01 } }
+                      : {
+                          opacity: 0,
+                          scale: 0.985,
+                          transition: {
+                            duration: 0.5,
+                            ease: [0.22, 1, 0.36, 1],
+                          },
+                        }
+                  }
+                  className={cn(
+                    "media-in absolute inset-0 h-full w-full bg-black transition-opacity duration-[600ms]",
+                    prefersReducedMotion
+                      ? "transition-none"
+                      : "ease-[cubic-bezier(0.22,1,0.36,1)]",
+                    isPortrait ? "object-contain p-0" : "object-cover",
+                    isTransitioning ? "opacity-0" : "opacity-100",
+                  )}
+                  poster={current.poster}
+                  muted={isMuted}
+                  playsInline
+                  disablePictureInPicture
+                  preload={initialized ? "metadata" : "none"}
+                  aria-label={`${current.title}. ${current.meta}`}
+                  onClick={togglePlay}
+                />
+              </AnimatePresence>
 
               {/* subtle bottom gradient + info */}
               <div className="absolute inset-x-0 bottom-0 z-10 bg-gradient-to-t from-black/70 via-black/30 to-transparent pt-12">
@@ -457,7 +483,7 @@ export function VideoShowcase() {
                   className="pointer-events-none flex items-end justify-between gap-4 p-4 md:p-5"
                 >
                   <div className="min-w-0">
-                    <div className="font-mono text-[10px] tracking-[0.2em] text-white/80">
+                    <div className="font-sans text-[10px] tracking-[0.2em] text-white/80">
                       {String(currentIndex + 1).padStart(2, "0")} /{" "}
                       {current.title.toUpperCase()}
                     </div>
@@ -545,10 +571,10 @@ export function VideoShowcase() {
           {/* queue */}
           <div className="min-w-0">
             <div className="mb-3 flex items-center justify-between">
-              <span className="font-mono text-[11px] tracking-[0.2em] text-foreground-secondary">
+              <span className="font-sans text-[11px] tracking-[0.2em] text-foreground-secondary">
                 NEXT
               </span>
-              <span className="hidden font-mono text-[11px] text-foreground-secondary lg:inline">
+              <span className="hidden font-sans text-[11px] text-foreground-secondary lg:inline">
                 {String(queue.length).padStart(2, "0")} queued
               </span>
             </div>
@@ -576,11 +602,11 @@ export function VideoShowcase() {
                     className="group relative flex w-full items-center gap-3 py-3 text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                     aria-label={`Play ${item.title}`}
                   >
-                    <span className="font-mono text-[11px] text-foreground-secondary tabular-nums">
+                    <span className="font-sans text-[11px] text-foreground-secondary tabular-nums">
                       {num}
                     </span>
                     <span className="min-w-0 flex-1">
-                      <span className="block truncate font-label-md text-[12px] font-semibold tracking-[0.12em] text-foreground group-hover:text-foreground">
+                      <span className="block truncate font-label-md text-[12px] font-semibold tracking-[0.12em] text-foreground transition-transform duration-200 ease-out group-hover:translate-x-[3px] motion-reduce:transition-none motion-reduce:group-hover:translate-x-0">
                         {item.title.toUpperCase()}
                       </span>
                       <span className="block truncate text-[11px] text-foreground-secondary">
@@ -594,7 +620,7 @@ export function VideoShowcase() {
                         alt={item.title}
                         loading="lazy"
                         decoding="async"
-                        className="h-full w-full object-cover transition duration-300 group-hover:scale-[1.02] group-hover:brightness-[1.06]"
+                        className="h-full w-full object-cover transition duration-300 group-hover:scale-[1.03] group-hover:brightness-[1.06]"
                       />
                     </span>
                     {idx < queue.length - 1 ? (
@@ -632,7 +658,7 @@ export function VideoShowcase() {
                           decoding="async"
                           className="h-full w-full object-cover"
                         />
-                        <span className="absolute left-2 top-2 rounded-full bg-black/60 px-1.5 py-0.5 font-mono text-[10px] text-white">
+                        <span className="absolute left-2 top-2 rounded-full bg-black/60 px-1.5 py-0.5 font-sans text-[10px] text-white">
                           {num}
                         </span>
                       </span>
