@@ -11,7 +11,7 @@
  *   public/videos/showcase-{n}-mobile-hevc.mp4
  *   public/videos/showcase-{n}-mobile.webm
  *
- * Muted showcase delivery: all outputs strip audio (`-an`) and cap at 30fps.
+ * Muted showcase delivery: all outputs keep audio (AAC 96k / Opus 64k) and cap at 30fps.
  * Desktop/mobile sources prefer the lossless backup originals when present
  * to avoid generational loss.
  *
@@ -94,37 +94,37 @@ function encodeVariants(
   const webmOut = path.join(videosDir, `${prefix}.webm`);
   const webmTmp = path.join(videosDir, `${prefix}.tmp.webm`);
 
-  console.log("  H.264 (no audio)…");
+  console.log("  H.264 (with audio)…");
   run(
     [
       `ffmpeg -y -i "${input}"`,
       `-vf "${scale}"`,
       `-c:v libx264 -preset slow -crf ${h264Crf}`,
-      "-an",
+      "-c:a aac -b:a 96k -ar 48000",
       "-movflags +faststart",
       `"${h264Tmp}"`,
     ].join(" "),
   );
 
-  console.log("  HEVC (no audio)…");
+  console.log("  HEVC (with audio)…");
   run(
     [
       `ffmpeg -y -i "${input}"`,
       `-vf "${scale}"`,
       `-c:v libx265 -preset medium -crf ${hevcCrf} -tag:v hvc1`,
-      "-an",
+      "-c:a aac -b:a 96k -ar 48000",
       "-movflags +faststart",
       `"${hevcTmp}"`,
     ].join(" "),
   );
 
-  console.log("  WebM (VP9, no audio)…");
+  console.log("  WebM (VP9, with audio)…");
   run(
     [
       `ffmpeg -y -i "${input}"`,
       `-vf "${scale}"`,
       `-c:v libvpx-vp9 -crf ${webmCrf} -b:v 0 -row-mt 1`,
-      "-an",
+      "-c:a libopus -b:a 64k",
       `"${webmTmp}"`,
     ].join(" "),
   );
