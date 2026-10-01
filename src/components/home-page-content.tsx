@@ -17,7 +17,6 @@ import { projectRows, services, videoItems } from "@/data";
 import { useContainerKeyboardScroll } from "@/hooks/use-container-keyboard-scroll";
 import { useHashScroll } from "@/hooks/use-hash-scroll";
 import { SCROLL_CONTAINER_ID } from "@/lib/scroll-container";
-import { useAudio } from "@/providers/audio-provider";
 import { useTheatreIntro } from "@/providers/theatre-intro-provider";
 
 const Services = dynamic(
@@ -64,8 +63,7 @@ function HashScrollSync() {
 
 export function HomePageContent() {
   const { hasEntered, bootstrapped } = useTheatreIntro();
-  const { unlocked } = useAudio();
-  const showMute = bootstrapped && (hasEntered || unlocked);
+  const showMute = bootstrapped;
 
   return (
     <>

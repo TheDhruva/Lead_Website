@@ -4,18 +4,18 @@ Cinematic digital studio portfolio — a production Next.js app. Beautiful websi
 
 ## Tech Stack
 
-| Category         | Technology                |
-| ---------------- | ------------------------- |
-| Framework        | Next.js 16 (App Router)   |
-| UI Library       | React 19                  |
-| Language         | TypeScript (strict)       |
-| Styling          | Tailwind CSS 4            |
-| Animation        | Framer Motion             |
-| Smooth Scrolling | Lenis                     |
-| Forms            | React Hook Form + Zod     |
-| Email            | Resend (server API route) |
-| Icons            | Material Symbols Outlined |
-| Utilities        | clsx, tailwind-merge      |
+| Category         | Technology                 |
+| ---------------- | -------------------------- |
+| Framework        | Next.js 16 (App Router)    |
+| UI Library       | React 19                   |
+| Language         | TypeScript (strict)        |
+| Styling          | Tailwind CSS 4             |
+| Animation        | Framer Motion              |
+| Smooth Scrolling | Native scroll choreography |
+| Forms            | React Hook Form + Zod      |
+| Email            | Resend (server API route)  |
+| Icons            | Material Symbols Outlined  |
+| Utilities        | clsx, tailwind-merge       |
 
 ## Setup
 
@@ -37,13 +37,13 @@ Requires Node.js >= 20.9.0 (see `engines` in `package.json`).
 
 ## Environment Variables
 
-| Variable               | Required | Purpose                                                                                                                    |
-| ---------------------- | -------- | -------------------------------------------------------------------------------------------------------------------------- |
-| `NEXT_PUBLIC_SITE_URL` | dev only | Canonical production URL (metadata, OG, sitemap, robots, JSON-LD). Falls back to the production URL in `src/data/site.ts`. |
-| `RESEND_API_KEY`       | yes      | Server-side only. Contact form delivery.                                                                                   |
-| `CONTACT_FROM_EMAIL`   | yes      | Verified Resend sender.                                                                                                    |
-| `CONTACT_TO_EMAIL`     | yes      | Where inquiries are delivered.                                                                                             |
-| `NEXT_PUBLIC_*_URL`s   | no       | Social links; empty values hide the link from the UI and JSON-LD.                                                          |
+| Variable               | Required   | Purpose                                                                                                                  |
+| ---------------------- | ---------- | ------------------------------------------------------------------------------------------------------------------------ |
+| `NEXT_PUBLIC_SITE_URL` | production | Canonical URL (metadata, OG, sitemap, robots, JSON-LD). Vercel previews fall back to the platform-provided `VERCEL_URL`. |
+| `RESEND_API_KEY`       | yes        | Server-side only. Contact form delivery.                                                                                 |
+| `CONTACT_FROM_EMAIL`   | yes        | Verified Resend sender.                                                                                                  |
+| `CONTACT_TO_EMAIL`     | yes        | Where inquiries are delivered.                                                                                           |
+| `NEXT_PUBLIC_*_URL`s   | no         | Social links; empty values hide the link from the UI and JSON-LD.                                                        |
 
 ## Contact Form (Production)
 

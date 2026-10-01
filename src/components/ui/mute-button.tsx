@@ -24,7 +24,7 @@ export function MuteButton({ className }: MuteButtonProps) {
       type="button"
       aria-label={
         !unlocked
-          ? "Enable ambient audio"
+          ? "Start ambient audio"
           : muted
             ? "Unmute ambient audio"
             : "Mute ambient audio"
@@ -53,7 +53,7 @@ export function MuteButton({ className }: MuteButtonProps) {
       )}
     >
       <AnimatePresence mode="wait" initial={false}>
-        {!unlocked || muted ? (
+        {muted ? (
           <m.span
             key="off"
             initial={{ opacity: 0, scale: 0.85 }}
@@ -84,7 +84,7 @@ export function MuteButton({ className }: MuteButtonProps) {
         )}
       </AnimatePresence>
       <span className="font-label-md text-[9px] tracking-[0.22em] text-foreground-secondary uppercase max-md:sr-only">
-        {!unlocked || muted ? "Off" : "On"}
+        {muted ? "Off" : "On"}
       </span>
     </m.button>
   );

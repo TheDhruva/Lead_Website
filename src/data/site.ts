@@ -7,25 +7,22 @@ import type {
   VideoItem,
 } from "@/types";
 
-/**
- * Development-only fallback. Production MUST set NEXT_PUBLIC_SITE_URL —
- * every canonical URL, OG tag, sitemap entry, robots directive, and
- * JSON-LD @id derives from `siteConfig.url`. A loud build/runtime warning
- * fires below if production runs without it; the fallback exists solely
- * so local development works with no env file.
- */
-const FALLBACK_URL = "https://something.vercel.app";
-
 const configuredUrl =
   typeof process !== "undefined" ? process.env.NEXT_PUBLIC_SITE_URL : undefined;
+const vercelUrl =
+  typeof process !== "undefined" ? process.env.VERCEL_URL : undefined;
+const siteUrl =
+  configuredUrl ??
+  (vercelUrl ? `https://${vercelUrl}` : "http://localhost:3000");
 
 if (
   typeof process !== "undefined" &&
   process.env.NODE_ENV === "production" &&
-  !configuredUrl
+  !configuredUrl &&
+  !vercelUrl
 ) {
   console.warn(
-    `[site] NEXT_PUBLIC_SITE_URL is not set — production metadata (canonical, OG, sitemap, robots, JSON-LD) falls back to placeholder ${FALLBACK_URL}. Set the real deployment URL in the hosting environment.`,
+    "[site] NEXT_PUBLIC_SITE_URL is not set and VERCEL_URL is unavailable — production metadata uses http://localhost:3000. Set NEXT_PUBLIC_SITE_URL in the hosting environment.",
   );
 }
 
@@ -33,7 +30,7 @@ export const siteConfig: SiteConfig = {
   name: "The Dhruva",
   description:
     "Beautiful websites, powerful visuals, and videos that make your brand impossible to ignore. A cinematic approach to digital presence.",
-  url: configuredUrl ?? FALLBACK_URL,
+  url: siteUrl,
   ogImage: "/images/og-cover.jpg",
   links: {
     instagram: process.env.NEXT_PUBLIC_INSTAGRAM_URL ?? "#",
