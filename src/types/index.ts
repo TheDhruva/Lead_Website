@@ -81,12 +81,3 @@ export interface HeroPortrait {
   src: string;
   alt: string;
 }
-
-export interface ContactFormData {
-  name: string;
-  email: string;
-  service: string;
-  budget: string;
-  timeline: string;
-  message: string;
-}

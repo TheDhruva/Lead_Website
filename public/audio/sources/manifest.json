@@ -71,6 +71,30 @@
       "durationMs": 1700,
       "peakDb": -6,
       "downloadedAt": null
+    },
+    {
+      "local": null,
+      "title": "Quiet UI hover tick (90ms whisper)",
+      "author": "THE DHRUVA (project asset — provenance unrecorded, verify before redistribution)",
+      "license": "Project-internal asset — provenance unrecorded, verify before redistribution",
+      "licenseUrl": null,
+      "source": "unrecorded (present in repository without source note; very quiet tick, peak -27.6 dBFS)",
+      "file": "sfx/ui-hover.mp3",
+      "durationMs": 90,
+      "peakDb": -27.6,
+      "downloadedAt": null
+    },
+    {
+      "local": null,
+      "title": "Heavenly Music (ambient bed, 6:02 loop)",
+      "author": "Provenance unrecorded — verify license before redistribution",
+      "license": "Provenance unrecorded — verify license before redistribution",
+      "licenseUrl": null,
+      "source": "unrecorded (added in early project history without source note; stereo 44.1kHz, -21.6 LUFS integrated)",
+      "file": "ambient/heavenly-music.mp3",
+      "durationMs": 362000,
+      "peakDb": -6.7,
+      "downloadedAt": null
     }
   ]
 }

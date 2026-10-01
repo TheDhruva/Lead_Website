@@ -60,14 +60,14 @@ The `.env.example` file documents every key. Never commit real `.env.local`.
 ## SEO & Social
 
 - `src/app/layout.tsx` — full metadata (title `THE DHRUVA — Cinematic Digital Studio`, description, keywords, canonical, Open Graph + Twitter `summary_large_image`).
-- OG image: `public/images/og-cover.jpg` (1200×630 compressed JPEG) — browsed by Discord/WhatsApp/X/etc. Generated from `public/ODimage.png` (clients' original asset).
+- OG image: `public/images/og-cover.jpg` (1200×630 compressed JPEG) — browsed by Discord/WhatsApp/X/etc.
 - `src/app/robots.ts`, `src/app/sitemap.ts`, `src/app/manifest.ts` — generated at build (`/robots.txt`, `/sitemap.xml`, `/manifest.webmanifest`).
 - JSON-LD (`src/components/seo/json-ld.tsx`): `Organization` + `WebSite` schema with only verified data (name, URL, description, logo, defined social `sameAs`) — no invented contact info.
 - Below-the-fold sections render server-side `sr-only` summaries so crawlers see real service/project/video content before the interactive (client-lazy) sections hydrate.
 
 ## Content
 
-- **Videos:** add showcase files to `public/videos` and point at them from `videoItems` in `src/data/site.ts`. Variants (HEVC/WebM/mobile) are optional; missing ones are skipped safely (note: `showcase-3` and `showcase-4` currently ship MP4-only).
+- **Videos:** normalized showcase files (`*-norm.mp4`/`.webm`, -16 LUFS / -1.5 dBTP audio) in `public/videos`, referenced from `videoItems` in `src/data/site.ts`. Variants (HEVC/WebM/mobile) are optional; missing ones are skipped safely.
 - **Audio:** ambient bed + SFX in `public/audio`; references live in `src/constants/audio.ts` (lowercase filenames).
 - **Gallery data:** `src/data/site.ts` (services, projects, socials, footer links, portrait set).
 

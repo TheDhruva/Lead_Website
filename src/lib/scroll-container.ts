@@ -138,6 +138,18 @@ export function scrollContainerTo(
     onSettled?.({ cancelled });
   };
 
+  // Cancellation deadband: a single wheel tick (1–4px of trackpad
+  // momentum or an accidental nudge) must not strand a long flight
+  // mid-section. Accumulate wheel displacement and cancel only on
+  // meaningful input (~2–3 deliberate ticks); touch and scroll-keys
+  // stay instant-cancel since finger-down and keypresses are
+  // unambiguous intent. No timers — purely input-driven.
+  const WHEEL_CANCEL_PX = 24;
+  let wheelAccum = 0;
+  const cancelOnWheel = (event: WheelEvent) => {
+    wheelAccum += Math.abs(event.deltaY) + Math.abs(event.deltaX);
+    if (wheelAccum >= WHEEL_CANCEL_PX) finish(true);
+  };
   const cancelOnInput = () => finish(true);
   // Only keys that scroll cancel — typing in the contact form must not
   // abort navigation.
@@ -160,12 +172,12 @@ export function scrollContainerTo(
   };
 
   const detach = () => {
-    container.removeEventListener("wheel", cancelOnInput);
+    container.removeEventListener("wheel", cancelOnWheel);
     container.removeEventListener("touchmove", cancelOnInput);
     window.removeEventListener("keydown", cancelOnKey);
   };
 
-  container.addEventListener("wheel", cancelOnInput, { passive: true });
+  container.addEventListener("wheel", cancelOnWheel, { passive: true });
   container.addEventListener("touchmove", cancelOnInput, { passive: true });
   window.addEventListener("keydown", cancelOnKey);
 

@@ -262,9 +262,6 @@ export function AudioProvider({ children }: AudioProviderProps) {
     if (!unlockedRef.current) {
       unlockedRef.current = true;
       setUnlocked(true);
-      try {
-        localStorage.setItem("dhruva:unlocked", "1");
-      } catch {}
       // Preload + decode every SFX once, up front — never on click.
       void Promise.all(
         (Object.keys(SFX) as SfxKey[]).map((key) => decodeKey(key)),

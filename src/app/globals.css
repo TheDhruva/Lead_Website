@@ -1728,7 +1728,7 @@ html.theatre-settling [data-page-shell] {
     overflow: hidden;
     align-items: start;
     align-content: center;
-    column-gap: clamp(2.5rem, 4.5vw, 4.5rem);
+    column-gap: clamp(2.5rem, 4vw, 3.75rem);
   }
 
   .contact-scene__intro {
@@ -1739,12 +1739,12 @@ html.theatre-settling [data-page-shell] {
   }
 
   .contact-scene__intro .contact-scene__links {
-    gap: 0.375rem;
+    gap: 0.25rem;
   }
 
   .contact-scene__intro .contact-scene__link,
   .contact-scene__intro .contact-scene__resume-desktop {
-    min-height: 3rem;
+    min-height: 2.25rem;
     gap: 0.875rem;
     font-size: 1rem;
   }
@@ -1780,11 +1780,11 @@ html.theatre-settling [data-page-shell] {
     justify-self: end;
     align-self: start;
     overflow: hidden;
-    padding: 0.75rem 1.375rem 1.25rem;
+    padding: 1.25rem 1.5rem 1.5rem;
   }
 
   .contact-scene__panel .contact-form {
-    gap: 0.625rem;
+    gap: 0.875rem;
     min-width: 0;
     max-width: 100%;
   }
@@ -1806,7 +1806,8 @@ html.theatre-settling [data-page-shell] {
 
   .contact-scene__panel fieldset legend {
     margin-bottom: 0.3125rem;
-    font-size: 0.8125rem;
+    font-size: 0.75rem;
+    letter-spacing: 0.01em;
   }
 
   .contact-scene__panel fieldset [role="radiogroup"] {
@@ -1827,7 +1828,16 @@ html.theatre-settling [data-page-shell] {
 
   .contact-scene__panel label {
     margin-bottom: 0.25rem;
-    font-size: 0.8125rem;
+    font-size: 0.75rem;
+    letter-spacing: 0.01em;
+  }
+
+  .contact-scene__panel input {
+    min-height: 2.625rem;
+  }
+
+  .contact-scene__panel .contact-form__message {
+    margin-top: 0.625rem;
   }
 
   .contact-scene__panel input,
@@ -1837,8 +1847,8 @@ html.theatre-settling [data-page-shell] {
   }
 
   .contact-scene__panel textarea {
-    min-height: 4.5rem;
-    max-height: 4.5rem;
+    min-height: 6.875rem;
+    max-height: 6.875rem;
     resize: none;
   }
 
@@ -1848,8 +1858,8 @@ html.theatre-settling [data-page-shell] {
   }
 
   .contact-scene__panel .contact-form__submit {
-    margin-top: 0.125rem;
-    min-height: 2.5rem;
+    margin-top: 0.875rem;
+    min-height: 2.75rem;
     padding-top: 0.5rem;
     padding-bottom: 0.5rem;
     font-size: 0.875rem;
@@ -1891,17 +1901,27 @@ html.theatre-settling [data-page-shell] {
 @media (min-width: 1024px) {
   .contact-scene__main {
     grid-template-columns: minmax(0, 0.85fr) minmax(0, 1.15fr);
+    align-items: start;
+    align-content: start;
   }
-  /* Equal-height columns: heading top aligns with form top, and the
-     margin-top:auto link group anchors Email to the form bottom. */
-  .contact-scene__intro,
-  .contact-scene__panel {
-    align-self: stretch;
+  /* Natural heights — both columns top-align at the row top (form top
+     edge level with "Your Brand Deserves") and each column sizes to
+     its own content. No stretching, no pinned CTA, no grown textarea. */
+  .contact-scene__main > div {
+    align-self: start;
+    min-width: 0;
   }
-  /* Content-to-content top alignment: intro starts where the form
-     fields start (below the panel chrome), not at the raw row top. */
+  /* Editorial rhythm: heading connected to the social links with
+     breathing room — a modest fixed gap, not row-height slack. */
   .contact-scene__intro {
-    padding-top: 0.75rem;
+    padding-block: 0;
+    gap: clamp(0.625rem, 1.8vh, 1rem);
+  }
+  .contact-scene__panel {
+    align-self: start;
+  }
+  .contact-scene__panel .contact-form {
+    justify-content: flex-start;
   }
 }
 
@@ -1928,7 +1948,7 @@ html.theatre-settling [data-page-shell] {
 
   .contact-scene__intro .contact-scene__link,
   .contact-scene__intro .contact-scene__resume-desktop {
-    min-height: 2.625rem;
+    min-height: 2rem;
   }
 
   .contact-scene__panel {

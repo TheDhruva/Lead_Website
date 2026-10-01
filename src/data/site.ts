@@ -7,11 +7,33 @@ import type {
   VideoItem,
 } from "@/types";
 
+/**
+ * Development-only fallback. Production MUST set NEXT_PUBLIC_SITE_URL —
+ * every canonical URL, OG tag, sitemap entry, robots directive, and
+ * JSON-LD @id derives from `siteConfig.url`. A loud build/runtime warning
+ * fires below if production runs without it; the fallback exists solely
+ * so local development works with no env file.
+ */
+const FALLBACK_URL = "https://something.vercel.app";
+
+const configuredUrl =
+  typeof process !== "undefined" ? process.env.NEXT_PUBLIC_SITE_URL : undefined;
+
+if (
+  typeof process !== "undefined" &&
+  process.env.NODE_ENV === "production" &&
+  !configuredUrl
+) {
+  console.warn(
+    `[site] NEXT_PUBLIC_SITE_URL is not set — production metadata (canonical, OG, sitemap, robots, JSON-LD) falls back to placeholder ${FALLBACK_URL}. Set the real deployment URL in the hosting environment.`,
+  );
+}
+
 export const siteConfig: SiteConfig = {
   name: "The Dhruva",
   description:
     "Beautiful websites, powerful visuals, and videos that make your brand impossible to ignore. A cinematic approach to digital presence.",
-  url: process.env.NEXT_PUBLIC_SITE_URL ?? "https://something.vercel.app",
+  url: configuredUrl ?? FALLBACK_URL,
   ogImage: "/images/og-cover.jpg",
   links: {
     instagram: process.env.NEXT_PUBLIC_INSTAGRAM_URL ?? "#",
@@ -109,12 +131,12 @@ export const videoItems: VideoItem[] = [
     meta: "Editing · YouTube",
     duration: "00:29",
     poster: "/images/videos/showcase-5-poster.webp",
-    src: "/videos/showcase-5.mp4?v=3",
-    hevcSrc: "/videos/showcase-5-hevc.mp4?v=3",
-    webmSrc: "/videos/showcase-5.webm?v=3",
-    mobileSrc: "/videos/showcase-5-mobile.mp4?v=3",
-    mobileHevcSrc: "/videos/showcase-5-mobile-hevc.mp4?v=3",
-    mobileWebmSrc: "/videos/showcase-5-mobile.webm?v=3",
+    src: "/videos/showcase-5-norm.mp4?v=3",
+    hevcSrc: "/videos/showcase-5-hevc-norm.mp4?v=3",
+    webmSrc: "/videos/showcase-5-norm.webm?v=3",
+    mobileSrc: "/videos/showcase-5-mobile-norm.mp4?v=3",
+    mobileHevcSrc: "/videos/showcase-5-mobile-hevc-norm.mp4?v=3",
+    mobileWebmSrc: "/videos/showcase-5-mobile-norm.webm?v=3",
     aspect: "landscape",
     featured: true,
   },
@@ -125,12 +147,12 @@ export const videoItems: VideoItem[] = [
     meta: "2D Motion · Editing",
     duration: "00:09",
     poster: "/images/videos/showcase-6-poster.webp",
-    src: "/videos/showcase-6.mp4?v=3",
-    hevcSrc: "/videos/showcase-6-hevc.mp4?v=3",
-    webmSrc: "/videos/showcase-6.webm?v=3",
-    mobileSrc: "/videos/showcase-6-mobile.mp4?v=3",
-    mobileHevcSrc: "/videos/showcase-6-mobile-hevc.mp4?v=3",
-    mobileWebmSrc: "/videos/showcase-6-mobile.webm?v=3",
+    src: "/videos/showcase-6-norm.mp4?v=3",
+    hevcSrc: "/videos/showcase-6-hevc-norm.mp4?v=3",
+    webmSrc: "/videos/showcase-6-norm.webm?v=3",
+    mobileSrc: "/videos/showcase-6-mobile-norm.mp4?v=3",
+    mobileHevcSrc: "/videos/showcase-6-mobile-hevc-norm.mp4?v=3",
+    mobileWebmSrc: "/videos/showcase-6-mobile-norm.webm?v=3",
     aspect: "portrait",
   },
   {
@@ -140,12 +162,12 @@ export const videoItems: VideoItem[] = [
     meta: "Brand Film · Editing",
     duration: "00:34",
     poster: "/images/videos/showcase-1-poster.webp?v=3",
-    src: "/videos/showcase-1.mp4?v=3",
-    hevcSrc: "/videos/showcase-1-hevc.mp4?v=3",
-    webmSrc: "/videos/showcase-1.webm?v=3",
-    mobileSrc: "/videos/showcase-1-mobile.mp4?v=3",
-    mobileHevcSrc: "/videos/showcase-1-mobile-hevc.mp4?v=3",
-    mobileWebmSrc: "/videos/showcase-1-mobile.webm?v=3",
+    src: "/videos/showcase-1-norm.mp4?v=3",
+    hevcSrc: "/videos/showcase-1-hevc-norm.mp4?v=3",
+    webmSrc: "/videos/showcase-1-norm.webm?v=3",
+    mobileSrc: "/videos/showcase-1-mobile-norm.mp4?v=3",
+    mobileHevcSrc: "/videos/showcase-1-mobile-hevc-norm.mp4?v=3",
+    mobileWebmSrc: "/videos/showcase-1-mobile-norm.webm?v=3",
     aspect: "landscape",
   },
   {
@@ -155,12 +177,12 @@ export const videoItems: VideoItem[] = [
     meta: "Video Editing · Talk",
     duration: "00:39",
     poster: "/images/videos/showcase-4-poster.webp",
-    src: "/videos/showcase-4.mp4?v=3",
-    hevcSrc: "/videos/showcase-4-hevc.mp4?v=3",
-    webmSrc: "/videos/showcase-4.webm?v=3",
-    mobileSrc: "/videos/showcase-4-mobile.mp4?v=3",
-    mobileHevcSrc: "/videos/showcase-4-mobile-hevc.mp4?v=3",
-    mobileWebmSrc: "/videos/showcase-4-mobile.webm?v=3",
+    src: "/videos/showcase-4-norm.mp4?v=3",
+    hevcSrc: "/videos/showcase-4-hevc-norm.mp4?v=3",
+    webmSrc: "/videos/showcase-4-norm.webm?v=3",
+    mobileSrc: "/videos/showcase-4-mobile-norm.mp4?v=3",
+    mobileHevcSrc: "/videos/showcase-4-mobile-hevc-norm.mp4?v=3",
+    mobileWebmSrc: "/videos/showcase-4-mobile-norm.webm?v=3",
     aspect: "landscape",
   },
   {
@@ -170,12 +192,12 @@ export const videoItems: VideoItem[] = [
     meta: "Gameplay · Editing",
     duration: "00:48",
     poster: "/images/videos/showcase-3-poster.webp",
-    src: "/videos/showcase-3.mp4?v=3",
-    hevcSrc: "/videos/showcase-3-hevc.mp4?v=3",
-    webmSrc: "/videos/showcase-3.webm?v=3",
-    mobileSrc: "/videos/showcase-3-mobile.mp4?v=3",
-    mobileHevcSrc: "/videos/showcase-3-mobile-hevc.mp4?v=3",
-    mobileWebmSrc: "/videos/showcase-3-mobile.webm?v=3",
+    src: "/videos/showcase-3-norm.mp4?v=3",
+    hevcSrc: "/videos/showcase-3-hevc-norm.mp4?v=3",
+    webmSrc: "/videos/showcase-3-norm.webm?v=3",
+    mobileSrc: "/videos/showcase-3-mobile-norm.mp4?v=3",
+    mobileHevcSrc: "/videos/showcase-3-mobile-hevc-norm.mp4?v=3",
+    mobileWebmSrc: "/videos/showcase-3-mobile-norm.webm?v=3",
     aspect: "landscape",
   },
   {
@@ -185,12 +207,12 @@ export const videoItems: VideoItem[] = [
     meta: "Web Development · Talk",
     duration: "00:37",
     poster: "/images/videos/showcase-2-poster.webp?v=3",
-    src: "/videos/showcase-2.mp4?v=3",
-    hevcSrc: "/videos/showcase-2-hevc.mp4?v=3",
-    webmSrc: "/videos/showcase-2.webm?v=3",
-    mobileSrc: "/videos/showcase-2-mobile.mp4?v=3",
-    mobileHevcSrc: "/videos/showcase-2-mobile-hevc.mp4?v=3",
-    mobileWebmSrc: "/videos/showcase-2-mobile.webm?v=3",
+    src: "/videos/showcase-2-norm.mp4?v=3",
+    hevcSrc: "/videos/showcase-2-hevc-norm.mp4?v=3",
+    webmSrc: "/videos/showcase-2-norm.webm?v=3",
+    mobileSrc: "/videos/showcase-2-mobile-norm.mp4?v=3",
+    mobileHevcSrc: "/videos/showcase-2-mobile-hevc-norm.mp4?v=3",
+    mobileWebmSrc: "/videos/showcase-2-mobile-norm.webm?v=3",
     aspect: "landscape",
   },
 ];
@@ -319,8 +341,3 @@ export const resumeLink = {
   label: "Résumé",
   href: "/Resume.pdf",
 } as const;
-
-export const footerLinks: SocialLink[] = [
-  ...socialLinks.filter((link) => link.id !== "github"),
-  { id: resumeLink.id, label: resumeLink.label, href: resumeLink.href },
-];

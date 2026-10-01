@@ -33,8 +33,7 @@ export function Navbar() {
   const menuId = useId();
   const navRef = useRef<HTMLElement>(null);
   const menuButtonRef = useRef<HTMLButtonElement>(null);
-  const { activeId: displayId, scrollToSection } =
-    useActiveSection(SECTION_LIST);
+  const { displayId, scrollToSection } = useActiveSection(SECTION_LIST);
   const { play, onClick } = useSfxHandlers();
 
   useNavMetrics(navRef);

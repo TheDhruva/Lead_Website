@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { memo, useEffect, useRef, useState } from "react";
 
 import { AnimatePresence, m } from "framer-motion";
 
@@ -11,7 +11,7 @@ import { EASING_OUT, FACE_CYCLE_INTERVAL_MS, MOTION } from "@/constants";
 import { heroPortraits } from "@/data";
 import { useCanPointerReact } from "@/hooks/use-can-pointer-react";
 import { useCinematicSection } from "@/hooks/use-cinematic-section";
-import { useEnterExit } from "@/hooks/use-enter-exit";
+import { type EnterExitState, useEnterExit } from "@/hooks/use-enter-exit";
 import { useFaceCycle } from "@/hooks/use-face-cycle";
 import { useMediaQuery } from "@/hooks/use-media-query";
 import { useReducedMotion } from "@/hooks/use-reduced-motion";
@@ -40,6 +40,123 @@ const STACK_EXITED = { opacity: 0 };
 /** CTA disengage on scroll-away: lifts slightly and settles out. */
 const CTA_SHOWN = { opacity: 1, y: 0, scale: 1 };
 const CTA_EXIT = { opacity: 0, y: -8, scale: 0.99 };
+
+/**
+ * Static desktop composition — presence word, headline, copy, CTAs.
+ * Memoized on primitive/stable props so the 2.4s face-cycle tick (which
+ * lives in `Hero` and only changes portrait indices) never re-renders
+ * typography, buttons, or Motion entrance props. CTA scroll-away still
+ * responds via `ctaState`; intro handoff via `started`.
+ */
+const HeroDesktopStatic = memo(function HeroDesktopStatic({
+  started,
+  ctaState,
+  prefersReducedMotion,
+  scrollTo,
+  ctaRef,
+}: {
+  started: boolean;
+  ctaState: EnterExitState;
+  prefersReducedMotion: boolean;
+  scrollTo: (hrefOrId: string) => void;
+  ctaRef: (element: HTMLDivElement | null) => void;
+}) {
+  return (
+    <>
+      {/* PRESENCE — complete-word background layer seated between
+          headline and copy with slight overlap on both.
+          Behind portraits, headline and copy. */}
+      <span
+        aria-hidden="true"
+        key={started ? "presence-live" : "presence-boot"}
+        className="hero-presence pointer-events-none absolute inset-x-0 top-[54%] flex -translate-y-1/2 justify-center overflow-visible select-none"
+      >
+        <span className="cinematic-layer cinematic-layer--atmosphere font-display leading-none whitespace-nowrap italic text-[clamp(8rem,16vw,18rem)]">
+          Presence
+        </span>
+      </span>
+
+      <m.div
+        className="relative z-10 mx-auto flex w-full max-w-none flex-col items-center px-4 text-center sm:px-6 md:px-10"
+        initial={prefersReducedMotion ? false : { opacity: 0 }}
+        animate={started ? { opacity: 1 } : {}}
+        transition={{
+          duration: 0.5,
+          ease: MOTION.reveal.ease,
+          delay: prefersReducedMotion ? 0 : 0.05,
+        }}
+      >
+        <p
+          id="hero-heading-visual"
+          className="cinematic-layer cinematic-layer--headline mb-6 font-condensed text-[clamp(3rem,9vw,9.5rem)] leading-[0.88] font-normal tracking-[-0.01em] text-foreground md:mb-8"
+        >
+          <AnimatedText
+            mode="mount"
+            start={started}
+            delay={0.12}
+            segments="Make Audience"
+            className="block uppercase"
+          />
+          <AnimatedText
+            mode="mount"
+            start={started}
+            delay={0.3}
+            segments="Feel Your"
+            className="block uppercase"
+          />
+        </p>
+        <p className="cinematic-layer cinematic-layer--copy mx-auto mb-8 max-w-xl text-center font-body-lg text-body-lg text-foreground-secondary md:mb-9">
+          <AnimatedText
+            mode="mount"
+            start={started}
+            level="word"
+            delay={0.58}
+            segments="Beautiful websites, powerful visuals, and videos that make your brand impossible to ignore. A cinematic approach to digital presence."
+          />
+        </p>
+        <div className="cinematic-layer cinematic-layer--cta flex flex-col items-center justify-center gap-4 sm:flex-row">
+          <m.div
+            ref={ctaRef}
+            className="flex flex-col items-center justify-center gap-4 sm:flex-row"
+            initial={
+              prefersReducedMotion ? false : { opacity: 0, y: 8, scale: 0.98 }
+            }
+            animate={
+              prefersReducedMotion
+                ? { opacity: 1, y: 0, scale: 1 }
+                : !started
+                  ? {}
+                  : ctaState === "exit"
+                    ? CTA_EXIT
+                    : CTA_SHOWN
+            }
+            transition={
+              ctaState === "exit" && !prefersReducedMotion
+                ? { duration: 0.35, ease: EASING_OUT }
+                : {
+                    duration: 0.5,
+                    ease: EASING_OUT,
+                    delay: prefersReducedMotion ? 0 : 0.76,
+                  }
+            }
+          >
+            <Button size="lg" sfx onClick={() => scrollTo("#contact")}>
+              I&apos;m Ready To Grow
+            </Button>
+            <Button
+              size="lg"
+              variant="ghost"
+              sfx
+              onClick={() => scrollTo("#projects")}
+            >
+              View Work
+            </Button>
+          </m.div>
+        </div>
+      </m.div>
+    </>
+  );
+});
 
 function PortraitStack({
   portraits,
@@ -425,18 +542,6 @@ export function Hero() {
             lg: so no visual gap; theatre gates first paint regardless. */}
         {isDesktop ? (
           <div className="hidden lg:contents">
-            {/* PRESENCE — complete-word background layer seated between
-                headline and copy with slight overlap on both.
-                Behind portraits, headline and copy. */}
-            <span
-              aria-hidden="true"
-              key={started ? "presence-live" : "presence-boot"}
-              className="hero-presence pointer-events-none absolute inset-x-0 top-[54%] flex -translate-y-1/2 justify-center overflow-visible select-none"
-            >
-              <span className="cinematic-layer cinematic-layer--atmosphere font-display leading-none whitespace-nowrap italic text-[clamp(8rem,16vw,18rem)]">
-                Presence
-              </span>
-            </span>
             {started ? (
               <PortraitStack
                 portraits={heroPortraits}
@@ -446,86 +551,14 @@ export function Hero() {
               />
             ) : null}
 
-            <m.div
-              className="relative z-10 mx-auto flex w-full max-w-none flex-col items-center px-4 text-center sm:px-6 md:px-10"
-              initial={prefersReducedMotion ? false : { opacity: 0 }}
-              animate={started ? { opacity: 1 } : {}}
-              transition={{
-                duration: 0.5,
-                ease: MOTION.reveal.ease,
-                delay: prefersReducedMotion ? 0 : 0.05,
-              }}
-            >
-              <p
-                id="hero-heading-visual"
-                className="cinematic-layer cinematic-layer--headline mb-6 font-condensed text-[clamp(3rem,9vw,9.5rem)] leading-[0.88] font-normal tracking-[-0.01em] text-foreground md:mb-8"
-              >
-                <AnimatedText
-                  mode="mount"
-                  start={started}
-                  delay={0.12}
-                  segments="Make Audience"
-                  className="block uppercase"
-                />
-                <AnimatedText
-                  mode="mount"
-                  start={started}
-                  delay={0.3}
-                  segments="Feel Your"
-                  className="block uppercase"
-                />
-              </p>
-              <p className="cinematic-layer cinematic-layer--copy mx-auto mb-8 max-w-xl text-center font-body-lg text-body-lg text-foreground-secondary md:mb-9">
-                <AnimatedText
-                  mode="mount"
-                  start={started}
-                  level="word"
-                  delay={0.58}
-                  segments="Beautiful websites, powerful visuals, and videos that make your brand impossible to ignore. A cinematic approach to digital presence."
-                />
-              </p>
-              <div className="cinematic-layer cinematic-layer--cta flex flex-col items-center justify-center gap-4 sm:flex-row">
-                <m.div
-                  ref={ctaRef}
-                  className="flex flex-col items-center justify-center gap-4 sm:flex-row"
-                  initial={
-                    prefersReducedMotion
-                      ? false
-                      : { opacity: 0, y: 8, scale: 0.98 }
-                  }
-                  animate={
-                    prefersReducedMotion
-                      ? { opacity: 1, y: 0, scale: 1 }
-                      : !started
-                        ? {}
-                        : ctaState === "exit"
-                          ? CTA_EXIT
-                          : CTA_SHOWN
-                  }
-                  transition={
-                    ctaState === "exit" && !prefersReducedMotion
-                      ? { duration: 0.35, ease: EASING_OUT }
-                      : {
-                          duration: 0.5,
-                          ease: EASING_OUT,
-                          delay: prefersReducedMotion ? 0 : 0.76,
-                        }
-                  }
-                >
-                  <Button size="lg" sfx onClick={() => scrollTo("#contact")}>
-                    I&apos;m Ready To Grow
-                  </Button>
-                  <Button
-                    size="lg"
-                    variant="ghost"
-                    sfx
-                    onClick={() => scrollTo("#projects")}
-                  >
-                    View Work
-                  </Button>
-                </m.div>
-              </div>
-            </m.div>
+            {/* Static typography/CTAs — memoized, untouched by face ticks */}
+            <HeroDesktopStatic
+              started={started}
+              ctaState={ctaState}
+              prefersReducedMotion={prefersReducedMotion}
+              scrollTo={scrollTo}
+              ctaRef={ctaRef}
+            />
 
             {started ? (
               <PortraitStack

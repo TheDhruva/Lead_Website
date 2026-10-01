@@ -214,7 +214,7 @@ export function VideoShowcase() {
   const swapTimeRef = useRef(0);
   const preloadStartedRef = useRef(false);
   const prefersReducedMotion = useReducedMotion();
-  const { play, setVideoAudioActive } = useAudio();
+  const { play, setVideoAudioActive, muted: globalMuted } = useAudio();
 
   const [currentIndex, setCurrentIndex] = useState(0);
   const [isSectionVisible, setIsSectionVisible] = useState(false);
@@ -243,6 +243,15 @@ export function VideoShowcase() {
   useEffect(() => {
     isMutedRef.current = isMuted;
   }, [isMuted]);
+  // Global mute is authoritative over every website-controlled sound,
+  // including <video> audio: while globally muted the element stays
+  // muted regardless of per-video intent; unmuting globally restores
+  // the user's stored per-video choice without resetting it.
+  useEffect(() => {
+    const v = activeRef.current;
+    if (!v) return;
+    v.muted = globalMuted || isMutedRef.current;
+  }, [globalMuted]);
   useEffect(() => {
     isPlayingRef.current = isPlaying;
   }, [isPlaying]);
@@ -290,10 +299,16 @@ export function VideoShowcase() {
       !userPausedRef.current
     ) {
       // resume autoplay when returning — unless the user explicitly stopped
-      v.muted = isMutedRef.current;
+      v.muted = globalMuted || isMutedRef.current;
       void v.play().catch(() => setAutoplayBlocked(true));
     }
-  }, [isSectionVisible, initialized, autoplayBlocked, setVideoAudioActive]);
+  }, [
+    isSectionVisible,
+    initialized,
+    autoplayBlocked,
+    globalMuted,
+    setVideoAudioActive,
+  ]);
 
   // helper to set sources on a video element
   const setVideoSources = useCallback(
@@ -422,7 +437,7 @@ export function VideoShowcase() {
     setAutoplayBlocked(false);
 
     setVideoSources(v, current);
-    v.muted = isMutedRef.current;
+    v.muted = globalMuted || isMutedRef.current;
     v.volume = VIDEO_PLAYBACK_VOLUME;
     v.currentTime = 0;
 
@@ -470,6 +485,7 @@ export function VideoShowcase() {
     current,
     initialized,
     isSectionVisible,
+    globalMuted,
     setVideoSources,
     setVideoAudioActive,
   ]);
@@ -627,12 +643,12 @@ export function VideoShowcase() {
     play("video-control");
     if (v.paused) {
       userPausedRef.current = false;
-      v.muted = isMutedRef.current;
+      v.muted = globalMuted || isMutedRef.current;
       void v
         .play()
         .then(() => {
           setIsPlaying(true);
-          if (!isMutedRef.current) setVideoAudioActive(true);
+          if (!isMutedRef.current && !globalMuted) setVideoAudioActive(true);
         })
         .catch(() => {
           setIsPlaying(false);
@@ -643,7 +659,7 @@ export function VideoShowcase() {
       v.pause();
       if (!isMutedRef.current) setVideoAudioActive(false);
     }
-  }, [play, setVideoAudioActive]);
+  }, [play, setVideoAudioActive, globalMuted]);
 
   const toggleMute = useCallback(
     (e?: React.MouseEvent) => {
@@ -651,11 +667,13 @@ export function VideoShowcase() {
       const v = activeRef.current;
       if (!v) return;
       play("video-control");
-      const next = !v.muted;
-      v.muted = next;
+      // Intent toggles from stored per-video choice (the element may be
+      // force-muted by global mute); the element obeys global OR intent.
+      const next = !isMutedRef.current;
+      v.muted = globalMuted || next;
       isMutedRef.current = next;
       setIsMuted(next);
-      if (!next) {
+      if (!next && !globalMuted) {
         v.volume = VIDEO_PLAYBACK_VOLUME;
         if (v.paused) {
           // unmuting while paused starts playback so the tap does something audible
@@ -670,9 +688,11 @@ export function VideoShowcase() {
               setIsPlaying(false);
             });
         } else setVideoAudioActive(true);
-      } else setVideoAudioActive(false);
+      } else if (next) {
+        setVideoAudioActive(false);
+      }
     },
-    [play, setVideoAudioActive],
+    [play, setVideoAudioActive, globalMuted],
   );
 
   const toggleFullscreen = useCallback(
@@ -780,7 +800,10 @@ export function VideoShowcase() {
                   ref={activeRef}
                   className="absolute inset-0 h-full w-full bg-transparent object-contain"
                   poster={current.poster}
-                  muted={isMuted}
+                  // Effective mute: global preference OR per-video intent.
+                  // React applies this on prop change; imperative paths
+                  // above enforce it synchronously between renders.
+                  muted={globalMuted || isMuted}
                   playsInline
                   disablePictureInPicture
                   preload={initialized ? "metadata" : "none"}

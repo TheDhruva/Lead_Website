@@ -1,7 +1,7 @@
 /**
  * Central sound configuration — THE DHRUVA cinematic UI sound design.
  *
- * Six curated assets, restrained by design. Volumes are starting values
+ * Seven curated assets, restrained by design. Volumes are starting values
  * tuned for quiet playback: the site must feel premium when sound is
  * barely audible. Nothing here should read as a game UI, notification
  * or loud click.

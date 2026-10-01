@@ -9,6 +9,7 @@ import { AnimatedText } from "@/components/motion/animated-text";
 import { Container } from "@/components/ui/container";
 import { services } from "@/data";
 import { useCinematicSection } from "@/hooks/use-cinematic-section";
+import { useMediaQuery } from "@/hooks/use-media-query";
 import { getScrollContainer } from "@/lib/scroll-container";
 import { cn } from "@/lib/utils";
 import { useAudio } from "@/providers/audio-provider";
@@ -23,12 +24,10 @@ type Service = (typeof services)[number];
  */
 function ServicePanel({
   service,
-  isFirst,
   isActive,
   onActivate,
 }: {
   service: Service;
-  isFirst: boolean;
   isActive: boolean;
   /** Fired on hover/focus/click — parent holds the canonical state. */
   onActivate: (id: string) => void;
@@ -69,7 +68,10 @@ function ServicePanel({
             fill
             sizes="(max-width: 1024px) 33vw, 55vw"
             className="object-cover"
-            priority={isFirst}
+            // Below-fold and never LCP (the hero portrait owns LCP with its
+            // own preload). No `priority`: the desktop subtree is hidden
+            // on mobile, where a priority image would still download.
+            loading="lazy"
           />
         </div>
         <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/45 to-black/20" />
@@ -314,6 +316,11 @@ export function Services() {
   const [activeId, setActiveId] = useState<string | null>(
     services[1]?.id ?? null,
   );
+  // Breakpoint-gated subtrees (matches md:): only the visible layout
+  // mounts, so the hidden breakpoint's next/image set never requests.
+  // Client-only section (ssr:false), so matchMedia is correct on first
+  // paint — no SSR mismatch. Same pattern as Hero's desktop/mobile split.
+  const isDesktopLayout = useMediaQuery("(min-width: 768px)");
   const mountedRef = useRef(false);
 
   // The single change whisper for both breakpoints — never on mount,
@@ -345,36 +352,37 @@ export function Services() {
         {/* Desktop — state-driven accordion. Card height derives
             from viewport minus heading, navbar safe zone and
             breathing room, so cards always finish above the pill. */}
-        <div className="hidden md:block">
-          <CssReveal delay={80}>
+        {isDesktopLayout ? (
+          <div className="hidden md:block">
+            <CssReveal delay={80}>
+              <div
+                className="cinematic-layer cinematic-layer--grid services-accordion flex h-[clamp(300px,calc(100svh-var(--nav-safe-top)-var(--floating-nav-clearance)-11rem),560px)] min-w-0 gap-4 lg:gap-5"
+                onMouseLeave={() => setActiveId(null)}
+              >
+                {services.map((service) => (
+                  <ServicePanel
+                    key={service.id}
+                    service={service}
+                    isActive={activeId === service.id}
+                    onActivate={setActiveId}
+                  />
+                ))}
+              </div>
+            </CssReveal>
+          </div>
+        ) : (
+          /* Mobile — vertical scroll-spy stack (no carousel) */
+          <div className="md:hidden">
+            <CssReveal delay={80}>
+              <MobileStack activeId={activeId} onActiveChange={setActiveId} />
+            </CssReveal>
+            {/* breathing room for floating navbar */}
             <div
-              className="cinematic-layer cinematic-layer--grid services-accordion flex h-[clamp(300px,calc(100svh-var(--nav-safe-top)-var(--floating-nav-clearance)-11rem),560px)] min-w-0 gap-4 lg:gap-5"
-              onMouseLeave={() => setActiveId(null)}
-            >
-              {services.map((service, idx) => (
-                <ServicePanel
-                  key={service.id}
-                  service={service}
-                  isFirst={idx === 0}
-                  isActive={activeId === service.id}
-                  onActivate={setActiveId}
-                />
-              ))}
-            </div>
-          </CssReveal>
-        </div>
-
-        {/* Mobile — vertical scroll-spy stack (no carousel) */}
-        <div className="md:hidden">
-          <CssReveal delay={80}>
-            <MobileStack activeId={activeId} onActiveChange={setActiveId} />
-          </CssReveal>
-          {/* breathing room for floating navbar */}
-          <div
-            className="h-[max(1rem,calc(var(--nav-height)+env(safe-area-inset-bottom)+8px))]"
-            aria-hidden
-          />
-        </div>
+              className="h-[max(1rem,calc(var(--nav-height)+env(safe-area-inset-bottom)+8px))]"
+              aria-hidden
+            />
+          </div>
+        )}
       </Container>
     </section>
   );

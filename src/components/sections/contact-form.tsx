@@ -271,7 +271,7 @@ export function ContactForm() {
             />
           </div>
 
-          <div>
+          <div className="contact-form__message">
             <Textarea
               label="Project Description"
               placeholder="Tell me about your project, goals, and anything you'd like me to know..."
@@ -315,7 +315,7 @@ export function ContactForm() {
             fullWidth
             sfx
             disabled={isSubmitting}
-            className="contact-form__submit group mt-0.5 min-h-[52px] hover:-translate-y-0.5 hover:shadow-[var(--shadow-md)] md:min-h-12 md:py-2.5 md:text-sm"
+            className="contact-form__submit group mt-0.5 min-h-[52px] hover:-translate-y-0.5 hover:shadow-[var(--shadow-md)] md:min-h-[44px] md:py-2.5 md:text-sm"
           >
             {isSubmitting ? (
               <span className="inline-flex items-center gap-2.5">

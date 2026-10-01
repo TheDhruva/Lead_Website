@@ -40,3 +40,7 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# camera originals / source masters (kept locally, never deployed or served;
+# public/ encodes are generated from these via scripts/optimize-videos.mjs)
+assets/videos/originals/*.mp4

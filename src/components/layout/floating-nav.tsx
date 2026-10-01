@@ -28,8 +28,7 @@ const SHORT_LABELS: Record<string, string> = {
  * (Section-snap audio lives in the top Navbar.)
  */
 export function FloatingNav() {
-  const { activeId: displayId, scrollToSection } =
-    useActiveSection(SECTION_LIST);
+  const { displayId, scrollToSection } = useActiveSection(SECTION_LIST);
   const { play } = useSfxHandlers();
   const prefersReducedMotion = useReducedMotion();
 

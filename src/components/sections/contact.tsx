@@ -54,8 +54,8 @@ export function Contact() {
       aria-labelledby="contact-heading"
     >
       <Container className="contact-scene__body flex w-full min-w-0 max-w-none flex-col gap-5 md:max-h-full md:gap-3 lg:gap-4">
-        <div className="contact-scene__main grid min-h-0 min-w-0 flex-1 grid-cols-1 items-start gap-4 max-md:gap-3.5 md:items-center md:gap-0">
-          <div className="cinematic-layer cinematic-layer--links min-w-0">
+        <div className="contact-scene__main grid min-h-0 min-w-0 flex-1 grid-cols-1 items-start gap-4 max-md:gap-3.5 lg:items-start lg:gap-0">
+          <div className="cinematic-layer cinematic-layer--links min-w-0 lg:self-start">
             <div className="contact-scene__intro flex min-w-0 flex-col gap-4 max-md:gap-3 md:gap-4">
               <Reveal y={16}>
                 <h2
@@ -74,7 +74,7 @@ export function Contact() {
                 </h2>
               </Reveal>
 
-              <div className="mt-auto flex min-w-0 flex-col gap-4 max-md:gap-3 md:gap-4">
+              <div className="flex min-w-0 flex-col gap-4 max-md:gap-3 md:gap-4">
                 <Reveal index={1}>
                   <a
                     href={resumeLink.href}
@@ -129,12 +129,12 @@ export function Contact() {
             </div>
           </div>
 
-          <div className="cinematic-layer cinematic-layer--panel min-w-0 w-full max-w-full self-start md:self-center">
+          <div className="cinematic-layer cinematic-layer--panel min-w-0 w-full max-w-full self-start lg:self-start">
             <Reveal
               index={2}
               y={24}
               scale={0.985}
-              className="contact-scene__panel w-full overflow-hidden p-3 md:p-0"
+              className="contact-scene__panel w-full overflow-hidden"
             >
               <ContactFormLazy />
             </Reveal>
