@@ -104,9 +104,9 @@ export const services: Service[] = [
 export const videoItems: VideoItem[] = [
   {
     id: "video-classic-spot",
-    title: "Classic Spot",
-    category: "Commercial",
-    meta: "Commercial · Editing · Color",
+    title: "YouTube Edit",
+    category: "YouTube",
+    meta: "Editing · YouTube",
     duration: "00:29",
     poster: "/images/videos/showcase-5-poster.webp",
     src: "/videos/showcase-5.mp4?v=3",
@@ -120,9 +120,9 @@ export const videoItems: VideoItem[] = [
   },
   {
     id: "video-street-reel",
-    title: "Street Reel",
-    category: "Short Form",
-    meta: "Reels · Editing · Captions",
+    title: "Motion Art",
+    category: "2D Motion",
+    meta: "2D Motion · Editing",
     duration: "00:09",
     poster: "/images/videos/showcase-6-poster.webp",
     src: "/videos/showcase-6.mp4?v=3",
@@ -135,9 +135,9 @@ export const videoItems: VideoItem[] = [
   },
   {
     id: "video-featured",
-    title: "Kinetic Type",
-    category: "Motion Design",
-    meta: "Typography · Motion · Editing",
+    title: "Personal Brand",
+    category: "Brand Film",
+    meta: "Brand Film · Editing",
     duration: "00:34",
     poster: "/images/videos/showcase-1-poster.webp?v=3",
     src: "/videos/showcase-1.mp4?v=3",
@@ -150,9 +150,9 @@ export const videoItems: VideoItem[] = [
   },
   {
     id: "video-landscape-3",
-    title: "Promo Reel",
-    category: "Social Media",
-    meta: "Editing · Motion · Sound",
+    title: "Editing Talk",
+    category: "Video Editing",
+    meta: "Video Editing · Talk",
     duration: "00:39",
     poster: "/images/videos/showcase-4-poster.webp",
     src: "/videos/showcase-4.mp4?v=3",
@@ -165,9 +165,9 @@ export const videoItems: VideoItem[] = [
   },
   {
     id: "video-landscape-2",
-    title: "Product Story",
-    category: "Commercial",
-    meta: "Commercial · Editing · Storytelling",
+    title: "Silksong",
+    category: "Gameplay",
+    meta: "Gameplay · Editing",
     duration: "00:48",
     poster: "/images/videos/showcase-3-poster.webp",
     src: "/videos/showcase-3.mp4?v=3",
@@ -180,9 +180,9 @@ export const videoItems: VideoItem[] = [
   },
   {
     id: "video-landscape-1",
-    title: "Cinematic Cut",
-    category: "Short Form",
-    meta: "Montage · Editing · Sound",
+    title: "Web Dev Talk",
+    category: "Web Development",
+    meta: "Web Development · Talk",
     duration: "00:37",
     poster: "/images/videos/showcase-2-poster.webp?v=3",
     src: "/videos/showcase-2.mp4?v=3",
@@ -202,7 +202,7 @@ export const projectRows: ProjectShowcaseRow[] = [
       id: "driving-school",
       title: "Driving School Website",
       description:
-        "A conversion-focused driving academy site with theory LMS and lesson booking.",
+        "A conversion-focused driving school site built around courses, trust, and lesson booking.",
       category: "Website",
       tags: ["Next.js", "Tailwind CSS", "Framer Motion"],
       image: "/images/projects/digital/website-1.webp",
@@ -215,7 +215,7 @@ export const projectRows: ProjectShowcaseRow[] = [
         id: "local-restaurant-menu",
         title: "Local Restaurant Menu Design",
         description:
-          "Editorial menu system with print-ready layouts and social campaign assets.",
+          "A print-ready menu system built for restaurant and social applications.",
         category: "Brand Identity",
         tags: ["Print", "Social Design"],
         image: "/images/projects/brand/poster-1.webp",
@@ -227,7 +227,7 @@ export const projectRows: ProjectShowcaseRow[] = [
         id: "product-brand",
         title: "Product Brand Identity",
         description:
-          "Packaging and identity system for a contemporary product line.",
+          "A visual identity and packaging system for a contemporary product line.",
         category: "Brand Identity",
         tags: ["Brand Identity", "Packaging"],
         image: "/images/projects/brand/poster-2.webp",
@@ -243,7 +243,7 @@ export const projectRows: ProjectShowcaseRow[] = [
       id: "golf-club",
       title: "Golf Club Landing Website",
       description:
-        "A precision-focused golf equipment landing experience built for conversion.",
+        "A product-focused landing experience designed around clarity and conversion.",
       category: "Website",
       tags: ["React", "GSAP", "UI/UX"],
       image: "/images/projects/digital/website-2.webp",
@@ -255,8 +255,7 @@ export const projectRows: ProjectShowcaseRow[] = [
       {
         id: "apparel",
         title: "Apparel Typography",
-        description:
-          "Type-led campaign system for a contemporary apparel label.",
+        description: "A type-led visual system built for an apparel campaign.",
         category: "Brand Identity",
         tags: ["Typography", "Campaign"],
         image: "/images/projects/brand/poster-3.webp",
@@ -268,7 +267,7 @@ export const projectRows: ProjectShowcaseRow[] = [
         id: "event-poster",
         title: "Event Poster Series",
         description:
-          "A cohesive poster language for a multi-night cultural series.",
+          "A unified poster system for a multi-night cultural event.",
         category: "Brand Identity",
         tags: ["Poster", "Motion"],
         image: "/images/projects/brand/poster-4.webp",

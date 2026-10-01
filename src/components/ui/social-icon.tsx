@@ -2,7 +2,9 @@ import type { ComponentType, SVGProps } from "react";
 
 import { Mail } from "lucide-react";
 
+import { useCanPointerReact } from "@/hooks/use-can-pointer-react";
 import { cn } from "@/lib/utils";
+import { useAudio } from "@/providers/audio-provider";
 import type { SocialLink } from "@/types";
 
 type IconProps = SVGProps<SVGSVGElement>;
@@ -97,6 +99,8 @@ interface SocialIconProps {
 export function SocialIcon({ link, className }: SocialIconProps) {
   const Icon = ICONS[link.id] ?? Mail;
   const isExternal = link.href.startsWith("http");
+  const { play } = useAudio();
+  const canHoverTick = useCanPointerReact();
 
   return (
     <a
@@ -104,19 +108,23 @@ export function SocialIcon({ link, className }: SocialIconProps) {
       target={isExternal ? "_blank" : undefined}
       rel={isExternal ? "noopener noreferrer" : undefined}
       aria-label={link.label}
+      onMouseEnter={() => {
+        if (canHoverTick) play("ui-hover");
+      }}
+      onClick={() => play("ui-click")}
       className={cn(
-        "group inline-flex min-h-10 w-fit max-w-full min-w-0 items-center gap-2 text-foreground-secondary transition-all duration-[250ms] ease-[cubic-bezier(0.22,1,0.36,1)] max-md:gap-1.5 md:min-h-11 md:gap-3",
-        "hover:-translate-y-0.5 hover:text-foreground",
-        "active:scale-[0.985] motion-reduce:active:scale-100",
+        "group inline-flex min-h-10 w-fit max-w-full min-w-0 items-center gap-2 text-foreground-secondary transition-[transform,color] duration-[220ms] ease-[cubic-bezier(0.22,1,0.36,1)] max-md:gap-1.5 md:min-h-11 md:gap-3",
+        "hover:translate-x-1 hover:text-foreground",
+        "active:scale-[0.985] motion-reduce:transform-none motion-reduce:active:scale-100",
         "focus-visible:rounded-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--background)]",
         className,
       )}
     >
       <Icon
-        className="h-[18px] w-[18px] shrink-0 transition-transform duration-[250ms] ease-out group-hover:scale-110"
+        className="h-[18px] w-[18px] shrink-0 transition-transform duration-[220ms] ease-out group-hover:scale-110 md:h-5 md:w-5"
         aria-hidden="true"
       />
-      <span className="whitespace-nowrap font-label-md text-[13px] tracking-wide md:text-label-md">
+      <span className="whitespace-nowrap font-sans text-[14px] font-medium tracking-wide md:text-base">
         {link.label}
       </span>
     </a>

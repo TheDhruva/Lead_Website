@@ -4,6 +4,7 @@ import { useState } from "react";
 
 import { zodResolver } from "@hookform/resolvers/zod";
 import { AnimatePresence, m } from "framer-motion";
+import { ArrowUpRight } from "lucide-react";
 import {
   Controller,
   type FieldErrors,
@@ -34,7 +35,7 @@ const defaultValues: ContactFormValues = {
   name: "",
   email: "",
   service: "Website",
-  budget: "Let's Discuss",
+  budget: "Under $500",
   timeline: "Flexible",
   message: "",
   website: "",
@@ -192,7 +193,7 @@ export function ContactForm() {
       ) : (
         <m.form
           key="form"
-          className="contact-form flex min-w-0 flex-col gap-3 max-md:gap-2.5 md:gap-2"
+          className="contact-form flex min-w-0 flex-col gap-2"
           onSubmit={handleSubmit(onSubmit, onInvalid)}
           noValidate
           aria-label="Contact form"
@@ -200,7 +201,7 @@ export function ContactForm() {
           exit={prefersReducedMotion ? undefined : { opacity: 0, y: -8 }}
           transition={{ duration: 0.4, ease: EASING_OUT }}
         >
-          <div className="grid min-w-0 grid-cols-1 gap-3 max-md:gap-2.5 sm:grid-cols-2 md:gap-2">
+          <div className="grid min-w-0 grid-cols-2 gap-1.5 md:gap-2">
             <Input
               label="Name"
               placeholder="Jane Doe"
@@ -236,7 +237,7 @@ export function ContactForm() {
             )}
           />
 
-          <div className="grid min-w-0 grid-cols-1 gap-3 max-md:gap-2.5 sm:grid-cols-2 md:gap-2">
+          <div className="grid min-w-0 grid-cols-1 gap-2 sm:grid-cols-2 md:gap-2">
             <Controller
               name="budget"
               control={control}
@@ -314,7 +315,7 @@ export function ContactForm() {
             fullWidth
             sfx
             disabled={isSubmitting}
-            className="contact-form__submit mt-0.5 min-h-12 hover:-translate-y-0.5 hover:shadow-[var(--shadow-md)] md:min-h-10 md:py-2.5 md:text-sm"
+            className="contact-form__submit group mt-0.5 min-h-[52px] hover:-translate-y-0.5 hover:shadow-[var(--shadow-md)] md:min-h-12 md:py-2.5 md:text-sm"
           >
             {isSubmitting ? (
               <span className="inline-flex items-center gap-2.5">
@@ -326,7 +327,13 @@ export function ContactForm() {
                 Sending
               </span>
             ) : (
-              "Let's Build Something Great"
+              <span className="inline-flex items-center gap-2">
+                Let&apos;s Build Something Great
+                <ArrowUpRight
+                  className="h-4 w-4 transition-transform duration-200 ease-out group-hover:translate-x-1 motion-reduce:transition-none motion-reduce:group-hover:translate-x-0"
+                  aria-hidden="true"
+                />
+              </span>
             )}
           </Button>
         </m.form>

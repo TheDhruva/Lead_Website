@@ -133,7 +133,7 @@ function PortraitStack({
         stackRef(el);
       }}
       className={cn(
-        "pointer-events-none absolute top-[44%] hidden h-[34rem] w-80 -translate-y-1/2 lg:block xl:h-[42rem] xl:w-96 cinematic-layer cinematic-layer--visual",
+        "pointer-events-none absolute top-[44%] hidden h-[34rem] w-80 -translate-y-1/2 lg:block xl:h-[42rem] xl:w-96",
         side === "left" ? "left-0" : "right-0",
       )}
       aria-hidden="true"
@@ -150,9 +150,10 @@ function PortraitStack({
           ...STACK_SHOWN,
           transition: { duration: 0.3, ease: EASING_OUT },
         },
-        // Opacity only: translate/scale stay with the scroll-linked
-        // cinematic drift on this same element (inline transforms would
-        // override the drift permanently). Drift moves it, fade exits it.
+        // Opacity only: this node owns Motion opacity and nothing else.
+        // Scroll-linked cinematic drift (transform + opacity) lives on
+        // the wrapper below, so inline Motion styles can never override
+        // the drift. Drift moves it, fade exits it — one owner each.
         exited: {
           ...STACK_EXITED,
           transition: { duration: 0.4, ease: EASING_OUT },
@@ -165,46 +166,53 @@ function PortraitStack({
       }}
     >
       <div
-        ref={gazeRef}
-        className="hero-cutout-gaze absolute inset-0"
-        style={{ transformStyle: "preserve-3d" }}
+        className="cinematic-layer cinematic-layer--visual absolute inset-0"
+        aria-hidden="true"
       >
-        <AnimatePresence mode="sync" initial={false}>
-          <m.div
-            key={active.id}
-            className="absolute inset-0"
-            style={{ mixBlendMode: "normal" }}
-            initial={
-              prefersReducedMotion
-                ? false
-                : { opacity: 0.25, scale: 0.98, rotate: tilt * 1.1, y: 14 }
-            }
-            animate={{ opacity: 1, scale: 1, rotate: tilt, y: 0 }}
-            exit={
-              prefersReducedMotion
-                ? undefined
-                : { opacity: 0, scale: 0.98, rotate: tilt, y: -10 }
-            }
-            transition={
-              prefersReducedMotion
-                ? { duration: 0.01 }
-                : { duration: 0.6, ease: EASING_OUT }
-            }
-          >
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img
-              src={active.src}
-              alt=""
-              draggable={false}
-              loading={side === "left" && activeIndex === 0 ? "eager" : "lazy"}
-              fetchPriority={
-                side === "left" && activeIndex === 0 ? "high" : "low"
+        <div
+          ref={gazeRef}
+          className="hero-cutout-gaze absolute inset-0"
+          style={{ transformStyle: "preserve-3d" }}
+        >
+          <AnimatePresence mode="sync" initial={false}>
+            <m.div
+              key={active.id}
+              className="absolute inset-0"
+              style={{ mixBlendMode: "normal" }}
+              initial={
+                prefersReducedMotion
+                  ? false
+                  : { opacity: 0.25, scale: 0.98, rotate: tilt * 1.1, y: 14 }
               }
-              decoding="async"
-              className="hero-cutout absolute inset-0 h-full w-full object-contain"
-            />
-          </m.div>
-        </AnimatePresence>
+              animate={{ opacity: 1, scale: 1, rotate: tilt, y: 0 }}
+              exit={
+                prefersReducedMotion
+                  ? undefined
+                  : { opacity: 0, scale: 0.98, rotate: tilt, y: -10 }
+              }
+              transition={
+                prefersReducedMotion
+                  ? { duration: 0.01 }
+                  : { duration: 0.6, ease: EASING_OUT }
+              }
+            >
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src={active.src}
+                alt=""
+                draggable={false}
+                loading={
+                  side === "left" && activeIndex === 0 ? "eager" : "lazy"
+                }
+                fetchPriority={
+                  side === "left" && activeIndex === 0 ? "high" : "low"
+                }
+                decoding="async"
+                className="hero-cutout absolute inset-0 h-full w-full object-contain"
+              />
+            </m.div>
+          </AnimatePresence>
+        </div>
       </div>
     </m.div>
   );

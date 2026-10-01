@@ -25,7 +25,7 @@ export interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
  */
 const variantClasses: Record<ButtonVariant, string> = {
   primary:
-    "bg-lacquer text-paper border border-lacquer shadow-[var(--shadow-sm)] hover:bg-bright-lacquer hover:border-bright-lacquer hover:-translate-y-px hover:shadow-[var(--shadow-md)] active:translate-y-0 active:scale-[0.985] dark:bg-bright-lacquer dark:border-bright-lacquer dark:hover:bg-lacquer dark:hover:border-lacquer focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--background)]",
+    "bg-lacquer text-paper border border-lacquer shadow-[var(--shadow-sm)] hover:bg-dark-lacquer hover:border-dark-lacquer hover:-translate-y-px hover:shadow-[var(--shadow-md)] active:translate-y-0 active:scale-[0.985] dark:bg-bright-lacquer dark:border-bright-lacquer dark:hover:bg-dark-lacquer dark:hover:border-dark-lacquer focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--background)]",
   secondary:
     "bg-transparent text-foreground border border-border hover:-translate-y-px hover:bg-card-hover hover:border-border-hover hover:text-foreground active:translate-y-0 active:scale-[0.985] focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--background)]",
   ghost:
@@ -77,7 +77,7 @@ export const Button = forwardRef<HTMLButtonElement, ButtonProps>(
           if (sfx) playClick();
         }}
         className={cn(
-          "inline-flex cursor-pointer items-center justify-center gap-2 rounded-md font-sans text-sm font-semibold tracking-[0.04em] whitespace-nowrap uppercase transition-all duration-[180ms] ease-[cubic-bezier(0.16,1,0.3,1)] disabled:pointer-events-none disabled:opacity-50 motion-reduce:transform-none motion-reduce:transition-colors [&_svg]:size-4 [&_svg]:shrink-0",
+          "inline-flex cursor-pointer items-center justify-center gap-2 rounded-md font-sans text-sm font-semibold tracking-[0.04em] whitespace-nowrap uppercase transition-[transform,box-shadow,background-color,border-color,color] duration-[180ms] ease-[cubic-bezier(0.16,1,0.3,1)] disabled:pointer-events-none disabled:opacity-50 motion-reduce:transform-none motion-reduce:transition-colors [&_svg]:size-4 [&_svg]:shrink-0",
           variantClasses[variant],
           sizeClasses[size],
           fullWidth && "w-full",

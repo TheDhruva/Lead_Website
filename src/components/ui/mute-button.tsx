@@ -23,7 +23,11 @@ export function MuteButton({ className }: MuteButtonProps) {
     <m.button
       type="button"
       aria-label={
-        !unlocked ? "Enable sound" : muted ? "Unmute sound" : "Mute sound"
+        !unlocked
+          ? "Enable ambient audio"
+          : muted
+            ? "Unmute ambient audio"
+            : "Mute ambient audio"
       }
       aria-pressed={unlocked ? muted : undefined}
       initial={prefersReducedMotion ? false : { opacity: 0, y: 8 }}

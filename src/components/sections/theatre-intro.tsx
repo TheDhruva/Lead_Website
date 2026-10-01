@@ -69,11 +69,11 @@ export function TheatreIntro() {
 
       // Signal the hero to begin assembling during this exit transition
       // so the handoff feels like one continuous composition. Deferred
-      // ~450ms so the intro owns the first beat of the exit: the curtain
-      // is already lifting when the hero stirs, never before.
+      // ~120ms so the intro owns the first beat of the exit while the
+      // hero is already stirring underneath the lifting curtain.
       // Fire-and-forget is safe: markDeparting only touches the module
       // snapshot (idempotent), never component state.
-      window.setTimeout(() => markDeparting(), 450);
+      window.setTimeout(() => markDeparting(), 120);
       setPhase((current) =>
         current === "reveal" || current === "loading" || current === "ready"
           ? "exiting"
@@ -153,8 +153,12 @@ export function TheatreIntro() {
             }
           }}
           tabIndex={showEnterPrompt ? 0 : -1}
-          initial={{ opacity: 1 }}
-          animate={{ opacity: exiting ? 0 : 1 }}
+          initial={{ opacity: 1, y: 0, scale: 1 }}
+          animate={
+            exiting
+              ? { opacity: 0, y: -24, scale: 1.02 }
+              : { opacity: 1, y: 0, scale: 1 }
+          }
           transition={{
             duration: exiting ? 0.4 : 0,
             delay: exiting ? 0.55 : 0,

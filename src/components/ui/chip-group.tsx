@@ -3,6 +3,7 @@
 import { type KeyboardEvent, useRef } from "react";
 
 import { cn } from "@/lib/utils";
+import { useAudio } from "@/providers/audio-provider";
 
 interface ChipGroupProps {
   label: string;
@@ -30,9 +31,18 @@ export function ChipGroup({
   const labelId = `${name}-label`;
   const errorId = `${name}-error`;
   const buttonRefs = useRef<Map<string, HTMLButtonElement>>(new Map());
+  const { play } = useAudio();
 
   const focusOption = (option: string) => {
     buttonRefs.current.get(option)?.focus();
+  };
+
+  // One soft tactile tick per genuine selection change — reselecting
+  // the active option stays silent; the provider cooldown absorbs
+  // rapid arrow-key sweeps.
+  const selectOption = (option: string) => {
+    if (option !== value) play("video-control");
+    onChange(option);
   };
 
   const handleKeyDown = (
@@ -54,7 +64,7 @@ export function ChipGroup({
       case " ":
       case "Enter":
         event.preventDefault();
-        onChange(options[index]!);
+        selectOption(options[index]!);
         return;
       default:
         return;
@@ -62,7 +72,7 @@ export function ChipGroup({
 
     event.preventDefault();
     const nextOption = options[nextIndex!]!;
-    onChange(nextOption);
+    selectOption(nextOption);
     focusOption(nextOption);
   };
 
@@ -73,10 +83,7 @@ export function ChipGroup({
     >
       <legend
         id={labelId}
-        className={cn(
-          "block font-label-md text-label-md text-foreground-secondary",
-          compact ? "mb-2" : "mb-3",
-        )}
+        className="mb-3 block font-sans text-[13px] font-medium text-foreground"
       >
         {label}
       </legend>
@@ -104,14 +111,14 @@ export function ChipGroup({
               role="radio"
               aria-checked={selected}
               tabIndex={selected ? 0 : -1}
-              onClick={() => onChange(option)}
+              onClick={() => selectOption(option)}
               onKeyDown={(event) => handleKeyDown(event, index)}
               className={cn(
-                "rounded-full border font-label-md transition-all duration-[250ms] ease-out",
+                "rounded-full border font-label-md transition-[border-color,background-color,color,box-shadow,transform] duration-[250ms] ease-out",
                 "active:scale-[0.985] motion-reduce:active:scale-100",
                 "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--background)]",
                 compact
-                  ? "min-h-[44px] px-3 py-2 text-xs"
+                  ? "min-h-10 px-3 py-2 text-xs"
                   : "min-h-[44px] px-3.5 py-2 text-sm",
                 selected
                   ? "border-primary bg-primary text-primary-foreground shadow-[var(--shadow-sm)]"

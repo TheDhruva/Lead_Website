@@ -13,6 +13,8 @@ export const SFX = {
   "hero-transition": "/audio/sfx/hero-transition.mp3",
   /** Tiny tactile click — buttons, toggles, submit confirmation */
   "ui-click": "/audio/sfx/ui-click.mp3",
+  /** Whisper-soft tick — guarded hover/focus only, never bare */
+  "ui-hover": "/audio/sfx/ui-hover.mp3",
   /** Softer tick — section navigation activation only */
   "nav-click": "/audio/sfx/nav-click.mp3",
   /** Very short soft air — service active-card change only */
@@ -22,6 +24,16 @@ export const SFX = {
 } as const;
 
 export type SfxKey = keyof typeof SFX;
+
+export const AMBIENT_TRACK = "/audio/ambient/heavenly-music.mp3";
+
+/** Ambient bed — audible but not dominant */
+export const AMBIENT_TARGET_VOLUME = 0.22;
+/** Duck ambient while a showcase video plays with sound on */
+export const AMBIENT_DUCKED_VOLUME = 0.07;
+
+export const AMBIENT_FADE_MS = 420;
+export const AMBIENT_DUCK_MS = 520;
 
 export interface SfxConfig {
   /** Playback gain (0–1). All values deliberately quiet. */
@@ -34,6 +46,7 @@ export const SOUND_CONFIG: Record<SfxKey, SfxConfig> = {
   "intro-swell": { volume: 0.1, cooldownMs: 2000 },
   "hero-transition": { volume: 0.12, cooldownMs: 1500 },
   "ui-click": { volume: 0.1, cooldownMs: 60 },
+  "ui-hover": { volume: 0.05, cooldownMs: 90 },
   "nav-click": { volume: 0.07, cooldownMs: 300 },
   "service-expand": { volume: 0.08, cooldownMs: 450 },
   "video-control": { volume: 0.09, cooldownMs: 120 },

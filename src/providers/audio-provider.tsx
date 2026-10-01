@@ -12,6 +12,11 @@ import {
 } from "react";
 
 import {
+  AMBIENT_DUCKED_VOLUME,
+  AMBIENT_DUCK_MS,
+  AMBIENT_FADE_MS,
+  AMBIENT_TARGET_VOLUME,
+  AMBIENT_TRACK,
   SFX,
   SFX_DUCKED_MASTER,
   SFX_MASTER,
@@ -27,7 +32,7 @@ interface AudioContextValue {
   unlocked: boolean;
   videoAudioActive: boolean;
   toggleMute: () => void;
-  /** Call from a user gesture (click / key) to start the audio engine */
+  /** Call from a user gesture (click / key) to start ambient + SFX */
   unlockAudio: () => void;
   setVideoAudioActive: (active: boolean) => void;
 }
@@ -61,14 +66,17 @@ interface EngineRefs {
 }
 
 /**
- * Central cinematic sound manager (Web Audio API).
+ * Central cinematic sound manager (Web Audio SFX + looping ambient bed).
  *
  * - One lazy AudioContext, created on first user gesture (autoplay-safe).
  * - All SFX preloaded + decoded once at unlock; reused AudioBuffers.
- * - No `new Audio()` per interaction, no fetch-on-click — playback is
+ * - Ambient bed is a separate looping HTMLAudio element (4MB) that only
+ *   downloads after the user opts into sound — never speculatively.
+ * - No `new Audio()` per interaction, no fetch-on-click — SFX playback is
  *   an instant buffer-source start.
  * - Per-key cooldowns + a 2-voice cap prevent stacking on rapid input.
- * - Master gain gives instant global mute; preference persists.
+ * - Master gain gives instant global SFX mute; ambient fades separately;
+ *   preference persists.
  * - Reduced-motion disables the engine entirely (enhancement only).
  * - Every failure path degrades silently (dev-only warning).
  */
@@ -98,6 +106,8 @@ export function AudioProvider({ children }: AudioProviderProps) {
   const mutedRef = useRef(false);
   const unlockedRef = useRef(false);
   const videoAudioCountRef = useRef(0);
+  const ambientRef = useRef<HTMLAudioElement | null>(null);
+  const fadeFrameRef = useRef<number | null>(null);
 
   useEffect(() => {
     mutedRef.current = muted;
@@ -113,6 +123,12 @@ export function AudioProvider({ children }: AudioProviderProps) {
   useEffect(() => {
     const state = engine.current;
     return () => {
+      if (fadeFrameRef.current !== null) {
+        cancelAnimationFrame(fadeFrameRef.current);
+        fadeFrameRef.current = null;
+      }
+      ambientRef.current?.pause();
+      ambientRef.current = null;
       state.voices.forEach((voice) => {
         try {
           voice.stop();
@@ -127,6 +143,65 @@ export function AudioProvider({ children }: AudioProviderProps) {
       }
     };
   }, []);
+
+  const getAmbientTarget = useCallback(() => {
+    if (mutedRef.current) return 0;
+    if (videoAudioCountRef.current > 0) return AMBIENT_DUCKED_VOLUME;
+    return AMBIENT_TARGET_VOLUME;
+  }, []);
+
+  const fadeAmbient = useCallback((toVolume: number, durationMs: number) => {
+    const ambient = ambientRef.current;
+    if (!ambient) return;
+
+    if (fadeFrameRef.current !== null) {
+      cancelAnimationFrame(fadeFrameRef.current);
+      fadeFrameRef.current = null;
+    }
+
+    const startVolume = ambient.volume;
+    const startTs = performance.now();
+
+    const tick = (now: number) => {
+      const progress = Math.min((now - startTs) / durationMs, 1);
+      ambient.volume = Math.min(
+        1,
+        Math.max(0, startVolume + (toVolume - startVolume) * progress),
+      );
+
+      if (progress < 1) {
+        fadeFrameRef.current = requestAnimationFrame(tick);
+      } else {
+        fadeFrameRef.current = null;
+      }
+    };
+
+    fadeFrameRef.current = requestAnimationFrame(tick);
+  }, []);
+
+  const ensureAmbient = useCallback((): HTMLAudioElement | null => {
+    if (disabled || typeof window === "undefined") return null;
+    if (ambientRef.current) return ambientRef.current;
+
+    const ambient = new Audio(AMBIENT_TRACK);
+    ambient.loop = true;
+    ambient.preload = "auto";
+    ambient.volume = 0;
+    ambientRef.current = ambient;
+    return ambient;
+  }, [disabled]);
+
+  const startAmbientPlayback = useCallback(() => {
+    const ambient = ensureAmbient();
+    if (!ambient) return;
+
+    void ambient
+      .play()
+      .then(() => {
+        fadeAmbient(getAmbientTarget(), AMBIENT_FADE_MS);
+      })
+      .catch(noop);
+  }, [ensureAmbient, fadeAmbient, getAmbientTarget]);
 
   const getSfxMultiplier = useCallback(() => {
     if (videoAudioCountRef.current > 0) return SFX_MASTER * SFX_DUCKED_MASTER;
@@ -194,8 +269,18 @@ export function AudioProvider({ children }: AudioProviderProps) {
       void Promise.all(
         (Object.keys(SFX) as SfxKey[]).map((key) => decodeKey(key)),
       );
+      // Start the looping ambient bed (only after explicit user gesture).
+      startAmbientPlayback();
+    } else if (!mutedRef.current) {
+      fadeAmbient(getAmbientTarget(), AMBIENT_FADE_MS);
     }
-  }, [disabled, decodeKey]);
+  }, [
+    disabled,
+    decodeKey,
+    startAmbientPlayback,
+    fadeAmbient,
+    getAmbientTarget,
+  ]);
 
   const toggleMute = useCallback(() => {
     if (disabled || !unlockedRef.current) return;
@@ -206,23 +291,34 @@ export function AudioProvider({ children }: AudioProviderProps) {
       if (ctx && master) {
         master.gain.setTargetAtTime(next ? 0 : 1, ctx.currentTime, 0.03);
       }
+      fadeAmbient(next ? 0 : getAmbientTarget(), AMBIENT_FADE_MS);
       try {
         localStorage.setItem("dhruva:muted", next ? "1" : "0");
       } catch {}
       return next;
     });
-  }, [disabled]);
+  }, [disabled, fadeAmbient, getAmbientTarget]);
 
-  const setVideoAudioActive = useCallback((active: boolean) => {
-    const nextCount = Math.max(
-      0,
-      videoAudioCountRef.current + (active ? 1 : -1),
-    );
-    if (nextCount === videoAudioCountRef.current) return;
+  const setVideoAudioActive = useCallback(
+    (active: boolean) => {
+      const nextCount = Math.max(
+        0,
+        videoAudioCountRef.current + (active ? 1 : -1),
+      );
+      if (nextCount === videoAudioCountRef.current) return;
 
-    videoAudioCountRef.current = nextCount;
-    setVideoAudioActiveState(nextCount > 0);
-  }, []);
+      videoAudioCountRef.current = nextCount;
+      setVideoAudioActiveState(nextCount > 0);
+
+      if (!unlockedRef.current || mutedRef.current) return;
+
+      fadeAmbient(
+        getAmbientTarget(),
+        nextCount > 0 ? AMBIENT_DUCK_MS : AMBIENT_FADE_MS,
+      );
+    },
+    [fadeAmbient, getAmbientTarget],
+  );
 
   const play = useCallback(
     (key: SfxKey) => {

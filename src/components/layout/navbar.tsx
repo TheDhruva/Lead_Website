@@ -33,7 +33,8 @@ export function Navbar() {
   const menuId = useId();
   const navRef = useRef<HTMLElement>(null);
   const menuButtonRef = useRef<HTMLButtonElement>(null);
-  const { activeId, scrollToSection } = useActiveSection(SECTION_LIST);
+  const { activeId: displayId, scrollToSection } =
+    useActiveSection(SECTION_LIST);
   const { play, onClick } = useSfxHandlers();
 
   useNavMetrics(navRef);
@@ -90,8 +91,11 @@ export function Navbar() {
   const go = (href: string) => {
     // One quiet tick per user-activated navigation — never on scroll.
     play("nav-click");
-    scrollToSection(href);
+    // Release the menu lock BEFORE starting travel so the unlock effect
+    // never restores the stale pre-menu scroll position over the tween
+    // (unlock also guards via the navigating flag — belt and suspenders).
     closeMenu();
+    scrollToSection(href);
   };
 
   return (
@@ -166,15 +170,34 @@ export function Navbar() {
               role="dialog"
               aria-modal="true"
               aria-label="Menu"
-              className="nav-menu-panel absolute top-0 right-0 left-0 border-b border-border bg-background px-5 pt-12 pb-6 z-10"
+              className="nav-menu-panel absolute top-0 right-0 left-0 border-b border-border bg-background px-5 pt-4 pb-5 z-10"
             >
-              <ul className="flex flex-col">
-                {NAV_ITEMS.map((item) => {
+              <div className="flex h-10 items-center justify-between">
+                <span className="font-sans text-[13px] font-bold tracking-[0.22em] text-foreground uppercase">
+                  The&nbsp;Dhruva
+                </span>
+                <button
+                  type="button"
+                  onClick={closeMenu}
+                  aria-label="Close menu"
+                  className="inline-flex h-9 w-9 items-center justify-center rounded-full text-foreground transition-colors duration-200 hover:bg-card-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                >
+                  <X className="h-5 w-5" aria-hidden="true" strokeWidth={2} />
+                </button>
+              </div>
+              <ul className="mt-2 flex flex-col">
+                {NAV_ITEMS.map((item, index) => {
                   const id = item.href.replace("#", "");
-                  const isActive = activeId === id;
+                  const isActive = displayId === id;
 
                   return (
-                    <li key={item.href}>
+                    <li
+                      key={item.href}
+                      className="nav-menu-item"
+                      style={{
+                        ["--nav-item-delay" as string]: `${index * 45}ms`,
+                      }}
+                    >
                       <a
                         href={item.href}
                         onClick={(event) => {
@@ -183,22 +206,35 @@ export function Navbar() {
                         }}
                         aria-current={isActive ? "true" : undefined}
                         className={cn(
-                          "flex items-center justify-between border-b border-divider py-3 font-sans text-sm font-semibold tracking-[0.14em] uppercase transition-colors duration-200 last:border-b-0 focus-visible:rounded-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+                          "flex items-center justify-between border-b border-divider py-2.5 font-sans text-sm font-semibold tracking-[0.14em] uppercase transition-colors duration-200 last:border-b-0 focus-visible:rounded-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
                           isActive
                             ? "text-lacquer dark:text-bright-lacquer"
                             : "text-foreground",
                         )}
                       >
-                        {item.label}
+                        <span className="inline-flex items-center gap-2.5">
+                          <span
+                            aria-hidden="true"
+                            className={cn(
+                              "h-[2px] w-4 rounded-full transition-colors duration-200",
+                              isActive
+                                ? "bg-lacquer dark:bg-bright-lacquer"
+                                : "bg-transparent",
+                            )}
+                          />
+                          {item.label}
+                        </span>
                         <span
                           aria-hidden="true"
                           className={cn(
-                            "h-1.5 w-1.5 rounded-full",
+                            "text-xs transition-[opacity,transform] duration-200",
                             isActive
-                              ? "bg-lacquer dark:bg-bright-lacquer"
-                              : "bg-transparent",
+                              ? "translate-x-0 text-lacquer opacity-100 dark:text-bright-lacquer"
+                              : "-translate-x-1 text-foreground-secondary opacity-0",
                           )}
-                        />
+                        >
+                          →
+                        </span>
                       </a>
                     </li>
                   );

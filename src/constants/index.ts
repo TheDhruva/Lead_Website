@@ -41,7 +41,6 @@ export const CONTACT_BUDGETS = [
   "$500 – $1.5k",
   "$1.5k – $5k",
   "$5k+",
-  "Let's Discuss",
 ] as const;
 
 export const CONTACT_TIMELINES = [
@@ -50,6 +49,17 @@ export const CONTACT_TIMELINES = [
   "1 Month",
   "Flexible",
 ] as const;
+
+/** Shared active-section observation language.
+ *
+ * The navbar, services scroll-spy, and video visibility observers each
+ * keep purpose-specific bands, but they all resolve against the same
+ * canonical `#scroll-container` root. These navbar values are the
+ * reference: a wide center band with fine thresholds so the active pill
+ * follows the visually dominant section without flutter at boundaries.
+ */
+export const ACTIVE_SECTION_ROOT_MARGIN = "-35% 0px -45% 0px" as const;
+export const ACTIVE_SECTION_THRESHOLDS = [0, 0.2, 0.4, 0.6, 0.8, 1] as const;
 
 /** Thin loading line duration before enter prompt / auto-advance (CSS-driven, no per-frame React state) */
 export const THEATRE_INTRO_LOAD_MS = 1400;

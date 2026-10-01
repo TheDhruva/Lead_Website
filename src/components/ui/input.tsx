@@ -15,7 +15,7 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(
       <div>
         <label
           htmlFor={inputId}
-          className="mb-2 block font-label-md text-label-md text-foreground-secondary"
+          className="mb-2 block font-sans text-[13px] font-medium text-foreground"
         >
           {label}
         </label>
@@ -25,7 +25,7 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(
           aria-invalid={Boolean(error)}
           aria-describedby={error ? `${inputId}-error` : undefined}
           className={cn(
-            "w-full rounded-lg border border-input-border bg-input px-4 py-3 text-foreground transition-[border-color,box-shadow,background-color] duration-300 ease-[cubic-bezier(0.4,0,0.2,1)] placeholder:text-muted-foreground focus:border-ring focus:outline-none focus:ring-2 focus:ring-ring/30",
+            "w-full rounded-[20px] border border-input-border bg-input px-4 py-3 text-foreground transition-[border-color,box-shadow,background-color] duration-200 ease-[cubic-bezier(0.4,0,0.2,1)] placeholder:text-muted-foreground focus:border-ring focus:outline-none focus:ring-2 focus:ring-ring/30",
             error && "border-error focus:border-error focus:ring-error",
             className,
           )}

@@ -8,13 +8,14 @@ export function useSfxHandlers() {
 
   // Clicks are meaningful confirmations — always allowed.
   const onClick = useCallback(() => play("ui-click"), [play]);
-  // Hover/focus/cursor sounds are intentionally silent: the design
-  // forbids hover spam, cursor noise and focus beeps. Kept as no-ops
-  // so existing call sites need no changes.
+  // Hover/focus whisper — allowed ONLY through the guarded ui-hover
+  // voice (fine-pointer gating happens at call sites, plus a 90ms
+  // per-key cooldown and a 2-voice cap in the provider). Raw cursor
+  // noise stays forbidden: onCursor remains a no-op.
+  const onHover = useCallback(() => play("ui-hover"), [play]);
   const noop = useCallback(() => {}, []);
-  const onHover = noop;
   const onCursor = noop;
-  const onFocus = noop;
+  const onFocus = useCallback(() => play("ui-hover"), [play]);
 
   const bindButton = useCallback(
     () => ({

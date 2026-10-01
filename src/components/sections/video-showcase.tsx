@@ -2,64 +2,239 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 
-import { AnimatePresence, m } from "framer-motion";
-import { Pause, Play, Volume2, VolumeX } from "lucide-react";
+import { m } from "framer-motion";
+import {
+  Maximize,
+  Minimize,
+  Pause,
+  Play,
+  Volume2,
+  VolumeX,
+} from "lucide-react";
 
 import { AnimatedText } from "@/components/motion/animated-text";
 import { Container } from "@/components/ui/container";
 import { VIDEO_PLAYBACK_VOLUME } from "@/constants/audio";
 import { videoItems } from "@/data";
+import { useCanPointerReact } from "@/hooks/use-can-pointer-react";
 import { useCinematicSection } from "@/hooks/use-cinematic-section";
 import { useReducedMotion } from "@/hooks/use-reduced-motion";
+import { useSectionEnterSound } from "@/hooks/use-section-enter-sound";
 import { getScrollContainer } from "@/lib/scroll-container";
 import { cn } from "@/lib/utils";
 import { getVideoSources } from "@/lib/video-source";
 import { useAudio } from "@/providers/audio-provider";
 import type { VideoItem } from "@/types";
 
-const TRANSITION_MS = 520;
+/* ─────────────────────────────────────────────────────────────
+   Centralized video transition timing — tune here, never inline.
+   The switch is a fast editorial CUT (300–500ms total):
+   push → cut → settle. No bounce, no elastic easing.
+   ───────────────────────────────────────────────────────────── */
+const VIDEO_SWITCH_MS = 420;
+/** Bounded wait for the swapped source to become playable — never hangs. */
+const VIDEO_READY_TIMEOUT_MS = 900;
+const VIDEO_CUT_OFFSET_PX = 26;
+const VIDEO_EXIT_SCALE = 1.022;
+const VIDEO_ENTRY_SCALE = 0.985;
+const VIDEO_CUT_BLUR_PX = 3;
+const VIDEO_ENTRANCE_HEADING_MS = 600;
+const VIDEO_ENTRANCE_PLAYER_MS = 700;
+const VIDEO_ENTRANCE_ROW_MS = 500;
 const PRELOAD_THRESHOLD = 0.75;
+const EASE_CINEMATIC = "cubic-bezier(0.22, 1, 0.36, 1)";
 
-function formatIndex(n: number, total: number) {
-  const pad = (v: number) => String(v).padStart(2, "0");
-  return `${pad(n)} / ${pad(total)}`;
+function formatNum(n: number) {
+  return String(n).padStart(2, "0");
+}
+
+/** Forward (01→02) vs backward (04→03), wrap-aware. Drives cut direction. */
+function resolveDirection(from: number, to: number, total: number): 1 | -1 {
+  if (to === 0 && from === total - 1) return 1;
+  if (to === total - 1 && from === 0) return -1;
+  return to > from ? 1 : -1;
+}
+
+/* ─────────────────────────────────────────────────────────────
+   VideoProjectRow — editorial index row, never a card.
+   Separators + typography + one lacquer micro-indicator carry
+   the active state. Hover only touches transform/opacity.
+   ───────────────────────────────────────────────────────────── */
+function VideoProjectRow({
+  item,
+  num,
+  isActive,
+  entered,
+  entranceDelayMs,
+  reduceMotion,
+  onSelect,
+  onHoverItem,
+}: {
+  item: VideoItem;
+  num: string;
+  isActive: boolean;
+  entered: boolean;
+  entranceDelayMs: number;
+  reduceMotion: boolean;
+  onSelect: (id: string) => void;
+  onHoverItem?: (id: string) => void;
+}) {
+  return (
+    <m.button
+      type="button"
+      initial={reduceMotion ? false : { opacity: 0, y: 14 }}
+      animate={entered ? { opacity: 1, y: 0 } : {}}
+      transition={{
+        duration: VIDEO_ENTRANCE_ROW_MS / 1000,
+        ease: [0.22, 1, 0.36, 1],
+        delay: reduceMotion ? 0 : entranceDelayMs / 1000,
+      }}
+      onClick={() => onSelect(item.id)}
+      onMouseEnter={() => onHoverItem?.(item.id)}
+      aria-label={`Play ${item.title}`}
+      aria-current={isActive ? "true" : undefined}
+      className={cn(
+        "group relative flex w-full items-center gap-3 py-3 text-left",
+        "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-inset",
+      )}
+    >
+      {/* lacquer micro-indicator — active row only */}
+      <span
+        aria-hidden
+        className={cn(
+          "absolute top-1/2 left-0 h-6 w-[2px] -translate-y-1/2 rounded-full bg-[var(--accent-cherry)] transition-opacity duration-300",
+          isActive ? "opacity-100" : "opacity-0",
+        )}
+      />
+      <span
+        className={cn(
+          "w-7 shrink-0 pl-3 font-sans text-[11px] tabular-nums",
+          isActive ? "text-foreground" : "text-foreground-secondary",
+        )}
+      >
+        {num}
+      </span>
+      <span className="min-w-0 flex-1">
+        <span
+          className={cn(
+            "block truncate font-sans text-[12px] tracking-[0.12em] transition-[transform,color] duration-300 ease-[cubic-bezier(0.22,1,0.36,1)] motion-reduce:transition-none",
+            isActive
+              ? "font-bold text-foreground"
+              : "font-semibold text-foreground/75 group-hover:text-foreground",
+            "group-hover:translate-x-[6px] motion-reduce:group-hover:translate-x-0",
+            isActive && "translate-x-[4px]",
+          )}
+        >
+          {item.title.toUpperCase()}
+        </span>
+        <span className="block truncate text-[11px] text-foreground-secondary">
+          {item.meta}
+        </span>
+      </span>
+      <span className="relative h-[54px] w-[96px] shrink-0 overflow-hidden rounded-md bg-black sm:h-[62px] sm:w-[108px]">
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img
+          src={item.poster}
+          alt=""
+          aria-hidden
+          loading="lazy"
+          decoding="async"
+          className={cn(
+            "h-full w-full object-cover transition-[transform,opacity] duration-300 ease-[cubic-bezier(0.22,1,0.36,1)] motion-reduce:transition-none",
+            isActive
+              ? "scale-[1.02] opacity-100"
+              : "opacity-70 group-hover:scale-[1.04] group-hover:opacity-100",
+          )}
+        />
+      </span>
+    </m.button>
+  );
+}
+
+/* ─────────────────────────────────────────────────────────────
+   VideoProjectList — "SELECTED WORK" index with live counter.
+   One shared component for desktop rail and mobile stack.
+   ───────────────────────────────────────────────────────────── */
+function VideoProjectList({
+  currentIndex,
+  entered,
+  reduceMotion,
+  onSelect,
+  onHoverItem,
+}: {
+  currentIndex: number;
+  entered: boolean;
+  reduceMotion: boolean;
+  onSelect: (id: string) => void;
+  onHoverItem?: (id: string) => void;
+}) {
+  return (
+    // Mobile (<lg): natural height — all rows participate in page flow and
+    // #scroll-container stays the ONLY vertical scroller. No nested
+    // scrollport, no gesture capture, no overscroll containment.
+    // Desktop (lg+): bounded docked rail co-visible with the player.
+    <div className="min-w-0 lg:min-h-0 lg:max-h-[calc(100svh-var(--nav-safe-top)-var(--floating-nav-clearance)-10rem)] lg:overflow-y-auto lg:overscroll-x-none lg:overscroll-y-contain lg:[scrollbar-width:thin] lg:[scrollbar-color:var(--scrollbar-thumb)_transparent]">
+      <div className="flex flex-col divide-y divide-[var(--border)]">
+        {videoItems.map((item, idx) => (
+          <VideoProjectRow
+            key={item.id}
+            item={item}
+            num={formatNum(idx + 1)}
+            isActive={idx === currentIndex}
+            entered={entered}
+            entranceDelayMs={80 + idx * 50}
+            reduceMotion={reduceMotion}
+            onSelect={onSelect}
+            onHoverItem={onHoverItem}
+          />
+        ))}
+      </div>
+    </div>
+  );
 }
 
 export function VideoShowcase() {
   const sectionRef = useRef<HTMLElement>(null);
   useCinematicSection(sectionRef, "videos");
+  // One soft cinematic breath on meaningful section entry.
+  useSectionEnterSound(sectionRef, "hero-transition");
+  const canHoverTick = useCanPointerReact();
+  const lastHoverRef = useRef<string | null>(null);
   const activeRef = useRef<HTMLVideoElement>(null);
   const nextRef = useRef<HTMLVideoElement>(null);
   const progressRef = useRef<HTMLDivElement>(null);
+  const frameRef = useRef<HTMLDivElement>(null);
+  const playerWrapRef = useRef<HTMLDivElement>(null);
   const rafRef = useRef<number | null>(null);
+  const cutAnimRef = useRef<Animation | null>(null);
+  const switchTimeoutRef = useRef<number | null>(null);
+  const generationRef = useRef(0);
+  /** Set when the swapped source fires canplay/playing; gates the transition flag. */
+  const mediaReadyRef = useRef(false);
+  const swapTimeRef = useRef(0);
   const preloadStartedRef = useRef(false);
   const prefersReducedMotion = useReducedMotion();
   const { play, setVideoAudioActive } = useAudio();
 
   const [currentIndex, setCurrentIndex] = useState(0);
   const [isSectionVisible, setIsSectionVisible] = useState(false);
+  const [enteredOnce, setEnteredOnce] = useState(false);
   const [initialized, setInitialized] = useState(false);
   const [isMuted, setIsMuted] = useState(true);
   const [isPlaying, setIsPlaying] = useState(false);
   const [isTransitioning, setIsTransitioning] = useState(false);
+  const [isFullscreen, setIsFullscreen] = useState(false);
   const [autoplayBlocked, setAutoplayBlocked] = useState(false);
 
   const isMutedRef = useRef(true);
   const currentIndexRef = useRef(0);
   const isPlayingRef = useRef(false);
+  const reducedMotionRef = useRef(false);
   // Explicit user stop (pause) — autoplay must not override it.
   const userPausedRef = useRef(false);
 
   const total = videoItems.length;
   const current: VideoItem = videoItems[currentIndex] ?? videoItems[0]!;
-  const queue: VideoItem[] = (() => {
-    const out: VideoItem[] = [];
-    for (let i = 1; i < total; i++)
-      out.push(videoItems[(currentIndex + i) % total]!);
-    return out;
-  })();
-  // stable frame aspect: 16:9 for landscape showcase. Vertical videos use contain + blur.
-  const isPortrait = current.aspect === "portrait";
 
   // keep refs in sync
   useEffect(() => {
@@ -71,8 +246,11 @@ export function VideoShowcase() {
   useEffect(() => {
     isPlayingRef.current = isPlaying;
   }, [isPlaying]);
+  useEffect(() => {
+    reducedMotionRef.current = prefersReducedMotion;
+  }, [prefersReducedMotion]);
 
-  // lazy init — only when section approaches viewport
+  // lazy init — only when section approaches viewport; entrance fires once
   useEffect(() => {
     const el = sectionRef.current;
     if (!el) return;
@@ -81,7 +259,10 @@ export function VideoShowcase() {
       ([entry]) => {
         const visible = !!entry?.isIntersecting;
         setIsSectionVisible(visible);
-        if (visible) setInitialized(true);
+        if (visible) {
+          setInitialized(true);
+          setEnteredOnce(true);
+        }
       },
       {
         threshold: [0, 0.15, 0.35],
@@ -134,7 +315,103 @@ export function VideoShowcase() {
     [],
   );
 
-  // initialize / switch active video
+  // Fast cinematic cut on the player frame — transform/opacity/filter
+  // only, cancellable so rapid switching never stacks animations.
+  // Single stable <video> element: no remount, no ref races.
+  const playCut = useCallback((dir: 1 | -1) => {
+    const frame = frameRef.current;
+    if (!frame || typeof frame.animate !== "function") return;
+    try {
+      cutAnimRef.current?.cancel();
+      if (reducedMotionRef.current) {
+        cutAnimRef.current =
+          frame.animate([{ opacity: 0.35 }, { opacity: 1 }], {
+            duration: 140,
+            easing: "ease-out",
+          }) ?? null;
+        return;
+      }
+      const x = dir * VIDEO_CUT_OFFSET_PX;
+      cutAnimRef.current =
+        frame.animate(
+          [
+            {
+              opacity: 1,
+              transform: "translate3d(0, 0, 0) scale(1)",
+              filter: "blur(0px)",
+              offset: 0,
+            },
+            {
+              opacity: 0.55,
+              transform: `translate3d(${(-x * 0.5).toFixed(1)}px, 0, 0) scale(${VIDEO_EXIT_SCALE})`,
+              filter: `blur(${VIDEO_CUT_BLUR_PX}px)`,
+              offset: 0.28,
+            },
+            {
+              opacity: 0,
+              transform: `translate3d(${x.toFixed(1)}px, 0, 0) scale(${VIDEO_ENTRY_SCALE})`,
+              filter: `blur(${VIDEO_CUT_BLUR_PX}px)`,
+              offset: 0.7,
+            },
+            {
+              opacity: 1,
+              transform: "translate3d(0, 0, 0) scale(1)",
+              filter: "blur(0px)",
+              offset: 1,
+            },
+          ],
+          { duration: VIDEO_SWITCH_MS, easing: EASE_CINEMATIC },
+        ) ?? null;
+    } catch {
+      // WAAPI unavailable — state still updates, UI stays functional.
+    }
+  }, []);
+
+  // Single commit path for every index change (tap, keyboard, auto).
+  // Generation-guarded: rapid 01 → 03 → 05 always settles on 05
+  // with matching metadata — no stale timeouts win. The visual floor
+  // is VIDEO_SWITCH_MS; if the swapped source is not yet playable by
+  // then, the transitioning state persists until canplay or the bounded
+  // VIDEO_READY_TIMEOUT_MS ceiling — never indefinitely.
+  const commitIndex = useCallback(
+    (target: number) => {
+      const cur = currentIndexRef.current;
+      if (target === cur || target < 0 || target >= total) return;
+      const dir = resolveDirection(cur, target, total);
+      generationRef.current += 1;
+      const gen = generationRef.current;
+      mediaReadyRef.current = false;
+      swapTimeRef.current =
+        typeof performance !== "undefined" ? performance.now() : Date.now();
+      playCut(dir);
+      setCurrentIndex(target);
+      setIsTransitioning(true);
+      if (switchTimeoutRef.current !== null) {
+        window.clearTimeout(switchTimeoutRef.current);
+      }
+      const settle = () => {
+        if (generationRef.current !== gen) return;
+        const now =
+          typeof performance !== "undefined" ? performance.now() : Date.now();
+        if (mediaReadyRef.current) {
+          setIsTransitioning(false);
+          return;
+        }
+        // Media still pending: re-check until the bounded ceiling, so the
+        // poster bridge never flashes black and metadata never outruns
+        // the picture. Rapid superseding commits cancel via generation.
+        if (now - swapTimeRef.current < VIDEO_READY_TIMEOUT_MS) {
+          switchTimeoutRef.current = window.setTimeout(settle, 120);
+        } else {
+          setIsTransitioning(false);
+        }
+      };
+      switchTimeoutRef.current = window.setTimeout(settle, VIDEO_SWITCH_MS);
+    },
+    [playCut, total],
+  );
+
+  // initialize / switch active video (stable element, sources swapped)
   useEffect(() => {
     if (!initialized) return;
     const v = activeRef.current;
@@ -148,6 +425,18 @@ export function VideoShowcase() {
     v.muted = isMutedRef.current;
     v.volume = VIDEO_PLAYBACK_VOLUME;
     v.currentTime = 0;
+
+    // Readiness signals for the bounded transition gate above. Cached or
+    // fast sources may already be playable — HAVE_ENOUGH_DATA covers it.
+    const markReady = () => {
+      mediaReadyRef.current = true;
+    };
+    if (v.readyState >= 3) {
+      markReady();
+    } else {
+      v.addEventListener("canplay", markReady, { once: true });
+      v.addEventListener("playing", markReady, { once: true });
+    }
 
     // autoplay muted when visible
     if (isSectionVisible) {
@@ -220,13 +509,10 @@ export function VideoShowcase() {
     }
   }, []);
 
-  // video events
-  // NOTE: the active <video> remounts on every video change
-  // (key={video-...}), so listeners must re-bind to each new element —
-  // otherwise only the first video reports play/pause/ended.
+  // video events — stable element, bound once per init cycle
   useEffect(() => {
     const v = activeRef.current;
-    if (!v) return;
+    if (!v || !initialized) return;
     const onPlay = () => {
       setIsPlaying(true);
       startProgressLoop();
@@ -252,16 +538,9 @@ export function VideoShowcase() {
       stopProgressLoop();
       if (progressRef.current)
         progressRef.current.style.setProperty("--progress", "100%");
-      // cyclic advance with crossfade
-      if (prefersReducedMotion) {
-        setCurrentIndex((i) => (i + 1) % total);
-      } else {
-        setIsTransitioning(true);
-        window.setTimeout(() => {
-          setCurrentIndex((i) => (i + 1) % total);
-          window.setTimeout(() => setIsTransitioning(false), 60);
-        }, TRANSITION_MS);
-      }
+      // cyclic advance — silent (no UI sound on automatic advance)
+      userPausedRef.current = false;
+      commitIndex((currentIndexRef.current + 1) % total);
     };
     const onError = () => {
       setIsPlaying(false);
@@ -279,18 +558,28 @@ export function VideoShowcase() {
       v.removeEventListener("error", onError);
     };
   }, [
-    currentIndex,
     initialized,
     startProgressLoop,
     stopProgressLoop,
-    prefersReducedMotion,
     total,
     setVideoSources,
+    commitIndex,
   ]);
 
-  // cleanup rAF on unmount
+  // track native fullscreen for the icon + aria state
+  useEffect(() => {
+    const onChange = () => setIsFullscreen(!!document.fullscreenElement);
+    document.addEventListener("fullscreenchange", onChange);
+    return () => document.removeEventListener("fullscreenchange", onChange);
+  }, []);
+
+  // cleanup on unmount — cancel cut, timers, rAF, release video resources
   useEffect(() => {
     return () => {
+      cutAnimRef.current?.cancel();
+      if (switchTimeoutRef.current !== null) {
+        window.clearTimeout(switchTimeoutRef.current);
+      }
       if (rafRef.current) cancelAnimationFrame(rafRef.current);
       // Refs are intentionally read at cleanup time (unmount) to release video resources.
       // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -316,17 +605,20 @@ export function VideoShowcase() {
       play("video-control");
       // picking a video is an explicit intent to watch — resume the autoplay chain
       userPausedRef.current = false;
-      if (prefersReducedMotion) {
-        setCurrentIndex(idx);
-      } else {
-        setIsTransitioning(true);
-        window.setTimeout(() => {
-          setCurrentIndex(idx);
-          window.setTimeout(() => setIsTransitioning(false), 60);
-        }, TRANSITION_MS * 0.6);
-      }
+      commitIndex(idx);
     },
-    [play, prefersReducedMotion],
+    [play, commitIndex],
+  );
+
+  // Desktop-only hover whisper — one tick per newly entered row,
+  // never a stream while resting on or sweeping across items.
+  const handleHoverItem = useCallback(
+    (id: string) => {
+      if (!canHoverTick || lastHoverRef.current === id) return;
+      lastHoverRef.current = id;
+      play("ui-hover");
+    },
+    [canHoverTick, play],
   );
 
   const togglePlay = useCallback(() => {
@@ -383,299 +675,236 @@ export function VideoShowcase() {
     [play, setVideoAudioActive],
   );
 
+  const toggleFullscreen = useCallback(
+    (e?: React.MouseEvent) => {
+      e?.stopPropagation();
+      play("video-control");
+      const wrap = playerWrapRef.current;
+      if (!wrap) return;
+      if (document.fullscreenElement) {
+        void document.exitFullscreen().catch(() => {});
+      } else if (wrap.requestFullscreen) {
+        void wrap.requestFullscreen().catch(() => {});
+      }
+    },
+    [play],
+  );
+
+  // Poster bridges the source-swap gap: visible until the new video
+  // is actually playing, so a cut never flashes black.
+  const showPoster = !isPlaying || isTransitioning;
+
   return (
     <section
       ref={sectionRef}
       id="video"
       data-snap-frame
-      className="section-frame section-tone-videos !h-auto !min-h-0 !max-h-none overflow-visible py-6 md:py-10 lg:py-10"
+      className="section-frame section-tone-videos !h-auto !min-h-0 !max-h-none relative overflow-visible py-6 md:pt-10 md:pb-[calc(var(--floating-nav-clearance)+1.25rem)] [@media(min-width:64rem)_and_(max-height:52rem)]:pt-6"
       aria-labelledby="video-heading"
     >
-      <Container className="w-full max-w-none">
-        {/* header */}
-        <div className="cinematic-layer cinematic-layer--header mb-5 flex items-end justify-between gap-4 md:mb-7">
-          <h2
-            id="video-heading"
-            className="font-sans text-[clamp(2.25rem,5vw,3.75rem)] leading-[1.02] font-extrabold tracking-[-0.03em] text-foreground"
+      {/* subtle cinematic atmosphere — warm/desaturated wash, felt not seen */}
+      <div
+        aria-hidden
+        className="pointer-events-none absolute inset-0"
+        style={{
+          background:
+            "radial-gradient(60% 45% at 30% 30%, rgb(201 21 36 / 0.045), transparent 70%), radial-gradient(55% 50% at 75% 75%, rgb(23 21 21 / 0.06), transparent 70%)",
+        }}
+      />
+      <Container className="relative w-full max-w-none">
+        {/* ── editorial heading ──
+            Ownership split: cinematic scroll owns the outer wrapper,
+            Framer Motion owns the inner entrance wrapper. */}
+        <div className="cinematic-layer cinematic-layer--header mb-5 md:mb-8">
+          <m.div
+            initial={prefersReducedMotion ? false : { opacity: 0, y: 26 }}
+            animate={enteredOnce ? { opacity: 1, y: 0 } : {}}
+            transition={{
+              duration: VIDEO_ENTRANCE_HEADING_MS / 1000,
+              ease: [0.22, 1, 0.36, 1],
+            }}
           >
-            <AnimatedText segments="Videos" />
-          </h2>
-          <span className="font-sans text-[11px] font-semibold tracking-[0.18em] text-foreground-secondary tabular-nums">
-            {formatIndex(currentIndex + 1, total)}
-          </span>
+            <h2
+              id="video-heading"
+              className="text-center font-sans text-[min(clamp(3.5rem,7vw,6rem),calc((100vw-2.5rem)/5.2))] leading-[1.02] font-extrabold tracking-[-0.05em] text-foreground"
+            >
+              <AnimatedText segments="MOTION" />
+            </h2>
+          </m.div>
         </div>
 
-        {/* showcase */}
-        <div className="cinematic-layer cinematic-layer--media grid grid-cols-1 gap-4 lg:grid-cols-[minmax(0,1.75fr)_minmax(280px,0.72fr)] lg:gap-6 lg:items-start">
-          {/* active */}
-          <div className="relative overflow-hidden rounded-lg bg-black">
-            {/* stable 16:9 frame */}
-            <div className="relative aspect-video w-full overflow-hidden bg-black">
-              {/* tonal backdrop for portrait reels — solid + gradient only (no blur filter) */}
-              {isPortrait ? (
-                <div
-                  aria-hidden
-                  className="absolute inset-0 bg-gradient-to-b from-neutral-900 via-black to-black"
-                />
-              ) : null}
-              {/* poster until video can play — outgoing recedes, incoming assembles */}
-              <AnimatePresence initial={false}>
-                <m.img
+        {/* ── showcase composition ──
+            Height-driven sizing: the grid caps at the largest width whose
+            16:9 player (+280px rail) still fits between the heading and
+            the floating-nav safe area — as large as possible, never
+            parked underneath the navigation. Below lg the player is
+            naturally full-width 16:9. */}
+        <div className="cinematic-layer cinematic-layer--media grid grid-cols-1 gap-6 lg:mx-auto lg:grid-cols-[minmax(0,1.75fr)_minmax(280px,0.72fr)] lg:items-start lg:max-w-[min(100%,calc((100svh-22rem)*16/9+19rem))]">
+          {/* ── cinematic player ── */}
+          <m.div
+            initial={
+              prefersReducedMotion ? false : { opacity: 0, y: 28, scale: 0.982 }
+            }
+            animate={enteredOnce ? { opacity: 1, y: 0, scale: 1 } : {}}
+            transition={{
+              duration: VIDEO_ENTRANCE_PLAYER_MS / 1000,
+              ease: [0.22, 1, 0.36, 1],
+              delay: prefersReducedMotion ? 0 : 0.08,
+            }}
+          >
+            <div
+              ref={playerWrapRef}
+              className="relative overflow-hidden rounded-lg bg-black shadow-[var(--shadow-lg)] ring-1 ring-black/10 dark:ring-white/10"
+            >
+              {/* PLAYER VIEWPORT — always 16:9. The media inside is
+                    contained (never cropped); unused area is plain ink. */}
+              <div
+                ref={frameRef}
+                className="relative aspect-video w-full overflow-hidden bg-black will-change-transform"
+              >
+                {/* poster bridge — keyed so each film resolves its own frame */}
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
                   key={`poster-${current.id}`}
                   src={current.poster}
                   alt=""
                   aria-hidden
-                  exit={
-                    prefersReducedMotion
-                      ? { opacity: 0, transition: { duration: 0.01 } }
-                      : { opacity: 0, transition: { duration: 0.4 } }
-                  }
-                  className={cn(
-                    "media-in absolute inset-0 h-full w-full object-cover transition-opacity duration-500 ease-[cubic-bezier(0.22,1,0.36,1)]",
-                    prefersReducedMotion ? "transition-none" : "",
-                    isPlaying && !isTransitioning ? "opacity-0" : "opacity-100",
-                  )}
                   loading="eager"
                   decoding="async"
-                />
-              </AnimatePresence>
-              <AnimatePresence initial={false}>
-                <m.video
-                  ref={activeRef}
-                  key={`video-${current.id}`}
-                  exit={
-                    prefersReducedMotion
-                      ? { opacity: 0, transition: { duration: 0.01 } }
-                      : {
-                          opacity: 0,
-                          scale: 0.985,
-                          transition: {
-                            duration: 0.5,
-                            ease: [0.22, 1, 0.36, 1],
-                          },
-                        }
-                  }
                   className={cn(
-                    "media-in absolute inset-0 h-full w-full bg-black transition-opacity duration-[600ms]",
-                    prefersReducedMotion
-                      ? "transition-none"
-                      : "ease-[cubic-bezier(0.22,1,0.36,1)]",
-                    isPortrait ? "object-contain p-0" : "object-cover",
-                    isTransitioning ? "opacity-0" : "opacity-100",
+                    "absolute inset-0 h-full w-full object-contain transition-opacity duration-300 ease-out motion-reduce:transition-none",
+                    showPoster ? "opacity-100" : "opacity-0",
                   )}
+                />
+                <video
+                  ref={activeRef}
+                  className="absolute inset-0 h-full w-full bg-transparent object-contain"
                   poster={current.poster}
                   muted={isMuted}
                   playsInline
                   disablePictureInPicture
                   preload={initialized ? "metadata" : "none"}
                   aria-label={`${current.title}. ${current.meta}`}
-                  onClick={togglePlay}
                 />
-              </AnimatePresence>
 
-              {/* subtle bottom gradient + info */}
-              <div className="absolute inset-x-0 bottom-0 z-10 bg-gradient-to-t from-black/70 via-black/30 to-transparent pt-12">
-                <m.div
-                  key={`meta-${current.id}`}
-                  initial={prefersReducedMotion ? false : { opacity: 0, y: 6 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ duration: 0.45, ease: [0.22, 1, 0.36, 1] }}
-                  className="pointer-events-none flex items-end justify-between gap-4 p-4 md:p-5"
-                >
-                  <div className="min-w-0">
-                    <div className="font-sans text-[10px] tracking-[0.2em] text-white/80">
-                      {String(currentIndex + 1).padStart(2, "0")} /{" "}
-                      {current.title.toUpperCase()}
-                    </div>
-                    <div className="mt-1 max-w-[28rem] truncate font-label-md text-[11px] tracking-[0.12em] text-white/70">
-                      {current.meta}
-                    </div>
-                  </div>
-                  <div className="pointer-events-auto hidden shrink-0 items-center gap-2 md:flex">
-                    <button
-                      type="button"
-                      onClick={toggleMute}
-                      aria-label={isMuted ? "Unmute video" : "Mute video"}
-                      className="pointer-events-auto inline-flex h-8 w-8 items-center justify-center rounded-full border border-white/20 bg-black/40 text-white backdrop-blur-[6px] transition hover:bg-black/55 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/60"
-                    >
-                      {isMuted ? (
-                        <VolumeX className="h-3.5 w-3.5" />
-                      ) : (
-                        <Volume2 className="h-3.5 w-3.5" />
-                      )}
-                    </button>
-                    <button
-                      type="button"
-                      onClick={togglePlay}
-                      aria-label={isPlaying ? "Pause video" : "Play video"}
-                      className="pointer-events-auto inline-flex h-8 w-8 items-center justify-center rounded-full border border-white/20 bg-black/40 text-white backdrop-blur-[6px] transition hover:bg-black/55 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/60"
-                    >
-                      {isPlaying ? (
-                        <Pause className="h-3.5 w-3.5" />
-                      ) : (
-                        <Play className="h-3.5 w-3.5 translate-x-px" />
-                      )}
-                    </button>
-                  </div>
-                </m.div>
-                {/* thin progress */}
+                {/* restrained metadata gradient — legibility only */}
                 <div
-                  ref={progressRef}
-                  className="pointer-events-none relative h-px w-full bg-white/15"
-                  style={{ ["--progress" as string]: "0%" }}
-                >
-                  <div
-                    className="absolute inset-y-0 left-0 bg-[var(--accent-cherry)] transition-none"
-                    style={{ width: "var(--progress)" }}
-                  />
-                </div>
-              </div>
-
-              {/* mobile controls + play affordance */}
-              <div className="pointer-events-auto absolute right-3 top-3 z-10 flex gap-2 md:hidden">
-                <button
-                  type="button"
-                  onClick={toggleMute}
-                  aria-label={isMuted ? "Unmute video" : "Mute video"}
-                  className="inline-flex h-11 w-11 items-center justify-center rounded-full border border-white/20 bg-black/40 text-white"
-                >
-                  {isMuted ? (
-                    <VolumeX className="h-4 w-4" />
-                  ) : (
-                    <Volume2 className="h-4 w-4" />
-                  )}
-                </button>
-              </div>
-              {!isPlaying && !isTransitioning ? (
-                <button
-                  type="button"
-                  onClick={togglePlay}
-                  aria-label="Play video"
-                  className="absolute inset-0 z-[1] grid place-items-center bg-black/20"
-                >
-                  <span className="inline-flex h-12 w-12 items-center justify-center rounded-full border border-white/30 bg-black/45 text-white">
-                    <Play className="h-5 w-5 translate-x-px" />
-                  </span>
-                </button>
-              ) : (
-                <button
-                  type="button"
-                  onClick={togglePlay}
-                  aria-label={isPlaying ? "Pause" : "Play"}
-                  className="absolute inset-0 z-[1]"
+                  aria-hidden
+                  className="pointer-events-none absolute inset-x-0 bottom-0 h-28 bg-gradient-to-t from-black/75 via-black/25 to-transparent"
                 />
-              )}
-            </div>
-          </div>
 
-          {/* queue */}
-          <div className="min-w-0">
-            <div className="mb-3 flex items-center justify-between">
-              <span className="font-sans text-[11px] tracking-[0.2em] text-foreground-secondary">
-                NEXT
-              </span>
-              <span className="hidden font-sans text-[11px] text-foreground-secondary lg:inline">
-                {String(queue.length).padStart(2, "0")} queued
-              </span>
-            </div>
-
-            {/* desktop vertical queue */}
-            <div className="hidden flex-col gap-0 lg:flex">
-              {queue.map((item, idx) => {
-                const num = String(
-                  videoItems.findIndex((v) => v.id === item.id) + 1,
-                ).padStart(2, "0");
-                return (
-                  <m.button
-                    key={item.id}
-                    type="button"
+                {/* bottom info + controls */}
+                <div className="absolute inset-x-0 bottom-0 z-10">
+                  <m.div
+                    key={`meta-${current.id}`}
                     initial={
-                      prefersReducedMotion ? false : { opacity: 0, y: 8 }
+                      prefersReducedMotion ? false : { opacity: 0, y: 6 }
                     }
                     animate={{ opacity: 1, y: 0 }}
-                    transition={{
-                      duration: 0.45,
-                      ease: [0.22, 1, 0.36, 1],
-                      delay: idx * 0.04,
-                    }}
-                    onClick={() => goTo(item.id)}
-                    className="group relative flex w-full items-center gap-3 py-3 text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-                    aria-label={`Play ${item.title}`}
+                    transition={{ duration: 0.3, ease: [0.22, 1, 0.36, 1] }}
+                    className="flex items-end justify-between gap-4 p-4 md:p-5"
                   >
-                    <span className="font-sans text-[11px] text-foreground-secondary tabular-nums">
-                      {num}
-                    </span>
-                    <span className="min-w-0 flex-1">
-                      <span className="block truncate font-label-md text-[12px] font-semibold tracking-[0.12em] text-foreground transition-transform duration-200 ease-out group-hover:translate-x-[3px] motion-reduce:transition-none motion-reduce:group-hover:translate-x-0">
-                        {item.title.toUpperCase()}
-                      </span>
-                      <span className="block truncate text-[11px] text-foreground-secondary">
-                        {item.meta}
-                      </span>
-                    </span>
-                    <span className="relative h-[62px] w-[108px] shrink-0 overflow-hidden rounded-md bg-black">
-                      {/* eslint-disable-next-line @next/next/no-img-element */}
-                      <img
-                        src={item.poster}
-                        alt={item.title}
-                        loading="lazy"
-                        decoding="async"
-                        className="h-full w-full object-cover transition duration-300 group-hover:scale-[1.03] group-hover:brightness-[1.06]"
-                      />
-                    </span>
-                    {idx < queue.length - 1 ? (
-                      <span
-                        aria-hidden
-                        className="pointer-events-none absolute inset-x-0 -bottom-px h-px bg-border"
-                      />
-                    ) : null}
-                  </m.button>
-                );
-              })}
-            </div>
+                    <div className="min-w-0">
+                      <div className="font-sans text-[10px] font-semibold tracking-[0.2em] text-white/85">
+                        {formatNum(currentIndex + 1)} /{" "}
+                        {current.title.toUpperCase()}
+                      </div>
+                      <div className="mt-1 max-w-[28rem] truncate font-sans text-[11px] tracking-[0.08em] text-white/70">
+                        {current.meta}
+                      </div>
+                    </div>
+                    <div className="flex shrink-0 items-center gap-2">
+                      <button
+                        type="button"
+                        onClick={toggleMute}
+                        aria-label={isMuted ? "Unmute video" : "Mute video"}
+                        className="inline-flex h-11 w-11 items-center justify-center rounded-full border border-white/20 bg-black/40 text-white backdrop-blur-[6px] transition-colors hover:bg-black/55 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/60 md:h-8 md:w-8"
+                      >
+                        {isMuted ? (
+                          <VolumeX className="h-4 w-4 md:h-3.5 md:w-3.5" />
+                        ) : (
+                          <Volume2 className="h-4 w-4 md:h-3.5 md:w-3.5" />
+                        )}
+                      </button>
+                      <button
+                        type="button"
+                        onClick={toggleFullscreen}
+                        aria-label={
+                          isFullscreen ? "Exit fullscreen" : "Enter fullscreen"
+                        }
+                        className="inline-flex h-11 w-11 items-center justify-center rounded-full border border-white/20 bg-black/40 text-white backdrop-blur-[6px] transition-colors hover:bg-black/55 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/60 md:h-8 md:w-8"
+                      >
+                        {isFullscreen ? (
+                          <Minimize className="h-4 w-4 md:h-3.5 md:w-3.5" />
+                        ) : (
+                          <Maximize className="h-4 w-4 md:h-3.5 md:w-3.5" />
+                        )}
+                      </button>
+                    </div>
+                  </m.div>
+                  {/* extremely thin progress — lacquer for played portion */}
+                  <div
+                    ref={progressRef}
+                    aria-hidden="true"
+                    className="pointer-events-none relative h-[2px] w-full bg-white/15"
+                    style={{ ["--progress" as string]: "0%" }}
+                  >
+                    <div
+                      className="absolute inset-y-0 left-0 bg-[var(--accent-cherry)]"
+                      style={{ width: "var(--progress)" }}
+                    />
+                  </div>
+                </div>
 
-            {/* mobile horizontal queue */}
-            <div className="-mx-4 overflow-x-auto overscroll-x-contain px-4 pb-2 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden lg:hidden">
-              <div className="flex gap-3 pr-4">
-                {queue.map((item) => {
-                  const num = String(
-                    videoItems.findIndex((v) => v.id === item.id) + 1,
-                  ).padStart(2, "0");
-                  return (
-                    <button
-                      key={item.id}
-                      type="button"
-                      onClick={() => goTo(item.id)}
-                      className="group flex w-[200px] shrink-0 flex-col gap-2 text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-                      aria-label={`Play ${item.title}`}
+                {/* cinematic play / pause — restrained circle, never huge.
+                    Idle: play is discoverable. Playing: the frame stays
+                    clean, pause reveals on hover/focus. */}
+                <button
+                  type="button"
+                  onClick={togglePlay}
+                  aria-label={
+                    isPlaying
+                      ? `Pause ${current.title}`
+                      : `Play ${current.title}`
+                  }
+                  className={cn(
+                    "group absolute inset-0 z-[1] grid place-items-center transition-colors duration-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-white/60",
+                    isPlaying ? "bg-transparent" : "bg-black/20",
+                  )}
+                >
+                  <span className="flex flex-col items-center gap-2">
+                    <span
+                      className={cn(
+                        "inline-flex h-[60px] w-[60px] items-center justify-center rounded-full border border-white/30 bg-black/45 text-white backdrop-blur-[6px] transition-[transform,background-color,opacity] duration-300 ease-[cubic-bezier(0.22,1,0.36,1)] group-hover:scale-[1.06] group-focus-visible:scale-[1.06] motion-reduce:transition-none md:h-[72px] md:w-[72px]",
+                        isPlaying &&
+                          "opacity-0 group-hover:opacity-100 group-focus-visible:opacity-100",
+                      )}
                     >
-                      <span className="relative aspect-video w-full overflow-hidden rounded-md bg-black">
-                        {/* eslint-disable-next-line @next/next/no-img-element */}
-                        <img
-                          src={item.poster}
-                          alt={item.title}
-                          loading="lazy"
-                          decoding="async"
-                          className="h-full w-full object-cover"
-                        />
-                        <span className="absolute left-2 top-2 rounded-full bg-black/60 px-1.5 py-0.5 font-sans text-[10px] text-white">
-                          {num}
-                        </span>
+                      {isPlaying ? (
+                        <Pause className="h-5 w-5 md:h-6 md:w-6" />
+                      ) : (
+                        <Play className="h-5 w-5 translate-x-px md:h-6 md:w-6" />
+                      )}
+                    </span>
+                    {!isPlaying ? (
+                      <span className="font-sans text-[10px] font-semibold tracking-[0.24em] text-white/0 transition-colors duration-300 group-hover:text-white/85 group-focus-visible:text-white/85 motion-reduce:transition-none">
+                        PLAY FILM
                       </span>
-                      <span className="min-w-0">
-                        <span className="block truncate text-[12px] font-semibold tracking-[0.08em] text-foreground">
-                          {item.title}
-                        </span>
-                        <span className="block truncate text-[11px] text-foreground-secondary">
-                          {item.meta}
-                        </span>
-                      </span>
-                    </button>
-                  );
-                })}
+                    ) : null}
+                  </span>
+                </button>
               </div>
             </div>
-          </div>
+          </m.div>
+
+          {/* ── project index — rail on desktop, vertical stack on mobile ── */}
+          <VideoProjectList
+            currentIndex={currentIndex}
+            entered={enteredOnce}
+            reduceMotion={prefersReducedMotion}
+            onSelect={goTo}
+            onHoverItem={handleHoverItem}
+          />
         </div>
 
         {/* hidden next preload */}

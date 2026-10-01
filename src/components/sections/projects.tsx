@@ -1,19 +1,49 @@
 "use client";
 
 import Image from "next/image";
-import { useRef } from "react";
+import {
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  useSyncExternalStore,
+} from "react";
 
-import { Reveal } from "@/components/animations/reveal";
+import {
+  AnimatePresence,
+  m,
+  useMotionValueEvent,
+  useScroll,
+  useTransform,
+} from "framer-motion";
+
 import { AnimatedText } from "@/components/motion/animated-text";
 import { Container } from "@/components/ui/container";
 import { projectRows } from "@/data";
+import { useCanPointerReact } from "@/hooks/use-can-pointer-react";
 import { useCinematicSection } from "@/hooks/use-cinematic-section";
+import { useMediaQuery } from "@/hooks/use-media-query";
 import { useReducedMotion } from "@/hooks/use-reduced-motion";
+import { useSectionEnterSound } from "@/hooks/use-section-enter-sound";
+import { getScrollContainer } from "@/lib/scroll-container";
 import { cn } from "@/lib/utils";
+import { useAudio } from "@/providers/audio-provider";
 import type { Project } from "@/types";
 
-type GalleryItem = Project & { number: string; tier: 1 | 2 | 3 };
+interface GalleryItem extends Project {
+  number: string;
+  /**
+   * Explicit presentation ratio, probed from the shipped asset —
+   * all six artworks are square 1254×1254 canvases, so every well
+   * is honestly 1/1. Future wide/portrait assets change only this
+   * pair and the frame follows (never cropped, never stretched).
+   */
+  mediaRatio: string;
+  /** Numeric w/h — the well width is height × ratioNum. */
+  ratioNum: number;
+}
 
+/* Six curated works, deck order: websites anchor, identities interleave. */
 const gallery: GalleryItem[] = (() => {
   const flat: Project[] = [
     projectRows[0]!.website,
@@ -23,7 +53,6 @@ const gallery: GalleryItem[] = (() => {
     projectRows[1]!.website,
     projectRows[0]!.brands[0]!, // Local Restaurant
   ];
-  // reorder to hierarchy: large → small → small → large → small → small
   const ordered = [
     flat[0],
     flat[2],
@@ -32,176 +61,384 @@ const gallery: GalleryItem[] = (() => {
     flat[1],
     flat[5],
   ] as Project[];
+  // Ratios probed from shipped assets (all 1254×1254): every entry
+  // is honestly square.
   return ordered.map((p, i) => ({
     ...p,
     number: String(i + 1).padStart(2, "0"),
-    tier: i < 2 ? 1 : i < 4 ? 2 : 3,
+    mediaRatio: "1 / 1",
+    ratioNum: 1,
   }));
 })();
 
-function ProjectFigure({
+const COUNT = gallery.length;
+/**
+ * Scroll-progress half-window (in 0–1 track units) each takeover
+ * occupies. MUST stay below half a segment (1/6 ÷ 2 ≈ 0.083) or the
+ * enter/exit keyframes overlap and WAAPI throws non-monotonic offsets.
+ */
+const WINDOW = 0.07;
+
+/* ─────────────────────────────────────────────────────────────
+   Deck mechanics, adapted from Componentry's sticky-scroll-cards:
+   a tall track holds ONE sticky full-viewport stage. The media
+   cell layers all six images (scroll-driven rise/recede, later
+   sheets above earlier ones); the info cell holds a SINGLE
+   viewport whose content crossfades on the active index. No
+   Lenis — progress is measured against the native #scroll-container.
+   ───────────────────────────────────────────────────────────── */
+
+/**
+ * ImageSheet — one print in the media stack. Media only: no text
+ * ever lives inside a sheet, so text can never pile up. Idle sheets
+ * park far outside the clipped stage; only the active takeover is
+ * ever visible.
+ */
+function ImageSheet({
   project,
-  priority,
+  index,
+  progress,
+  isActive,
+  gentle,
 }: {
   project: GalleryItem;
-  priority?: boolean;
+  index: number;
+  progress: ReturnType<typeof useScroll>["scrollYProgress"];
+  isActive: boolean;
+  gentle: boolean;
 }) {
-  const isWebsite = project.variant === "website";
-  const href = project.href ?? "#contact";
-  const isExternal = href.startsWith("http");
-  const prefersReducedMotion = useReducedMotion();
+  const b0 = index / COUNT;
+
+  // Rise window, then one settle window per takeover above this
+  // sheet: it recedes, then deepens a step for every further card
+  // that stacks on top. Replaced sheets REMAIN beneath as a visible
+  // pile instead of flying out of the stage. Monotonic inputs;
+  // interpolation clamps at both ends.
+  const riseY = gentle ? "40svh" : "60svh";
+  const nearY = gentle ? "10svh" : "14svh";
+  const stepScale = gentle ? 0.008 : 0.012;
+  const stepY = gentle ? 1 : 1.5;
+  const stepOpacity = gentle ? 0.03 : 0.05;
+  const baseScale = gentle ? 0.985 : 0.97;
+  const baseY = gentle ? -2 : -3;
+  const baseOpacity = gentle ? 0.88 : 0.82;
+
+  const keys: number[] = [];
+  const ys: string[] = [];
+  const scales: number[] = [];
+  const opacities: number[] = [];
+
+  if (index === 0) {
+    // Card 0 starts primary — no entrance travel.
+    keys.push(0);
+    ys.push("0svh");
+    scales.push(1);
+    opacities.push(1);
+  } else {
+    keys.push(b0 - WINDOW, b0 - WINDOW * 0.3, b0 + WINDOW);
+    ys.push(riseY, nearY, "0svh");
+    scales.push(baseScale, 0.985, 1);
+    opacities.push(0, 0.3, 1);
+  }
+  // Settle windows: one per takeover above this sheet. Depth d =
+  // cards resting above after boundary j. Flat holds between
+  // windows come free from duplicate consecutive values.
+  for (let j = index + 1; j < COUNT; j++) {
+    const d = j - index;
+    keys.push(j / COUNT - WINDOW, j / COUNT + WINDOW);
+    const deepY = `${(baseY - stepY * (d - 1)).toFixed(2)}svh`;
+    const prevY =
+      d === 1 ? "0svh" : `${(baseY - stepY * (d - 2)).toFixed(2)}svh`;
+    ys.push(prevY, deepY);
+    const deepS = Number((baseScale - stepScale * (d - 1)).toFixed(4));
+    const prevS =
+      d === 1 ? 1 : Number((baseScale - stepScale * (d - 2)).toFixed(4));
+    scales.push(prevS, deepS);
+    const deepO = Number(
+      Math.max(0.5, baseOpacity - stepOpacity * (d - 1)).toFixed(3),
+    );
+    const prevO =
+      d === 1
+        ? 1
+        : Number(Math.max(0.5, baseOpacity - stepOpacity * (d - 2)).toFixed(3));
+    opacities.push(prevO, deepO);
+  }
+
+  const y = useTransform(progress, keys, ys);
+  const scale = useTransform(progress, keys, scales);
+  const opacity = useTransform(progress, keys, opacities);
 
   return (
-    <a
-      href={href}
-      target={isExternal ? "_blank" : undefined}
-      rel={isExternal ? "noopener noreferrer" : undefined}
-      aria-label={`${project.title} — ${project.category}`}
-      className={cn(
-        "group relative block overflow-hidden rounded-lg bg-card",
-        "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--background-secondary)]",
-        prefersReducedMotion && "transition-none",
-      )}
+    <m.div
+      aria-hidden
+      style={{ y, scale, opacity, zIndex: index + 1 }}
+      className="pointer-events-none absolute inset-0 flex items-center justify-center"
     >
-      <figure className="m-0">
+      <div className="relative overflow-hidden rounded-lg border border-border bg-muted shadow-[var(--shadow-sm)]">
         <div
-          className={cn(
-            "relative w-full overflow-hidden bg-muted",
-            isWebsite ? "aspect-[16/9]" : "aspect-square",
-          )}
+          className="relative mx-auto h-[var(--wh)] max-w-full [width:min(100%,92vw,calc(var(--wh)*var(--rw)))] [--wh:34svh] md:[--wh:52svh] lg:[--wh:58svh] max-[380px]:[--wh:30svh]"
+          style={{
+            aspectRatio: project.mediaRatio,
+            ["--rw" as string]: project.ratioNum,
+          }}
         >
           <Image
             src={project.image}
-            alt={project.imageAlt}
+            alt=""
             fill
-            sizes={
-              isWebsite
-                ? "(min-width: 1280px) 62vw, (min-width: 1024px) 65vw, 100vw"
-                : "(min-width: 1280px) 28vw, (min-width: 768px) 45vw, 100vw"
-            }
-            priority={priority}
-            loading={priority ? "eager" : "lazy"}
-            className={cn(
-              "object-cover object-center transition-[transform,opacity] duration-[520ms] ease-[cubic-bezier(0.22,1,0.36,1)]",
-              prefersReducedMotion
-                ? "transition-none"
-                : "group-hover:scale-[1.015]",
-            )}
-          />
-          <span
-            aria-hidden
-            className="pointer-events-none absolute inset-0 bg-black/0 transition-colors duration-300 group-hover:bg-black/[0.04] dark:group-hover:bg-black/10"
+            sizes="(min-width: 1024px) 48vw, 94vw"
+            priority={index < 2}
+            loading={index < 2 ? "eager" : "lazy"}
+            className="object-contain object-center"
           />
         </div>
-        <figcaption className="flex min-h-[78px] flex-col justify-center p-3.5 md:min-h-[84px] md:p-4">
-          <div className="flex items-center gap-2 font-sans text-[10px] tracking-[0.16em] text-foreground-secondary">
-            <span>{project.number}</span>
-            <span aria-hidden className="h-px w-4 bg-border" />
-            <span className="uppercase">{project.category}</span>
+        <span
+          aria-hidden
+          className={cn(
+            "absolute inset-x-0 top-0 h-[2px] bg-[var(--accent-cherry)] transition-opacity duration-300",
+            isActive ? "opacity-100" : "opacity-0",
+          )}
+        />
+      </div>
+    </m.div>
+  );
+}
+
+/**
+ * InfoBlock — the single information viewport's content for one
+ * project. Rendered either inside the crossfade (deck mode) or
+ * inline per project (reduced-motion static list).
+ */
+function InfoBlock({ project }: { project: GalleryItem }) {
+  const href = project.href ?? "#contact";
+  const isExternal = href.startsWith("http");
+  const { play } = useAudio();
+  const canHoverTick = useCanPointerReact();
+
+  return (
+    <div className="min-w-0">
+      <p className="font-sans text-[11px] font-semibold tracking-[0.2em] text-foreground-secondary">
+        {project.category.toUpperCase()}
+      </p>
+      <h3 className="mt-2 font-sans text-[clamp(1.9rem,8vw,2.4rem)] leading-[1.05] font-extrabold tracking-[-0.02em] text-balance text-foreground md:mt-3 lg:text-[clamp(3rem,4.5vw,3.5rem)] max-[380px]:text-[1.7rem]">
+        {project.title}
+      </h3>
+      <p className="mt-3 max-w-[34rem] font-sans text-[14px] leading-relaxed text-foreground-secondary line-clamp-2 md:mt-3 md:text-[15px] md:line-clamp-none lg:mt-4 lg:text-[16px]">
+        {project.description}
+      </p>
+      <p className="mt-5 font-sans text-[10px] font-semibold tracking-[0.2em] text-foreground-secondary md:mt-8">
+        CAPABILITIES
+      </p>
+      {/* Desktop: editorial rows. Mobile: one compact inline line. */}
+      <ul className="mt-3 hidden border-t border-border md:block">
+        {project.tags.map((tag) => (
+          <li
+            key={tag}
+            className="border-b border-border py-2 font-sans text-[13px] font-medium tracking-[0.04em] text-foreground"
+          >
+            {tag}
+          </li>
+        ))}
+      </ul>
+      <p className="mt-3 font-sans text-[13px] font-medium tracking-[0.04em] text-foreground md:hidden">
+        {project.tags.join(" · ")}
+      </p>
+      <a
+        href={href}
+        target={isExternal ? "_blank" : undefined}
+        rel={isExternal ? "noopener noreferrer" : undefined}
+        aria-label={`View project: ${project.title}`}
+        onMouseEnter={() => {
+          if (canHoverTick) play("ui-hover");
+        }}
+        onClick={() => play("ui-click")}
+        className="group/link mt-5 inline-flex items-center gap-1.5 font-sans text-[11px] font-semibold tracking-[0.16em] text-foreground transition-colors duration-200 hover:text-[var(--accent-cherry)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring md:mt-6"
+      >
+        VIEW PROJECT
+        <span
+          aria-hidden
+          className="inline-block transition-transform duration-200 ease-out group-hover/link:-translate-y-[3px] group-hover/link:translate-x-[3px] motion-reduce:transition-none"
+        >
+          ↗
+        </span>
+      </a>
+    </div>
+  );
+}
+
+function StackDeck({ gentle }: { gentle: boolean }) {
+  const trackRef = useRef<HTMLDivElement>(null);
+  // Canonical scrollport via subscription (no effect-setState cascade):
+  // getElementById returns a stable node identity, so the snapshot is
+  // cached by reference. Until it resolves, useScroll holds instead of
+  // silently subscribing to window scrolling (which never moves here).
+  const scrollRoot = useSyncExternalStore(
+    () => () => {},
+    () => getScrollContainer(),
+    () => null,
+  );
+  const containerRef = useMemo(() => ({ current: scrollRoot }), [scrollRoot]);
+
+  const { scrollYProgress } = useScroll({
+    target: trackRef,
+    container: containerRef,
+    offset: ["start start", "end end"],
+  });
+
+  const [active, setActive] = useState(0);
+  // THE single source of truth: image emphasis + info content +
+  // hairline all follow this index. Sheet motion stays on
+  // MotionValues with zero re-renders per scroll frame.
+  // A soft air tick marks genuine takeovers only — direction-free,
+  // change-guarded, provider-cooled down so rapid scrolling never
+  // machine-guns.
+  const { play } = useAudio();
+  const playRef = useRef(play);
+  // Sync-only effect (no state) — keeps the motion callback pointed
+  // at the live play without re-subscribing it.
+  useEffect(() => {
+    playRef.current = play;
+  });
+  const activeRef = useRef(0);
+  useMotionValueEvent(scrollYProgress, "change", (v) => {
+    // Boundaries sit exactly at each sheet's rise origin (index / COUNT),
+    // matching the ImageSheet settle windows — text and image change as
+    // one card in both scroll directions. round() would shift every
+    // boundary half a card late and map v=1 to an invalid index.
+    const next = Math.min(
+      COUNT - 1,
+      Math.max(0, Math.floor(v * COUNT + Number.EPSILON)),
+    );
+    if (next !== activeRef.current) {
+      activeRef.current = next;
+      playRef.current("service-expand");
+    }
+    setActive(next);
+  });
+  const current = gallery[active] ?? gallery[0]!;
+
+  return (
+    <div ref={trackRef} className="relative h-[480svh] md:h-[600svh]">
+      {/* Clipped full-viewport stage: heading + viewer persist while
+          the track scrolls. Overflow on the sticky element itself
+          does not break its sticking. */}
+      <div className="sticky top-0 flex h-[100svh] flex-col overflow-hidden pt-12 md:pt-6">
+        <header className="mx-auto mb-8 w-full max-w-[min(94vw,80rem)] shrink-0 text-center md:mb-10">
+          <h2
+            id="projects-heading"
+            className="font-sans text-[clamp(2rem,12vw,4rem)] leading-[1.0] font-extrabold tracking-[-0.03em] text-foreground lg:text-[clamp(2.5rem,7vw,4.5rem)]"
+          >
+            <AnimatedText segments="DESIGN WORK" />
+          </h2>
+        </header>
+
+        <div className="mx-auto grid w-full max-w-[min(94vw,80rem)] flex-1 min-h-0 grid-cols-1 items-center gap-6 pb-4 md:gap-8 md:pb-[calc(var(--floating-nav-clearance)+1rem)] lg:grid-cols-[minmax(0,1.2fr)_minmax(0,0.8fr)] lg:gap-12">
+          {/* LEFT — scroll-driven image stack. Sheets are
+              aria-hidden and pointer-inert; all interaction lives
+              in the single info viewport. */}
+          <div className="relative flex h-[34svh] min-h-0 items-center justify-center md:h-full max-[380px]:h-[30svh]">
+            {gallery.map((project, i) => (
+              <ImageSheet
+                key={project.id}
+                project={project}
+                index={i}
+                progress={scrollYProgress}
+                isActive={i === active}
+                gentle={gentle}
+              />
+            ))}
           </div>
-          <h3 className="mt-1.5 line-clamp-1 font-headline-lg text-[15px] font-semibold leading-tight tracking-[-0.02em] text-foreground md:text-[16px]">
-            {project.title}
-          </h3>
-          <span className="mt-2 inline-flex items-center gap-1.5 font-sans text-[10px] tracking-[0.14em] text-foreground-secondary transition-colors duration-200 group-hover:text-foreground">
-            VIEW{" "}
-            <span
-              aria-hidden
-              className="inline-block transition-transform duration-300 ease-out group-hover:-translate-y-px group-hover:translate-x-px motion-reduce:transition-none"
-            >
-              ↗
-            </span>
-          </span>
-        </figcaption>
-      </figure>
-    </a>
+
+          {/* RIGHT — ONE information viewport. Content crossfades
+              (wait mode: exit completes before enter, never
+              overlapping); min-height keeps the composition stable
+              across varying description lengths. */}
+          <div
+            className="min-h-[200px] min-w-0 lg:min-h-[420px]"
+            aria-live="polite"
+            aria-atomic="true"
+          >
+            <AnimatePresence mode="wait" initial={false}>
+              <m.div
+                key={current.id}
+                initial={{ opacity: 0, y: gentle ? 8 : 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: gentle ? -8 : -10 }}
+                transition={{ duration: gentle ? 0.15 : 0.2, ease: "easeOut" }}
+              >
+                <InfoBlock project={current} />
+              </m.div>
+            </AnimatePresence>
+          </div>
+        </div>
+      </div>
+      {/* settle room — final viewer rests clear of floating nav */}
+      <div className="h-[8svh]" aria-hidden />
+    </div>
   );
 }
 
 export function Projects() {
   const ref = useRef<HTMLElement>(null);
   useCinematicSection(ref, "projects");
+  // One soft paper-air breath on meaningful section entry.
+  useSectionEnterSound(ref, "service-expand");
   const prefersReducedMotion = useReducedMotion();
+  const isMobile = useMediaQuery("(max-width: 767px)");
 
   return (
     <section
       ref={ref}
       id="projects"
-      className="section-tone-projects relative z-0 overflow-visible scroll-mt-[var(--nav-safe-top)] px-4 pt-[calc(var(--nav-safe-top)+0.75rem)] pb-8 sm:px-5 md:px-[var(--layout-nav-inset)] md:pb-10 lg:pb-12"
+      className="section-tone-projects relative z-0 overflow-visible scroll-mt-[var(--nav-safe-top)] px-4 pt-[calc(var(--nav-safe-top)+0.75rem)] pb-10 sm:px-5 md:px-[var(--layout-nav-inset)] md:pb-14"
       aria-labelledby="projects-heading"
     >
       <Container className="w-full max-w-none">
-        <header className="cinematic-layer cinematic-layer--heading mb-6 flex flex-col gap-2 border-b border-border pb-5 md:mb-8 md:flex-row md:items-end md:justify-between md:pb-6">
-          <div className="min-w-0">
-            <h2
-              id="projects-heading"
-              className="font-sans text-[clamp(2.25rem,5vw,3.75rem)] leading-[1.02] font-extrabold tracking-[-0.03em] text-foreground"
-            >
-              <AnimatedText segments="Selected Work" />
-            </h2>
-            <p className="mt-1.5 max-w-[32rem] font-body-md text-[13px] leading-relaxed text-foreground-secondary md:text-[14px]">
-              Digital experiences, identities and visual systems — a curated
-              selection.
-            </p>
-          </div>
-          <span className="shrink-0 font-sans text-[11px] font-semibold tracking-[0.2em] text-foreground-secondary">
-            01 — 06
-          </span>
-        </header>
-
-        <div className="flex flex-col gap-6 md:gap-5 lg:gap-6">
-          {/* Row 1: 16:9 + 1:1 — heights equal via 1.777:1 (64/36) */}
-          <div
-            className={cn(
-              "cinematic-layer cinematic-layer--media grid grid-cols-1 gap-6 md:grid-cols-[minmax(0,1.777fr)_minmax(0,1fr)] md:gap-5 lg:gap-6",
-              "group",
-              prefersReducedMotion
-                ? ""
-                : "[&_a:hover]:opacity-100 [&:has(a:hover)_a:not(:hover)]:opacity-[0.96]",
-            )}
-          >
-            <Reveal index={0} clip className="min-w-0">
-              <ProjectFigure project={gallery[0]!} priority />
-            </Reveal>
-            <Reveal index={1} clip className="min-w-0">
-              <ProjectFigure project={gallery[1]!} />
-            </Reveal>
-          </div>
-
-          {/* Row 2: 1:1 + 16:9 — reverse 1:1.777 */}
-          <div
-            className={cn(
-              "cinematic-layer cinematic-layer--media grid grid-cols-1 gap-6 md:grid-cols-[minmax(0,1fr)_minmax(0,1.777fr)] md:gap-5 lg:gap-6",
-              "group",
-              prefersReducedMotion
-                ? ""
-                : "[&_a:hover]:opacity-100 [&:has(a:hover)_a:not(:hover)]:opacity-[0.96]",
-            )}
-          >
-            <Reveal index={1} clip className="min-w-0">
-              <ProjectFigure project={gallery[2]!} />
-            </Reveal>
-            <Reveal index={2} clip className="min-w-0">
-              <ProjectFigure project={gallery[3]!} />
-            </Reveal>
-          </div>
-
-          {/* Row 3: 1:1 + 1:1 — full container width, equal 1:1 */}
-          <div
-            className={cn(
-              "cinematic-layer cinematic-layer--media grid grid-cols-1 gap-6 md:grid-cols-2 md:gap-5 lg:gap-6",
-              "group",
-              prefersReducedMotion
-                ? ""
-                : "[&_a:hover]:opacity-100 [&:has(a:hover)_a:not(:hover)]:opacity-[0.96]",
-            )}
-          >
-            <Reveal index={2} clip className="min-w-0">
-              <ProjectFigure project={gallery[4]!} />
-            </Reveal>
-            <Reveal index={3} clip className="min-w-0">
-              <ProjectFigure project={gallery[5]!} />
-            </Reveal>
-          </div>
+        <div className="cinematic-layer cinematic-layer--media">
+          {prefersReducedMotion ? (
+            /* Reduced motion: honest document flow, no sticky, no
+               scroll-linked transforms, no crossfade motion.
+               Content fully preserved. */
+            <div className="mx-auto flex max-w-[min(94vw,80rem)] flex-col gap-10 md:gap-14">
+              <h2
+                id="projects-heading"
+                className="text-center font-sans text-[clamp(2rem,12vw,4rem)] leading-[1.0] font-extrabold tracking-[-0.03em] text-foreground lg:text-[clamp(2.5rem,7vw,4.5rem)]"
+              >
+                DESIGN WORK
+              </h2>
+              {gallery.map((project, i) => (
+                <div
+                  key={project.id}
+                  className="grid grid-cols-1 items-center gap-5 md:gap-8 lg:grid-cols-[minmax(0,1.2fr)_minmax(0,0.8fr)] lg:gap-12"
+                >
+                  <div className="relative min-w-0 overflow-hidden rounded-lg border border-border bg-muted shadow-[var(--shadow-sm)]">
+                    <div
+                      className="relative mx-auto h-[var(--wh)] max-w-full [width:min(100%,calc(var(--wh)*var(--rw)))] [--wh:38svh] md:[--wh:52svh] lg:[--wh:58svh]"
+                      style={{
+                        aspectRatio: project.mediaRatio,
+                        ["--rw" as string]: project.ratioNum,
+                      }}
+                    >
+                      <Image
+                        src={project.image}
+                        alt={project.imageAlt}
+                        fill
+                        sizes="(min-width: 1024px) 48vw, 94vw"
+                        loading={i === 0 ? "eager" : "lazy"}
+                        priority={i === 0}
+                        className="object-contain object-center"
+                      />
+                    </div>
+                  </div>
+                  <InfoBlock project={project} />
+                </div>
+              ))}
+              <div className="h-[8svh]" aria-hidden />
+            </div>
+          ) : (
+            /* Heading lives inside the sticky stage (id for a11y). */
+            <StackDeck gentle={isMobile} />
+          )}
         </div>
       </Container>
     </section>

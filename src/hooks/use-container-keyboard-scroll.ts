@@ -2,7 +2,7 @@
 
 import { useEffect } from "react";
 
-import { getScrollContainer } from "@/lib/scroll-container";
+import { getScrollContainer, scrollContainerTo } from "@/lib/scroll-container";
 
 /**
  * Keyboard scrolling for the custom scroll container.
@@ -89,10 +89,19 @@ export function useContainerKeyboardScroll() {
       if (container.contains(target) && target !== container) return;
 
       event.preventDefault();
+      // One consistent path: the authoritative container scroller with
+      // short, native-feeling durations. This supersedes any in-flight
+      // programmatic tween (newest input wins) without setting the
+      // navigation flag — keys are manual travel, not destination nav.
+      // Reduced-motion jumps instantly inside scrollContainerTo.
       if (absolute !== null) {
-        container.scrollTo({ top: absolute, behavior: "smooth" });
+        scrollContainerTo(absolute, { behavior: "smooth", duration: 400 });
       } else if (delta !== null) {
-        container.scrollBy({ top: delta, behavior: "smooth" });
+        const lineStep = Math.abs(delta) <= 64;
+        scrollContainerTo(container.scrollTop + delta, {
+          behavior: "smooth",
+          duration: lineStep ? 160 : 380,
+        });
       }
     };
 

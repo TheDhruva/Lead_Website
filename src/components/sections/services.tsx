@@ -16,40 +16,53 @@ import { useAudio } from "@/providers/audio-provider";
 type Service = (typeof services)[number];
 
 /**
- * Desktop accordion panel — stateless.
- * Expansion is pure CSS (:hover / :focus-within on .services-accordion),
- * so hovering never triggers React renders, timeouts, or layout polling.
- * Closed: image + title only. Expanded: title, description, capabilities.
+ * Desktop accordion panel — ONE semantic active state drives geometry
+ * (flex-grow) and content (opacity/translate) together, so text can
+ * never float apart from its card. CSS owns the transitions; React
+ * owns the state. Fully reversible in every direction.
  */
 function ServicePanel({
   service,
   isFirst,
+  isActive,
   onActivate,
 }: {
   service: Service;
   isFirst: boolean;
-  /** Fired on hover/focus enter — parent plays only on real change. */
+  isActive: boolean;
+  /** Fired on hover/focus/click — parent holds the canonical state. */
   onActivate: (id: string) => void;
 }) {
   return (
     <article
       onMouseEnter={() => onActivate(service.id)}
+      style={{ flexGrow: isActive ? 3.2 : 1 }}
       className={cn(
         "service-acc group relative flex min-h-0 min-w-0 flex-col overflow-hidden rounded-lg border border-border bg-card",
         "focus-within:ring-2 focus-within:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--background-secondary)]",
         "hover:z-[1] hover:border-border-hover hover:shadow-[var(--shadow-md)]",
         "focus-within:z-[1] focus-within:border-border-hover focus-within:shadow-[var(--shadow-md)]",
+        isActive && "z-[1] border-border-hover shadow-[var(--shadow-md)]",
       )}
     >
-      {/* keyboard control — focusing expands via :focus-within */}
+      {/* keyboard + touch control — focusing/selecting joins the same
+          active-service path as hover (visual + sound unified) */}
       <button
         type="button"
-        aria-label={`${service.title}. Focus to expand.`}
+        aria-label={`${service.title}. Select to expand.`}
+        aria-expanded={isActive}
+        onFocus={() => onActivate(service.id)}
+        onClick={() => onActivate(service.id)}
         className="absolute inset-0 z-20 h-full w-full cursor-pointer outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-inset"
       />
-      {/* image */}
+      {/* image — dimmer and quieter when inactive */}
       <div className="absolute inset-0 overflow-hidden">
-        <div className="service-acc__media absolute inset-0">
+        <div
+          className={cn(
+            "service-acc__media absolute inset-0 transition-[transform,opacity] duration-700 ease-[cubic-bezier(0.16,1,0.3,1)] motion-reduce:transition-none",
+            isActive ? "scale-[1.05] opacity-90" : "scale-[1.02] opacity-35",
+          )}
+        >
           <Image
             src={service.image}
             alt={service.imageAlt}
@@ -61,24 +74,37 @@ function ServicePanel({
         </div>
         <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/45 to-black/20" />
         <div
-          className="service-acc__dim absolute inset-0 bg-black/20 transition-opacity duration-500 group-hover:bg-black/0 group-focus-within:bg-black/0"
+          className={cn(
+            "absolute inset-0 bg-black/20 transition-opacity duration-500 motion-reduce:transition-none",
+            isActive ? "opacity-0" : "opacity-100",
+          )}
           aria-hidden
         />
       </div>
 
-      {/* closed minimal — title only over the image */}
+      {/* quiet state — centered title only, clearly secondary */}
       <div
-        className="service-acc__inactive relative z-10 flex h-full min-h-0 flex-col justify-end p-5 md:p-6 lg:p-7"
+        className={cn(
+          "relative z-10 flex h-full min-h-0 flex-col items-center justify-center p-5 text-center transition-[opacity,transform] duration-300 ease-[cubic-bezier(0.16,1,0.3,1)] motion-reduce:transition-none",
+          isActive
+            ? "pointer-events-none translate-y-1 opacity-0"
+            : "opacity-100",
+        )}
         aria-hidden="true"
       >
-        <h3 className="font-headline-lg text-[20px] leading-[1] font-extrabold tracking-[-0.02em] text-white md:text-[22px]">
+        <h3 className="font-headline-lg text-[18px] leading-[1.05] font-extrabold tracking-[-0.02em] text-white/90 md:text-[19px]">
           {service.title.toUpperCase()}
         </h3>
       </div>
 
-      {/* expanded content */}
+      {/* focal state — title, description, capabilities */}
       <div
-        className="service-acc__active relative z-10 flex h-full min-h-0 flex-col justify-end p-5 md:p-6 lg:p-7"
+        className={cn(
+          "relative z-10 flex h-full min-h-0 flex-col justify-end p-5 transition-[opacity,transform] duration-500 ease-[cubic-bezier(0.16,1,0.3,1)] motion-reduce:transition-none md:p-6 lg:p-7",
+          isActive
+            ? "translate-y-0 opacity-100 delay-150"
+            : "pointer-events-none translate-y-2 opacity-0",
+        )}
         aria-hidden="true"
       >
         <div className="min-w-0">
@@ -104,7 +130,10 @@ function ServicePanel({
       {/* cherry accent when expanded */}
       <span
         aria-hidden
-        className="service-acc__accent absolute left-0 right-0 top-0 h-[2px] bg-[var(--accent-cherry)]"
+        className={cn(
+          "absolute left-0 right-0 top-0 h-[2px] bg-[var(--accent-cherry)] transition-opacity duration-300 motion-reduce:transition-none",
+          isActive ? "opacity-100" : "opacity-0",
+        )}
       />
     </article>
   );
@@ -117,13 +146,14 @@ function ServicePanel({
  * control). One IntersectionObserver on the scroll container: no scroll
  * listeners, no RAF, no per-frame work.
  */
-function MobileStack() {
-  const { play } = useAudio();
-  const [expandedId, setExpandedId] = useState<string | null>(
-    services[0]?.id ?? null,
-  );
+function MobileStack({
+  activeId,
+  onActiveChange,
+}: {
+  activeId: string | null;
+  onActiveChange: (id: string | null) => void;
+}) {
   const cardRefs = useRef<(HTMLDivElement | null)[]>([]);
-  const mountedRef = useRef(false);
 
   useEffect(() => {
     const root = getScrollContainer();
@@ -146,7 +176,7 @@ function MobileStack() {
           });
         const nearest = visible[0];
         const id = nearest?.target.getAttribute("data-service-id");
-        if (id) setExpandedId(id);
+        if (id) onActiveChange(id);
       },
       {
         root: root ?? null,
@@ -156,22 +186,14 @@ function MobileStack() {
     );
     targets.forEach((el) => observer.observe(el));
     return () => observer.disconnect();
-  }, []);
-
-  // One whisper when the scroll-spy focus actually changes cards —
-  // never on mount, never repeatedly while scrolling.
-  useEffect(() => {
-    if (!mountedRef.current) {
-      mountedRef.current = true;
-      return;
-    }
-    if (expandedId) play("service-expand");
-  }, [expandedId, play]);
+    // Scroll-spy writes into the shared canonical state; the parent
+    // owns the single change sound. Never add one here.
+  }, [onActiveChange]);
 
   return (
     <div className="flex flex-col gap-4">
       {services.map((service, idx) => {
-        const isExpanded = expandedId === service.id;
+        const isExpanded = activeId === service.id;
         const panelId = `service-panel-${service.id}`;
         const buttonId = `service-button-${service.id}`;
         return (
@@ -192,9 +214,7 @@ function MobileStack() {
                 aria-expanded={isExpanded}
                 aria-controls={panelId}
                 onClick={() =>
-                  setExpandedId((current) =>
-                    current === service.id ? null : service.id,
-                  )
+                  onActiveChange(activeId === service.id ? null : service.id)
                 }
                 className="relative block w-full text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring"
               >
@@ -288,15 +308,23 @@ export function Services() {
   const sectionRef = useRef<HTMLElement>(null);
   useCinematicSection(sectionRef, "services");
   const { play } = useAudio();
-  const lastActiveRef = useRef<string | null>(null);
+  // Canonical active service — desktop hover/focus/click and the
+  // mobile scroll-spy/tap all read and write this ONE state, so both
+  // breakpoints (and sound) can never disagree.
+  const [activeId, setActiveId] = useState<string | null>(
+    services[1]?.id ?? null,
+  );
+  const mountedRef = useRef(false);
 
-  // Desktop hover only makes a whisper when a DIFFERENT card takes
-  // over — entering the same card repeatedly stays silent.
-  const handleActivate = (id: string) => {
-    if (lastActiveRef.current === id) return;
-    lastActiveRef.current = id;
-    play("service-expand");
-  };
+  // The single change whisper for both breakpoints — never on mount,
+  // never on repeat selection (state bails out when unchanged).
+  useEffect(() => {
+    if (!mountedRef.current) {
+      mountedRef.current = true;
+      return;
+    }
+    if (activeId) play("service-expand");
+  }, [activeId, play]);
 
   return (
     <section
@@ -314,21 +342,22 @@ export function Services() {
           <AnimatedText segments="Services" />
         </h2>
 
-        {/* Desktop — CSS-only accordion */}
+        {/* Desktop — state-driven accordion. Card height derives
+            from viewport minus heading, navbar safe zone and
+            breathing room, so cards always finish above the pill. */}
         <div className="hidden md:block">
           <CssReveal delay={80}>
             <div
-              className="cinematic-layer cinematic-layer--grid services-accordion flex h-[min(520px,calc(100svh-var(--nav-safe-top)-6rem))] min-w-0 gap-4 lg:gap-5"
-              onMouseLeave={() => {
-                lastActiveRef.current = null;
-              }}
+              className="cinematic-layer cinematic-layer--grid services-accordion flex h-[clamp(300px,calc(100svh-var(--nav-safe-top)-var(--floating-nav-clearance)-11rem),560px)] min-w-0 gap-4 lg:gap-5"
+              onMouseLeave={() => setActiveId(null)}
             >
               {services.map((service, idx) => (
                 <ServicePanel
                   key={service.id}
                   service={service}
                   isFirst={idx === 0}
-                  onActivate={handleActivate}
+                  isActive={activeId === service.id}
+                  onActivate={setActiveId}
                 />
               ))}
             </div>
@@ -338,7 +367,7 @@ export function Services() {
         {/* Mobile — vertical scroll-spy stack (no carousel) */}
         <div className="md:hidden">
           <CssReveal delay={80}>
-            <MobileStack />
+            <MobileStack activeId={activeId} onActiveChange={setActiveId} />
           </CssReveal>
           {/* breathing room for floating navbar */}
           <div
