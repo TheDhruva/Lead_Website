@@ -55,7 +55,7 @@ export function Contact() {
     >
       <Container className="contact-scene__body flex w-full min-w-0 max-w-none flex-col gap-5 md:max-h-full md:gap-3 lg:gap-4">
         <div className="contact-scene__main grid min-h-0 min-w-0 flex-1 grid-cols-1 items-start gap-4 max-md:gap-3.5 lg:items-start lg:gap-0">
-          <div className="cinematic-layer cinematic-layer--links min-w-0 lg:self-start">
+          <div className="cinematic-layer cinematic-layer--links min-w-0 lg:self-center">
             <div className="contact-scene__intro flex min-w-0 flex-col gap-4 max-md:gap-3 md:gap-4">
               <Reveal y={16}>
                 <h2
@@ -129,7 +129,7 @@ export function Contact() {
             </div>
           </div>
 
-          <div className="cinematic-layer cinematic-layer--panel min-w-0 w-full max-w-full self-start lg:self-start">
+          <div className="cinematic-layer cinematic-layer--panel min-w-0 w-full max-w-full self-start lg:self-center">
             <Reveal
               index={2}
               y={24}

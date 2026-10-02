@@ -111,6 +111,11 @@ export function HomePageContent() {
               id={SECTION_IDS.video}
               className="section-tone-videos section-placeholder"
               minHeight="100svh"
+              // Heavier section (player + media): start preparing while the
+              // section is still well below the fold so chunk evaluation,
+              // render, and the first video's byte fetch happen off the
+              // entry frame instead of during active scrolling.
+              rootMargin="0px 0px 900px 0px"
               srContent={
                 <>
                   <h2 className="sr-only">Video Showcase</h2>
@@ -133,6 +138,9 @@ export function HomePageContent() {
               id={SECTION_IDS.projects}
               className="section-tone-projects section-placeholder"
               minHeight="100svh"
+              // Design Work carries the six-image stack — mount early so
+              // chunk + image fetches clear the scroll path before entry.
+              rootMargin="0px 0px 900px 0px"
               srContent={
                 <>
                   <h2 className="sr-only">Projects</h2>

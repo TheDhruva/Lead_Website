@@ -4,11 +4,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 
 import { AnimatePresence, m } from "framer-motion";
 
-import {
-  THEATRE_INTRO_AUTO_EXIT_MS,
-  THEATRE_INTRO_LOAD_MS,
-  THEATRE_INTRO_REVEAL_MS,
-} from "@/constants";
+import { THEATRE_INTRO_LOAD_MS, THEATRE_INTRO_REVEAL_MS } from "@/constants";
 import { useReducedMotion } from "@/hooks/use-reduced-motion";
 import { cn } from "@/lib/utils";
 import { useAudio } from "@/providers/audio-provider";
@@ -89,7 +85,10 @@ export function TheatreIntro() {
     if (isReturning) {
       window.setTimeout(() => beginExit(false), 120);
     } else {
-      setPhase("ready");
+      // Only the loading phase advances to "ready". The idle bar replays
+      // during "ready"; if its end lands mid-exit it must never revert
+      // an in-flight exit back to the prompt.
+      setPhase((current) => (current === "loading" ? "ready" : current));
     }
   }, [isReturning, beginExit]);
 
@@ -110,15 +109,10 @@ export function TheatreIntro() {
     return () => window.removeEventListener("keydown", onKeyDown);
   }, [prefersReducedMotion, phase, beginExit]);
 
-  useEffect(() => {
-    if (prefersReducedMotion || phase !== "ready") return;
-
-    const timer = window.setTimeout(
-      () => beginExit(false),
-      THEATRE_INTRO_AUTO_EXIT_MS,
-    );
-    return () => window.clearTimeout(timer);
-  }, [prefersReducedMotion, phase, beginExit]);
+  // NOTE: no auto-exit from "ready". First-time visitors wait here until
+  // they explicitly enter (click / Enter / Space / Skip / Escape) — that
+  // gesture is what opts them into background music. Returning visitors
+  // still fast-path through handleLoadAnimationEnd above.
 
   const exiting = phase === "exiting";
   const showEnterPrompt = phase === "ready";

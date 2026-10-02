@@ -3,6 +3,7 @@
 import {
   type RefObject,
   useCallback,
+  useEffect,
   useMemo,
   useState,
   useSyncExternalStore,
@@ -81,10 +82,18 @@ export function useEnterExit<T extends HTMLElement = HTMLDivElement>(
   });
   const [entered, setEntered] = useState(false);
 
-  // Render-phase latch (React-endorsed derived-state pattern).
-  if (inView && !entered) {
-    setEntered(true);
-  }
+  // Enter-latch lives in an effect, never during render: a fast section
+  // entry crosses many instances' thresholds together, and a render-phase
+  // setState forces a synchronous render burst for every one of them. The
+  // guard keeps the update conditional on the actual in-view transition —
+  // one update per crossing, none on the renders in between — and the
+  // microtask defers it out of the effect body so React can coalesce
+  // every crossing from the same scroll event into a single render.
+  // No render → setState → render loop: once entered, the guard is false.
+  useEffect(() => {
+    if (!inView || entered) return;
+    queueMicrotask(() => setEntered(true));
+  }, [inView, entered]);
 
   const ref = useCallback((el: T | null) => {
     setElement(el);

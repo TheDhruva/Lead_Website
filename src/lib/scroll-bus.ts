@@ -1,13 +1,6 @@
-import {
-  collectCinematicLayoutElements,
-  tickCinematicSections,
-} from "@/lib/cinematic-scroll-coordinator";
+import { tickCinematicSections } from "@/lib/cinematic-scroll-coordinator";
 import { pointerEngine } from "@/lib/pointer-engine";
 import { getScrollContainer } from "@/lib/scroll-container";
-import {
-  type ScrollLayoutSnapshot,
-  createScrollLayoutSnapshot,
-} from "@/lib/scroll-layout-snapshot";
 import {
   type ScrollMotionFrame,
   subscribeScrollMotion,
@@ -39,12 +32,6 @@ function scheduleScrollInactive(): void {
   }, SCROLL_IDLE_MS);
 }
 
-function buildLayoutSnapshot(): ScrollLayoutSnapshot {
-  const elements: HTMLElement[] = [];
-  collectCinematicLayoutElements(elements);
-  return createScrollLayoutSnapshot(elements);
-}
-
 function shouldSkipVisualTick(motion: ScrollMotionFrame): boolean {
   if (Math.abs(motion.velocity) >= LOW_VELOCITY_THRESHOLD) {
     return false;
@@ -69,8 +56,9 @@ function onScrollMotion(motion: ScrollMotionFrame): void {
     return;
   }
 
-  const snapshot = buildLayoutSnapshot();
-  tickCinematicSections(motion, snapshot);
+  // The coordinator owns geometry: cached section offsets are consumed
+  // per frame (no getBoundingClientRect on the scroll path).
+  tickCinematicSections(motion);
 }
 
 export function isScrollActive(): boolean {

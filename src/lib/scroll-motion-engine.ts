@@ -38,9 +38,19 @@ export function subscribeScrollMotion(
   };
 }
 
+/**
+ * Rect subset consumed by the progress math. Structurally compatible with
+ * DOMRect and with the coordinator's cached, arithmetically-derived rects.
+ */
+export interface SectionRect {
+  top: number;
+  bottom: number;
+  height: number;
+}
+
 /** 0 → section entering; 1 → section leaving viewport */
 export function computeSectionTravelProgress(
-  rect: DOMRect,
+  rect: SectionRect,
   viewportH: number,
 ): number {
   const total = viewportH + rect.height;
@@ -51,7 +61,7 @@ export function computeSectionTravelProgress(
 
 /** 0 → fully visible at top; 1 → scrolled away */
 export function computeSectionExitProgress(
-  rect: DOMRect,
+  rect: SectionRect,
   viewportH: number,
 ): number {
   if (viewportH <= 0) return 0;
@@ -60,7 +70,7 @@ export function computeSectionExitProgress(
 
 /** 0 → below fold; 1 → fully entered */
 export function computeSectionEnterProgress(
-  rect: DOMRect,
+  rect: SectionRect,
   viewportH: number,
 ): number {
   if (viewportH <= 0) return 0;

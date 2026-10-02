@@ -79,6 +79,67 @@ const COUNT = gallery.length;
  */
 const WINDOW = 0.07;
 
+/**
+ * Extend parallel keyframe channels to span the full [0, 1] progress
+ * range with flat holds at both ends. Framer's accelerated opacity
+ * path hands these arrays straight to WAAPI, and Web Animations'
+ * implicit-keyframe generation (L1) synthesises a missing offset-1
+ * keyframe from the element's UNDERLYING mounted style — without this,
+ * the deck's final stretch interpolates back toward the mounted
+ * opacity (card 1 flashing at the end of the deck). The JS
+ * interpolation path already clamps at both ends, so the flat holds
+ * are pixel-identical there.
+ */
+function extendKeyframesToFullRange(
+  keys: number[],
+  ...channels: unknown[][]
+): void {
+  if (keys.length === 0) return;
+  if (keys[0]! > 0) {
+    keys.unshift(0);
+    for (const channel of channels) channel.unshift(channel[0]!);
+  }
+  if (keys[keys.length - 1]! < 1) {
+    keys.push(1);
+    for (const channel of channels) {
+      channel.push(channel[channel.length - 1]!);
+    }
+  }
+}
+
+/**
+ * Dev-only regression guard for the deck keyframe contract: every
+ * channel stays aligned (equal length), offsets are strictly
+ * increasing, and the range is pinned to exactly [0, 1]. Breaks loudly
+ * in development if a future edit reintroduces the implicit-keyframe
+ * tail or non-monotonic offsets (WAAPI throws on those).
+ */
+function assertKeyframesCoherent(
+  keys: number[],
+  channels: Array<{ length: number }>,
+): void {
+  if (process.env.NODE_ENV === "production") return;
+  const fail = (reason: string): never => {
+    throw new Error(`ImageSheet keyframes: ${reason}`);
+  };
+  if (keys.length === 0) fail("empty offset list");
+  for (const channel of channels) {
+    if (channel.length !== keys.length) {
+      fail(`channel length ${channel.length} != ${keys.length} offsets`);
+    }
+  }
+  if (keys[0] !== 0) fail(`first offset ${keys[0]} !== 0`);
+  if (keys[keys.length - 1] !== 1)
+    fail(`last offset ${keys[keys.length - 1]} !== 1`);
+  for (let i = 1; i < keys.length; i++) {
+    if (!(keys[i]! > keys[i - 1]!)) {
+      fail(
+        `offsets not strictly increasing at ${i} (${keys[i - 1]} → ${keys[i]})`,
+      );
+    }
+  }
+}
+
 /* ─────────────────────────────────────────────────────────────
    Deck mechanics, adapted from Componentry's sticky-scroll-cards:
    a tall track holds ONE sticky full-viewport stage. The media
@@ -135,7 +196,12 @@ function ImageSheet({
     scales.push(1);
     opacities.push(1);
   } else {
-    keys.push(b0 - WINDOW, b0 - WINDOW * 0.3, b0 + WINDOW);
+    // Takeover window translated one WINDOW earlier so the rise
+    // COMPLETES exactly at the index boundary b0: the incoming card
+    // reaches full opacity the moment the active index flips to it,
+    // so text and visual dominance change as one card. Same window
+    // width and curve — only the placement moved.
+    keys.push(b0 - WINDOW * 2, b0 - WINDOW * 1.3, b0);
     ys.push(riseY, nearY, "0svh");
     scales.push(baseScale, 0.985, 1);
     opacities.push(0, 0.3, 1);
@@ -163,6 +229,11 @@ function ImageSheet({
         : Number(Math.max(0.5, baseOpacity - stepOpacity * (d - 2)).toFixed(3));
     opacities.push(prevO, deepO);
   }
+
+  // Pin both ends of the range before handing the arrays to Framer
+  // (accelerated WAAPI) — see extendKeyframesToFullRange.
+  extendKeyframesToFullRange(keys, ys, scales, opacities);
+  assertKeyframesCoherent(keys, [keys, ys, scales, opacities]);
 
   const y = useTransform(progress, keys, ys);
   const scale = useTransform(progress, keys, scales);
@@ -301,10 +372,11 @@ function StackDeck({ gentle }: { gentle: boolean }) {
   });
   const activeRef = useRef(0);
   useMotionValueEvent(scrollYProgress, "change", (v) => {
-    // Boundaries sit exactly at each sheet's rise origin (index / COUNT),
-    // matching the ImageSheet settle windows — text and image change as
-    // one card in both scroll directions. round() would shift every
-    // boundary half a card late and map v=1 to an invalid index.
+    // Boundaries sit exactly where each sheet's rise window completes
+    // (index / COUNT), matching the ImageSheet takeover timing — text
+    // and image change as one card in both scroll directions. round()
+    // would shift every boundary half a card late and map v=1 to an
+    // invalid index.
     const next = Math.min(
       COUNT - 1,
       Math.max(0, Math.floor(v * COUNT + Number.EPSILON)),

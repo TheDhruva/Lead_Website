@@ -5,6 +5,7 @@ import {
   getScrollTop,
   scrollContainerTo,
 } from "@/lib/scroll-container";
+import { getScrollMotionFrame } from "@/lib/scroll-motion-engine";
 import { setNavigating, setNavigationTarget } from "@/lib/section-choreography";
 
 export function getPageEndScrollY(): number {
@@ -37,14 +38,25 @@ export function navigationDurationFor(distancePx: number): number {
 }
 
 /**
- * Scroll to a section's SNAP position: the section's start within the
+ * Newest-request ownership for the pinned navigation target.
+ *
+ * A superseding navigation commits its target BEFORE the previous tween
+ * is stopped (see below), and stopping that tween fires its settle
+ * callback afterwards. Without a sequence guard the OLD flight's settle
+ * would immediately clear the NEW flight's pin — the navbar would step
+ * through intermediate sections again for the rest of the flight.
+ * One id per request: only the newest flight may touch the flags.
+ */
+let navSeq = 0;
+
+/**
+ * Scroll to a section's start position: the section's start within the
  * container, clamped to [0, maxScroll].
  *
- * This must match where CSS `scroll-snap-align: start` settles (section
- * border-box start == snapport start; internal section padding
- * `--nav-safe-top` already clears the floating navbar, and the Design
- * Work deck entry lands on its heading with card 1 active). Exactly one
- * controlled scroll action; snap finishes the job.
+ * This lands exactly on the section border-box start (internal section
+ * padding `--nav-safe-top` already clears the floating navbar, and the
+ * Design Work deck entry lands on its heading with card 1 active). Exactly
+ * one controlled scroll action; no scroll-snap assistance is involved.
  *
  * Navigation marks the choreography `navigating` so observers treat the
  * travel as arrival, and ALWAYS yields: user input or a newer request
@@ -69,11 +81,26 @@ export function scrollToSectionElement(target: HTMLElement): () => void {
 
   const firstTop = targetTop();
   const distance = Math.abs(firstTop - getScrollTop());
+  // Layout-change baseline for the re-aim below: total scrollable height
+  // only moves when sections actually mounted/resized, so comparing against
+  // this frame-published value lets the re-aim check skip measurement
+  // (and its forced style/layout flush) entirely in the common case.
+  const startLimit = getScrollMotionFrame().limit;
   // Commit the destination FIRST so a superseding request can never
-  // observe a stale target; then flag travel. Both clear on settle.
+  // observe a stale target; then flag travel. Both clear on settle —
+  // but only for the NEWEST request (navSeq guard above): stopping the
+  // previous tween fires its settle callback AFTER this commit.
+  const navId = (navSeq += 1);
   setNavigationTarget(target.id || null);
   setNavigating(true);
-  const onSettled = () => {
+  // True only when THIS flight was interrupted (user input / supersede),
+  // never when it arrived — the re-aim below must not resurrect a
+  // cancelled flight, but must still correct a lazy-mount shift after
+  // a normal arrival.
+  let interrupted = false;
+  const onSettled = (info: { cancelled: boolean }) => {
+    if (navId !== navSeq) return;
+    if (info.cancelled) interrupted = true;
     setNavigating(false);
     setNavigationTarget(null);
   };
@@ -86,8 +113,19 @@ export function scrollToSectionElement(target: HTMLElement): () => void {
 
   // Single re-aim ONLY if lazy mounting moved the target (placeholder →
   // real section height change). No polling loop, no correction fighting:
-  // identical positions never trigger a second scroll action.
+  // identical positions never trigger a second scroll action. Skipped for
+  // superseded flights (they no longer own the pin) and interrupted ones
+  // (the user has control — never restart a cancelled flight).
+  //
+  // The limit gate makes the common case free: when total scrollable
+  // height has not shifted, nothing above the target moved, so no geometry
+  // is read and no forced layout happens inside the timer. Measurement
+  // runs only after a real layout change (mount swap / content growth),
+  // and only then can the target have actually moved.
   const reaimTimer = window.setTimeout(() => {
+    if (navId !== navSeq || interrupted) return;
+    const limitNow = getScrollMotionFrame().limit;
+    if (Math.abs(limitNow - startLimit) <= 2) return;
     const el = resolveTarget();
     if (!document.contains(el)) return;
     const nextTop = targetTop();

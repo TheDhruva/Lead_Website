@@ -304,8 +304,8 @@
 }
 
 @layer base {
-  /* scroll-margin also offsets snap-align — keep 0 inside the snap panel
-     (sections clear the floating navbar with their own padding-top). */
+  /* Native anchor jumps land exactly on the section start — sections
+     clear the floating navbar with their own padding-top. */
   section[id],
   [data-snap-frame],
   .section-contact {
@@ -502,75 +502,23 @@
   }
 }
 
-/* ── Full-viewport scroll container (native scroll + CSS snap) ── */
+/* ── Full-viewport scroll container (native scroll) ── */
 html.theatre-done body {
   overflow: hidden;
   height: 100svh;
 }
 
+/* Vertical scroll snap was removed after runtime A/B measurement showed
+   proximity snap fighting gentle wheel input: with snap on, small wheel
+   deltas trapped and re-settled near section boundaries (final position
+   ~74px after a 600px+ intended traversal) and each settle re-ran restyle
+   work; identical input with snap off traversed linearly. Normal native
+   scrolling is the intended behavior: input responds immediately, no
+   snap-back, no re-settling. Sections keep their own start positions for
+   programmatic navigation (scrollContainerTo targets offsets directly). */
 .scroll-panel {
   overscroll-behavior-y: contain;
   -webkit-overflow-scrolling: touch;
-  /* Snap aligns section border-box start exactly to the snapport start.
-     Sections already carry internal padding-top: var(--nav-safe-top), so any
-     scroll-padding here would double-offset content below the navbar. */
-  scroll-padding-top: 0;
-  /* Native section rhythm — gentle proximity everywhere so the page
-     scrolls naturally with wheel, trackpad, touch and keyboard.
-     Never mandatory: the site must not fight scroll input. */
-  scroll-snap-type: y proximity;
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .scroll-panel {
-    scroll-snap-type: none;
-  }
-}
-
-/* Snap targets — major presentation sections align to container start.
-   Auto-height sections keep natural height; snap only sets the stop point. */
-section[id],
-[data-snap-frame],
-.section-frame,
-.section-contact {
-  scroll-snap-align: start;
-}
-
-@media (min-width: 1024px) and (hover: hover) and (pointer: fine) {
-  section[id],
-  [data-snap-frame],
-  .section-frame,
-  .section-contact {
-    scroll-snap-stop: normal;
-  }
-  /* Long gallery content must not trap the snap position on desktop */
-  #projects {
-    scroll-snap-stop: normal;
-  }
-}
-
-/* Design Work is a long scroll-driven deck (480–600svh track): exempt
-   the section itself from snap alignment so proximity snapping never
-   tugs mid-deck. Neighbouring sections keep their normal snap stops,
-   so entry into and exit from the deck still settle deliberately. */
-#projects {
-  scroll-snap-align: none;
-}
-
-/* Touch / coarse-pointer: continuous natural page scrolling. Several
-   sections (Services, Videos, Contact) are auto-height — taller than the
-   viewport — so start-snapping re-asserts mid-content and produces a
-   tug → pause → tug rhythm under a finger. Exempt them on coarse
-   pointers; fine-pointer desktop keeps its existing snap behavior.
-   Programmatic navigation targets section starts directly, so arrivals
-   stay exact with no post-tween snap glide on touch. */
-@media (pointer: coarse) {
-  section[id],
-  [data-snap-frame],
-  .section-frame,
-  .section-contact {
-    scroll-snap-align: none;
-  }
 }
 
 /* Every major section = exactly one viewport */
@@ -1901,14 +1849,21 @@ html.theatre-settling [data-page-shell] {
 @media (min-width: 1024px) {
   .contact-scene__main {
     grid-template-columns: minmax(0, 0.85fr) minmax(0, 1.15fr);
-    align-items: start;
+    align-items: center;
     align-content: start;
+    /* The row packs at the top of the grid box (align-content: start), so
+       the two-column composition sat too high with a large void below it.
+       A modest top pad shifts BOTH columns down ~50-70px toward a calmer
+       vertical balance. Horizontal placement, column heights, form size
+       and the floating nav are all untouched. */
+    padding-top: clamp(3.125rem, 6svh, 4.375rem);
   }
-  /* Natural heights — both columns top-align at the row top (form top
-     edge level with "Your Brand Deserves") and each column sizes to
-     its own content. No stretching, no pinned CTA, no grown textarea. */
+  /* Natural heights — both columns balance on the shared row centre line
+     (form top within a few px of "Your Brand Deserves", form bottom within
+     a few px of the social stack) and each column sizes to its own content.
+     No stretching, no pinned CTA, no grown textarea. */
   .contact-scene__main > div {
-    align-self: start;
+    align-self: center;
     min-width: 0;
   }
   /* Editorial rhythm: heading connected to the social links with
@@ -1916,9 +1871,15 @@ html.theatre-settling [data-page-shell] {
   .contact-scene__intro {
     padding-block: 0;
     gap: clamp(0.625rem, 1.8vh, 1rem);
+    width: fit-content;
+    max-width: 100%;
+    margin-inline: auto;
   }
   .contact-scene__panel {
     align-self: start;
+    max-width: 700px;
+    margin-inline: auto;
+    padding-inline: 1rem;
   }
   .contact-scene__panel .contact-form {
     justify-content: flex-start;

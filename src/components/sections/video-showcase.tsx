@@ -38,9 +38,9 @@ const VIDEO_CUT_OFFSET_PX = 26;
 const VIDEO_EXIT_SCALE = 1.022;
 const VIDEO_ENTRY_SCALE = 0.985;
 const VIDEO_CUT_BLUR_PX = 3;
-const VIDEO_ENTRANCE_HEADING_MS = 600;
-const VIDEO_ENTRANCE_PLAYER_MS = 700;
-const VIDEO_ENTRANCE_ROW_MS = 500;
+const VIDEO_ENTRANCE_HEADING_MS = 520;
+const VIDEO_ENTRANCE_PLAYER_MS = 560;
+const VIDEO_ENTRANCE_ROW_MS = 440;
 const PRELOAD_THRESHOLD = 0.75;
 const EASE_CINEMATIC = "cubic-bezier(0.22, 1, 0.36, 1)";
 
@@ -182,7 +182,7 @@ function VideoProjectList({
             num={formatNum(idx + 1)}
             isActive={idx === currentIndex}
             entered={entered}
-            entranceDelayMs={80 + idx * 50}
+            entranceDelayMs={60 + idx * 40}
             reduceMotion={reduceMotion}
             onSelect={onSelect}
             onHoverItem={onHoverItem}
@@ -213,6 +213,8 @@ export function VideoShowcase() {
   const mediaReadyRef = useRef(false);
   const swapTimeRef = useRef(0);
   const preloadStartedRef = useRef(false);
+  /** Id of the item whose sources are currently loaded on activeRef. */
+  const sourcesLoadedRef = useRef<string | null>(null);
   const prefersReducedMotion = useReducedMotion();
   const { play, setVideoAudioActive, muted: globalMuted } = useAudio();
 
@@ -276,6 +278,33 @@ export function VideoShowcase() {
       {
         threshold: [0, 0.15, 0.35],
         rootMargin: "-6% 0px -6% 0px",
+        root: root ?? null,
+      },
+    );
+    obs.observe(el);
+    return () => obs.disconnect();
+  }, []);
+
+  // Early preparation — initialize the player (and with preload="auto",
+  // the first video's bytes) while the section is still below the fold.
+  // Runtime measurement showed the first fetch+decode landing on the
+  // entry frame (part of the cold-entry stall); this moves it earlier
+  // without touching playback, visibility, or the two-window preload.
+  // Visibility gating is unchanged: play/pause still follows the -6%
+  // observer above, and the entrance still fires on actual entry.
+  useEffect(() => {
+    const el = sectionRef.current;
+    if (!el) return;
+    const root = getScrollContainer();
+    const obs = new IntersectionObserver(
+      ([entry]) => {
+        if (!entry?.isIntersecting) return;
+        setInitialized(true);
+        obs.disconnect();
+      },
+      {
+        threshold: 0,
+        rootMargin: "0px 0px 110% 0px",
         root: root ?? null,
       },
     );
@@ -431,15 +460,21 @@ export function VideoShowcase() {
     if (!initialized) return;
     const v = activeRef.current;
     if (!v) return;
-    preloadStartedRef.current = false;
-    if (progressRef.current)
-      progressRef.current.style.setProperty("--progress", "0%");
     setAutoplayBlocked(false);
-
-    setVideoSources(v, current);
     v.muted = globalMuted || isMutedRef.current;
     v.volume = VIDEO_PLAYBACK_VOLUME;
-    v.currentTime = 0;
+
+    // Source swaps only when the item actually changes: visibility flips,
+    // mute toggles, and the early-init → entry handoff must not tear down
+    // and reload already-prepared media on the entry frame.
+    if (sourcesLoadedRef.current !== current.id) {
+      preloadStartedRef.current = false;
+      if (progressRef.current)
+        progressRef.current.style.setProperty("--progress", "0");
+      setVideoSources(v, current);
+      v.currentTime = 0;
+      sourcesLoadedRef.current = current.id;
+    }
 
     // Readiness signals for the bounded transition gate above. Cached or
     // fast sources may already be playable — HAVE_ENOUGH_DATA covers it.
@@ -498,10 +533,12 @@ export function VideoShowcase() {
     if (!v || !bar) return;
     const tick = () => {
       if (!v.duration || Number.isNaN(v.duration) || v.duration === 0) {
-        bar.style.setProperty("--progress", "0%");
+        bar.style.setProperty("--progress", "0");
       } else {
         const pct = Math.min(100, (v.currentTime / v.duration) * 100);
-        bar.style.setProperty("--progress", `${pct}%`);
+        // Unitless 0–1: drives the bar via scaleX (transform) instead of
+        // width, so the per-frame progress update never dirties layout.
+        bar.style.setProperty("--progress", (pct / 100).toFixed(4));
         // two-window preload at ~75%
         if (!preloadStartedRef.current && pct >= PRELOAD_THRESHOLD * 100) {
           preloadStartedRef.current = true;
@@ -553,7 +590,7 @@ export function VideoShowcase() {
     const onEnded = () => {
       stopProgressLoop();
       if (progressRef.current)
-        progressRef.current.style.setProperty("--progress", "100%");
+        progressRef.current.style.setProperty("--progress", "1");
       // cyclic advance — silent (no UI sound on automatic advance)
       userPausedRef.current = false;
       commitIndex((currentIndexRef.current + 1) % total);
@@ -769,7 +806,7 @@ export function VideoShowcase() {
             transition={{
               duration: VIDEO_ENTRANCE_PLAYER_MS / 1000,
               ease: [0.22, 1, 0.36, 1],
-              delay: prefersReducedMotion ? 0 : 0.08,
+              delay: prefersReducedMotion ? 0 : 0.06,
             }}
           >
             <div
@@ -806,7 +843,11 @@ export function VideoShowcase() {
                   muted={globalMuted || isMuted}
                   playsInline
                   disablePictureInPicture
-                  preload={initialized ? "metadata" : "none"}
+                  // "auto" once initialized: the early-init observer above
+                  // arms this off-screen, so first video bytes arrive before
+                  // entry instead of on the visible frame (same pattern the
+                  // two-window next-video preload already uses).
+                  preload={initialized ? "auto" : "none"}
                   aria-label={`${current.title}. ${current.meta}`}
                 />
 
@@ -870,11 +911,11 @@ export function VideoShowcase() {
                     ref={progressRef}
                     aria-hidden="true"
                     className="pointer-events-none relative h-[2px] w-full bg-white/15"
-                    style={{ ["--progress" as string]: "0%" }}
+                    style={{ ["--progress" as string]: "0" }}
                   >
                     <div
-                      className="absolute inset-y-0 left-0 bg-[var(--accent-cherry)]"
-                      style={{ width: "var(--progress)" }}
+                      className="absolute inset-y-0 left-0 w-full bg-[var(--accent-cherry)]"
+                      style={{ transform: "scaleX(var(--progress, 0))" }}
                     />
                   </div>
                 </div>

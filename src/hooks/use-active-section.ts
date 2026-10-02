@@ -64,25 +64,31 @@ function ensureSharedObservation(sectionIds: readonly string[]): () => void {
         // viewport CENTER is the perceived section. Max-ratio
         // structurally favors short sections, which made tall
         // regions (Design deck) flicker against their neighbors.
-        const viewportH = root?.clientHeight ?? window.innerHeight;
-        const rootTop = root?.getBoundingClientRect().top ?? 0;
+        //
+        // Geometry comes from the observer entries themselves
+        // (boundingClientRect / rootBounds are captured when the
+        // intersection record is queued) — no getBoundingClientRect
+        // here, so a boundary handoff never forces a synchronous
+        // style/layout flush mid-scroll or mid-navigation.
+        const rootBounds = visible[0]?.rootBounds ?? null;
+        const viewportH =
+          rootBounds?.height ?? root?.clientHeight ?? window.innerHeight;
+        const rootTop = rootBounds?.top ?? 0;
         const centerY = rootTop + viewportH / 2;
         // Confirm 12% further along travel before handing over —
         // hysteresis so boundary straddling can't flap the pill.
         const direction = getScrollMotionFrame().direction || 1;
         const confirmY = centerY + direction * viewportH * 0.12;
-        const owns = (el: Element, y: number) => {
-          const rect = el.getBoundingClientRect();
-          return rect.top <= y && rect.bottom >= y;
-        };
+        const owns = (rect: DOMRectReadOnly, y: number) =>
+          rect.top <= y && rect.bottom >= y;
         const byRatio = [...visible].sort(
           (a, b) => b.intersectionRatio - a.intersectionRatio,
         );
         const centerOwner = visible.find((entry) =>
-          owns(entry.target, centerY),
+          owns(entry.boundingClientRect, centerY),
         );
         const confirmOwner = visible.find((entry) =>
-          owns(entry.target, confirmY),
+          owns(entry.boundingClientRect, confirmY),
         );
         const currentId = getSectionChoreography().activeId;
         const currentEntry = visible.find(

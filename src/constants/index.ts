@@ -85,7 +85,7 @@ export const EASING_SIGNATURE: [number, number, number, number] = [
 export const MOTION = {
   /** Restrained section reveals — editorial, premium */
   reveal: { duration: 0.62, ease: EASING_OUT, y: 36, scale: 0.97 },
-  stagger: 0.07,
+  stagger: 0.06,
   itemBaseDelay: 0.06,
   hover: { duration: 0.2, ease: EASING_OUT },
   /**

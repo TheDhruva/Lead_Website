@@ -39,6 +39,26 @@ interface AudioContextValue {
 
 const noop = () => {};
 
+const MUSIC_PREFERENCE_KEY = "dhruva:background-music-preference";
+const LEGACY_MUTED_KEY = "dhruva:muted";
+
+type MusicPreference = "enabled" | "muted";
+
+function readMusicPreference(): MusicPreference | null {
+  try {
+    const value = localStorage.getItem(MUSIC_PREFERENCE_KEY);
+    return value === "enabled" || value === "muted" ? value : null;
+  } catch {
+    return null;
+  }
+}
+
+function writeMusicPreference(value: MusicPreference): void {
+  try {
+    localStorage.setItem(MUSIC_PREFERENCE_KEY, value);
+  } catch {}
+}
+
 const AudioContext = createContext<AudioContextValue>({
   play: noop,
   muted: false,
@@ -75,8 +95,11 @@ interface EngineRefs {
  * - No `new Audio()` per interaction, no fetch-on-click — SFX playback is
  *   an instant buffer-source start.
  * - Per-key cooldowns + a 2-voice cap prevent stacking on rapid input.
- * - Master gain gives instant global SFX mute; ambient fades separately;
- *   preference persists.
+ * - Master gain gives instant global SFX mute; ambient fades separately.
+ * - Music preference persists in `dhruva:background-music-preference`
+ *   ("enabled" | "muted"): first gesture opts in, returning visitors get a
+ *   single autoplay-restore attempt (one controlled retry per gesture if
+ *   the browser blocks it), mute/unmute persists both directions.
  * - Reduced-motion disables the engine entirely (enhancement only).
  * - Every failure path degrades silently (dev-only warning).
  */
@@ -87,8 +110,10 @@ export function AudioProvider({ children }: AudioProviderProps) {
   const [muted, setMuted] = useState(() => {
     if (typeof window === "undefined") return false;
     try {
-      // Sound is ON by default; only an explicit user mute persists.
-      return localStorage.getItem("dhruva:muted") === "1";
+      const preference = readMusicPreference();
+      if (preference !== null) return preference === "muted";
+      // Visitors predating the preference key: migrate the legacy mute flag.
+      return localStorage.getItem(LEGACY_MUTED_KEY) === "1";
     } catch {
       return false;
     }
@@ -108,11 +133,14 @@ export function AudioProvider({ children }: AudioProviderProps) {
   const videoAudioCountRef = useRef(0);
   const ambientRef = useRef<HTMLAudioElement | null>(null);
   const fadeFrameRef = useRef<number | null>(null);
+  const ambientPlayPendingRef = useRef(false);
+  const ambientRetryCleanupRef = useRef<(() => void) | null>(null);
+  const startAmbientPlaybackRef = useRef<() => void>(noop);
 
   useEffect(() => {
     mutedRef.current = muted;
     try {
-      localStorage.setItem("dhruva:muted", muted ? "1" : "0");
+      localStorage.setItem(LEGACY_MUTED_KEY, muted ? "1" : "0");
     } catch {}
   }, [muted]);
 
@@ -123,6 +151,11 @@ export function AudioProvider({ children }: AudioProviderProps) {
   useEffect(() => {
     const state = engine.current;
     return () => {
+      const retryCleanup = ambientRetryCleanupRef.current;
+      if (retryCleanup) {
+        ambientRetryCleanupRef.current = null;
+        retryCleanup();
+      }
       if (fadeFrameRef.current !== null) {
         cancelAnimationFrame(fadeFrameRef.current);
         fadeFrameRef.current = null;
@@ -191,17 +224,62 @@ export function AudioProvider({ children }: AudioProviderProps) {
     return ambient;
   }, [disabled]);
 
+  const cancelAmbientRetry = useCallback(() => {
+    const cleanup = ambientRetryCleanupRef.current;
+    if (!cleanup) return;
+    ambientRetryCleanupRef.current = null;
+    cleanup();
+  }, []);
+
+  // Autoplay rejection recovery: bind exactly one retry per subsequent real
+  // user gesture — never a loop, never a timer, never console noise.
+  const scheduleAmbientRetry = useCallback(() => {
+    if (ambientRetryCleanupRef.current) return;
+
+    const retry = () => {
+      cancelAmbientRetry();
+      if (mutedRef.current) return;
+      if (readMusicPreference() === "muted") return;
+      startAmbientPlaybackRef.current();
+    };
+
+    window.addEventListener("pointerdown", retry, { passive: true });
+    window.addEventListener("keydown", retry);
+    ambientRetryCleanupRef.current = () => {
+      window.removeEventListener("pointerdown", retry);
+      window.removeEventListener("keydown", retry);
+    };
+  }, [cancelAmbientRetry]);
+
   const startAmbientPlayback = useCallback(() => {
     const ambient = ensureAmbient();
     if (!ambient) return;
+    if (mutedRef.current) return;
 
+    // Already playing, or a start is still pending — just settle the level.
+    if (ambientPlayPendingRef.current || !ambient.paused) {
+      fadeAmbient(getAmbientTarget(), AMBIENT_FADE_MS);
+      return;
+    }
+
+    ambientPlayPendingRef.current = true;
     void ambient
       .play()
       .then(() => {
         fadeAmbient(getAmbientTarget(), AMBIENT_FADE_MS);
       })
-      .catch(noop);
-  }, [ensureAmbient, fadeAmbient, getAmbientTarget]);
+      .catch(() => {
+        // Autoplay blocked: recover on the next real user gesture.
+        scheduleAmbientRetry();
+      })
+      .finally(() => {
+        ambientPlayPendingRef.current = false;
+      });
+  }, [ensureAmbient, fadeAmbient, getAmbientTarget, scheduleAmbientRetry]);
+
+  useEffect(() => {
+    startAmbientPlaybackRef.current = startAmbientPlayback;
+  });
 
   const getSfxMultiplier = useCallback(() => {
     if (videoAudioCountRef.current > 0) return SFX_MASTER * SFX_DUCKED_MASTER;
@@ -225,6 +303,20 @@ export function AudioProvider({ children }: AudioProviderProps) {
 
   const unlockAudio = useCallback(async () => {
     if (disabled || typeof window === "undefined") return;
+
+    // FIRST ACTIVATION — still inside the user-gesture stack (no awaits
+    // above this line): persist the music opt-in and start the ambient bed
+    // so the browser's autoplay approval covers this gesture. A muted
+    // visitor gets no playback attempt at all.
+    if (mutedRef.current) {
+      cancelAmbientRetry();
+    } else {
+      if (readMusicPreference() === null) {
+        writeMusicPreference("enabled");
+      }
+      startAmbientPlayback();
+    }
+
     const state = engine.current;
 
     if (!state.ctx) {
@@ -266,35 +358,57 @@ export function AudioProvider({ children }: AudioProviderProps) {
       void Promise.all(
         (Object.keys(SFX) as SfxKey[]).map((key) => decodeKey(key)),
       );
-      // Start the looping ambient bed (only after explicit user gesture).
-      startAmbientPlayback();
-    } else if (!mutedRef.current) {
-      fadeAmbient(getAmbientTarget(), AMBIENT_FADE_MS);
+      // The ambient bed is already started above (gesture-synchronous).
     }
-  }, [
-    disabled,
-    decodeKey,
-    startAmbientPlayback,
-    fadeAmbient,
-    getAmbientTarget,
-  ]);
+  }, [disabled, decodeKey, cancelAmbientRetry, startAmbientPlayback]);
 
   const toggleMute = useCallback(() => {
     if (disabled || !unlockedRef.current) return;
 
     setMuted((previous) => {
       const next = !previous;
+      // Updaters run before effects, so sync the ref here — downstream
+      // reads (fade targets, start guards) must see the new value now.
+      mutedRef.current = next;
       const { ctx, master } = engine.current;
       if (ctx && master) {
         master.gain.setTargetAtTime(next ? 0 : 1, ctx.currentTime, 0.03);
       }
-      fadeAmbient(next ? 0 : getAmbientTarget(), AMBIENT_FADE_MS);
+
+      // One state transition writes both keys together so the dedicated
+      // music preference and the legacy mute flag can never diverge.
+      writeMusicPreference(next ? "muted" : "enabled");
       try {
-        localStorage.setItem("dhruva:muted", next ? "1" : "0");
+        localStorage.setItem(LEGACY_MUTED_KEY, next ? "1" : "0");
       } catch {}
+
+      if (next) {
+        cancelAmbientRetry();
+        fadeAmbient(0, AMBIENT_FADE_MS);
+      } else if (ambientRef.current && !ambientRef.current.paused) {
+        fadeAmbient(getAmbientTarget(), AMBIENT_FADE_MS);
+      } else {
+        // Element never started (muted before its first play) — start it
+        // now, inside this click gesture.
+        startAmbientPlayback();
+      }
       return next;
     });
-  }, [disabled, fadeAmbient, getAmbientTarget]);
+  }, [
+    disabled,
+    cancelAmbientRetry,
+    fadeAmbient,
+    getAmbientTarget,
+    startAmbientPlayback,
+  ]);
+
+  // Returning visitor who left music enabled: attempt restore as soon as
+  // the page is ready. If the browser rejects autoplay, the failure path
+  // above binds a single controlled gesture-retry — no loops, no timers.
+  useEffect(() => {
+    if (disabled || readMusicPreference() !== "enabled") return;
+    startAmbientPlayback();
+  }, [disabled, startAmbientPlayback]);
 
   const setVideoAudioActive = useCallback(
     (active: boolean) => {

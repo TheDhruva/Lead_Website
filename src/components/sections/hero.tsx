@@ -110,7 +110,7 @@ const HeroDesktopStatic = memo(function HeroDesktopStatic({
             mode="mount"
             start={started}
             level="word"
-            delay={0.58}
+            delay={0.46}
             segments="Beautiful websites, powerful visuals, and videos that make your brand impossible to ignore. A cinematic approach to digital presence."
           />
         </p>
@@ -136,7 +136,7 @@ const HeroDesktopStatic = memo(function HeroDesktopStatic({
                 : {
                     duration: 0.5,
                     ease: EASING_OUT,
-                    delay: prefersReducedMotion ? 0 : 0.76,
+                    delay: prefersReducedMotion ? 0 : 0.58,
                   }
             }
           >
@@ -436,7 +436,7 @@ function HeroMobile() {
             start={started}
             gentle
             level="word"
-            delay={0.5}
+            delay={0.42}
             segments="Beautiful websites, powerful visuals, and videos that make your brand impossible to ignore. A cinematic approach to digital presence."
           />
         </p>
@@ -462,7 +462,7 @@ function HeroMobile() {
                 ? { duration: 0.35, ease: MOBILE_LINE_EASE }
                 : prefersReducedMotion
                   ? { duration: 0.01 }
-                  : { delay: 0.62, duration: 0.5, ease: MOBILE_LINE_EASE }
+                  : { delay: 0.52, duration: 0.5, ease: MOBILE_LINE_EASE }
             }
           >
             <Button
