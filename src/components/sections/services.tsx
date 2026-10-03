@@ -11,6 +11,7 @@ import { services } from "@/data";
 import { useCinematicSection } from "@/hooks/use-cinematic-section";
 import { useMediaQuery } from "@/hooks/use-media-query";
 import { BLUR_PLACEHOLDER_DATA_URL } from "@/lib/image-placeholder";
+import { getScrollContainer } from "@/lib/scroll-container";
 import { cn } from "@/lib/utils";
 import { useAudio } from "@/providers/audio-provider";
 
@@ -153,8 +154,56 @@ function MobileStack({
   activeId: string | null;
   onActiveChange: (id: string | null) => void;
 }) {
+  const stackRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const stack = stackRef.current;
+    const scrollContainer = getScrollContainer();
+    if (!stack || !scrollContainer) return;
+
+    const visibility = new Map<Element, boolean>();
+    const observer = new IntersectionObserver(
+      (entries) => {
+        for (const entry of entries) {
+          visibility.set(entry.target, entry.isIntersecting);
+        }
+
+        const rootRect = scrollContainer.getBoundingClientRect();
+        const rootCenter = rootRect.top + rootRect.height / 2;
+        let nearestId: string | null = null;
+        let nearestDistance = Number.POSITIVE_INFINITY;
+
+        stack
+          .querySelectorAll<HTMLElement>("[data-service-id]")
+          .forEach((card) => {
+            if (!visibility.get(card)) return;
+            const rect = card.getBoundingClientRect();
+            const distance = Math.abs(rect.top + rect.height / 2 - rootCenter);
+            if (distance < nearestDistance) {
+              nearestId = card.dataset.serviceId ?? null;
+              nearestDistance = distance;
+            }
+          });
+
+        onActiveChange(nearestId);
+      },
+      {
+        root: scrollContainer,
+        rootMargin: "-35% 0px -35% 0px",
+        threshold: [0, 0.25, 0.5, 0.75, 1],
+      },
+    );
+
+    stack.querySelectorAll<HTMLElement>("[data-service-id]").forEach((card) => {
+      visibility.set(card, false);
+      observer.observe(card);
+    });
+
+    return () => observer.disconnect();
+  }, [onActiveChange]);
+
   return (
-    <div className="flex flex-col gap-4">
+    <div ref={stackRef} className="flex flex-col gap-4">
       {services.map((service) => {
         const isExpanded = activeId === service.id;
         const panelId = `service-panel-${service.id}`;
@@ -270,9 +319,7 @@ export function Services() {
   // Canonical active service — desktop hover/focus/click and the
   // mobile scroll-spy/tap all read and write this ONE state, so both
   // breakpoints (and sound) can never disagree.
-  const [activeId, setActiveId] = useState<string | null>(
-    services[1]?.id ?? null,
-  );
+  const [activeId, setActiveId] = useState<string | null>(null);
   // Breakpoint-gated subtrees (matches md:): only the visible layout
   // mounts, so the hidden breakpoint's next/image set never requests.
   // Client-only section (ssr:false), so matchMedia is correct on first
