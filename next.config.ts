@@ -1,5 +1,24 @@
 import type { NextConfig } from "next";
 
+const isProduction = process.env.NODE_ENV === "production";
+
+const CONTENT_SECURITY_POLICY = [
+  "default-src 'self'",
+  "base-uri 'self'",
+  "object-src 'none'",
+  "frame-ancestors 'none'",
+  "form-action 'self'",
+  "img-src 'self' data: blob:",
+  "media-src 'self' blob:",
+  "font-src 'self'",
+  "style-src 'self' 'unsafe-inline'",
+  // 'unsafe-inline' required by Next.js App Router inline flight/boot scripts;
+  // upgrade to nonce-based CSP via middleware for strict-dynamic later.
+  "script-src 'self' 'unsafe-inline' https://va.vercel-scripts.com",
+  "connect-src 'self' https://va.vercel-scripts.com",
+  "upgrade-insecure-requests",
+].join("; ");
+
 const nextConfig: NextConfig = {
   reactStrictMode: true,
   poweredByHeader: false,
@@ -59,6 +78,18 @@ const nextConfig: NextConfig = {
           key: "Permissions-Policy",
           value: "camera=(), geolocation=(), microphone=()",
         },
+        ...(isProduction
+          ? [
+              {
+                key: "Content-Security-Policy",
+                value: CONTENT_SECURITY_POLICY,
+              },
+              {
+                key: "Strict-Transport-Security",
+                value: "max-age=31536000; includeSubDomains",
+              },
+            ]
+          : []),
       ],
     },
     {
@@ -76,6 +107,15 @@ const nextConfig: NextConfig = {
         {
           key: "Cache-Control",
           value: "public, max-age=31536000, immutable",
+        },
+      ],
+    },
+    {
+      source: "/audio/:path*",
+      headers: [
+        {
+          key: "Cache-Control",
+          value: "public, max-age=604800, stale-while-revalidate=86400",
         },
       ],
     },
