@@ -19,10 +19,13 @@ export function useCinematicSection(
   const prefersReducedMotion = useReducedMotion();
   const isMobile = useMediaQuery("(max-width: 767px)");
   const isCoarsePointer = useMediaQuery("(pointer: coarse)");
-  // Cinematic scroll vars are a desktop/fine-pointer treatment: on
-  // mobile/coarse pointers the motion is intentionally absent, so skip
-  // registration entirely — no getBoundingClientRect, no CSS var writes.
-  const cinematicDisabled = prefersReducedMotion || isMobile || isCoarsePointer;
+  // Design Work owns its own card-stack animation. Other sections keep
+  // native scrolling without section-level parallax or per-frame CSS writes.
+  const cinematicDisabled =
+    preset !== "projects" ||
+    prefersReducedMotion ||
+    isMobile ||
+    isCoarsePointer;
 
   useEffect(() => {
     const el = ref.current;

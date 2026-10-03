@@ -15,7 +15,10 @@ import { SECTION_IDS } from "@/constants";
 import { projectRows, services, videoItems } from "@/data";
 import { useContainerKeyboardScroll } from "@/hooks/use-container-keyboard-scroll";
 import { useHashScroll } from "@/hooks/use-hash-scroll";
-import { SCROLL_CONTAINER_ID } from "@/lib/scroll-container";
+import {
+  SCROLL_CONTAINER_ID,
+  getScrollContainer,
+} from "@/lib/scroll-container";
 import { useTheatreIntro } from "@/providers/theatre-intro-provider";
 
 const Services = dynamic(
@@ -118,7 +121,11 @@ function SectionChunkPrefetch() {
         }
       },
       // ~1 viewport + margin ahead of the 600/900px mount margins.
-      { rootMargin: "0px 0px 1500px 0px", threshold: 0 },
+      {
+        root: getScrollContainer(),
+        rootMargin: "0px 0px 1500px 0px",
+        threshold: 0,
+      },
     );
     // Observe lazily: targets may not exist until first paint.
     const raf = requestAnimationFrame(() => {

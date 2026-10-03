@@ -140,10 +140,8 @@ function VideoProjectRow({
           loading="lazy"
           decoding="async"
           className={cn(
-            "h-full w-full object-cover transition-[transform,opacity] duration-300 ease-[cubic-bezier(0.22,1,0.36,1)] motion-reduce:transition-none",
-            isActive
-              ? "scale-[1.02] opacity-100"
-              : "opacity-70 group-hover:scale-[1.04] group-hover:opacity-100",
+            "h-full w-full object-cover transition-opacity duration-300 ease-[cubic-bezier(0.22,1,0.36,1)] motion-reduce:transition-none",
+            isActive ? "opacity-100" : "opacity-70 group-hover:opacity-100",
           )}
         />
       </span>
@@ -285,11 +283,9 @@ export function VideoShowcase() {
     return () => obs.disconnect();
   }, []);
 
-  // Early preparation — initialize the player (and with preload="auto",
-  // the first video's bytes) while the section is still below the fold.
-  // Runtime measurement showed the first fetch+decode landing on the
-  // entry frame (part of the cold-entry stall); this moves it earlier
-  // without touching playback, visibility, or the two-window preload.
+  // Prepare shortly before entry without downloading the full film.
+  // Metadata arrives early enough for a clean handoff; video bytes begin
+  // when the section becomes visible.
   // Visibility gating is unchanged: play/pause still follows the -6%
   // observer above, and the entrance still fires on actual entry.
   useEffect(() => {
@@ -304,7 +300,7 @@ export function VideoShowcase() {
       },
       {
         threshold: 0,
-        rootMargin: "0px 0px 110% 0px",
+        rootMargin: "0px 0px 70% 0px",
         root: root ?? null,
       },
     );
@@ -525,20 +521,30 @@ export function VideoShowcase() {
     setVideoAudioActive,
   ]);
 
-  // progress loop — direct DOM, no React state per frame
+  // progress loop — direct DOM, no React state per frame.
+  // P2: writes only on meaningful change (0.001 steps); the bar is a
+  // scaleX transform so updates never dirty layout.
   const startProgressLoop = useCallback(() => {
     if (rafRef.current) cancelAnimationFrame(rafRef.current);
     const v = activeRef.current;
     const bar = progressRef.current;
     if (!v || !bar) return;
+    let lastWritten = "";
     const tick = () => {
       if (!v.duration || Number.isNaN(v.duration) || v.duration === 0) {
-        bar.style.setProperty("--progress", "0");
+        if (lastWritten !== "0") {
+          bar.style.setProperty("--progress", "0");
+          lastWritten = "0";
+        }
       } else {
         const pct = Math.min(100, (v.currentTime / v.duration) * 100);
         // Unitless 0–1: drives the bar via scaleX (transform) instead of
         // width, so the per-frame progress update never dirties layout.
-        bar.style.setProperty("--progress", (pct / 100).toFixed(4));
+        const next = (pct / 100).toFixed(3);
+        if (next !== lastWritten) {
+          bar.style.setProperty("--progress", next);
+          lastWritten = next;
+        }
         // two-window preload at ~75%
         if (!preloadStartedRef.current && pct >= PRELOAD_THRESHOLD * 100) {
           preloadStartedRef.current = true;
@@ -755,7 +761,6 @@ export function VideoShowcase() {
     <section
       ref={sectionRef}
       id="video"
-      data-snap-frame
       className="section-frame section-tone-videos !h-auto !min-h-0 !max-h-none relative overflow-visible py-6 md:pt-10 md:pb-[calc(var(--floating-nav-clearance)+1.25rem)] [@media(min-width:64rem)_and_(max-height:52rem)]:pt-6"
       aria-labelledby="video-heading"
     >
@@ -774,8 +779,8 @@ export function VideoShowcase() {
             Framer Motion owns the inner entrance wrapper. */}
         <div className="cinematic-layer cinematic-layer--header mb-5 md:mb-8">
           <m.div
-            initial={prefersReducedMotion ? false : { opacity: 0, y: 26 }}
-            animate={enteredOnce ? { opacity: 1, y: 0 } : {}}
+            initial={prefersReducedMotion ? false : { opacity: 0 }}
+            animate={enteredOnce ? { opacity: 1 } : {}}
             transition={{
               duration: VIDEO_ENTRANCE_HEADING_MS / 1000,
               ease: [0.22, 1, 0.36, 1],
@@ -785,7 +790,7 @@ export function VideoShowcase() {
               id="video-heading"
               className="text-center font-sans text-[min(clamp(3.5rem,7vw,6rem),calc((100vw-2.5rem)/5.2))] leading-[1.02] font-extrabold tracking-[-0.05em] text-foreground"
             >
-              <AnimatedText segments="MOTION" />
+              <AnimatedText segments="MOTION" level="word" />
             </h2>
           </m.div>
         </div>
@@ -799,10 +804,8 @@ export function VideoShowcase() {
         <div className="cinematic-layer cinematic-layer--media grid grid-cols-1 gap-6 lg:mx-auto lg:grid-cols-[minmax(0,1.75fr)_minmax(280px,0.72fr)] lg:items-start lg:max-w-[min(100%,calc((100svh-22rem)*16/9+19rem))]">
           {/* ── cinematic player ── */}
           <m.div
-            initial={
-              prefersReducedMotion ? false : { opacity: 0, y: 28, scale: 0.982 }
-            }
-            animate={enteredOnce ? { opacity: 1, y: 0, scale: 1 } : {}}
+            initial={prefersReducedMotion ? false : { opacity: 0 }}
+            animate={enteredOnce ? { opacity: 1 } : {}}
             transition={{
               duration: VIDEO_ENTRANCE_PLAYER_MS / 1000,
               ease: [0.22, 1, 0.36, 1],
@@ -847,7 +850,7 @@ export function VideoShowcase() {
                   // arms this off-screen, so first video bytes arrive before
                   // entry instead of on the visible frame (same pattern the
                   // two-window next-video preload already uses).
-                  preload={initialized ? "auto" : "none"}
+                  preload={initialized ? "metadata" : "none"}
                   aria-label={`${current.title}. ${current.meta}`}
                 />
 
@@ -861,10 +864,8 @@ export function VideoShowcase() {
                 <div className="absolute inset-x-0 bottom-0 z-10">
                   <m.div
                     key={`meta-${current.id}`}
-                    initial={
-                      prefersReducedMotion ? false : { opacity: 0, y: 6 }
-                    }
-                    animate={{ opacity: 1, y: 0 }}
+                    initial={prefersReducedMotion ? false : { opacity: 0 }}
+                    animate={{ opacity: 1 }}
                     transition={{ duration: 0.3, ease: [0.22, 1, 0.36, 1] }}
                     className="flex items-end justify-between gap-4 p-4 md:p-5"
                   >
@@ -939,7 +940,7 @@ export function VideoShowcase() {
                   <span className="flex flex-col items-center gap-2">
                     <span
                       className={cn(
-                        "inline-flex h-[60px] w-[60px] items-center justify-center rounded-full border border-white/30 bg-black/45 text-white backdrop-blur-[6px] transition-[transform,background-color,opacity] duration-300 ease-[cubic-bezier(0.22,1,0.36,1)] group-hover:scale-[1.06] group-focus-visible:scale-[1.06] motion-reduce:transition-none md:h-[72px] md:w-[72px]",
+                        "inline-flex h-[60px] w-[60px] items-center justify-center rounded-full border border-white/30 bg-black/45 text-white backdrop-blur-[6px] transition-[background-color,opacity] duration-300 ease-[cubic-bezier(0.22,1,0.36,1)] motion-reduce:transition-none md:h-[72px] md:w-[72px]",
                         isPlaying &&
                           "opacity-0 group-hover:opacity-100 group-focus-visible:opacity-100",
                       )}

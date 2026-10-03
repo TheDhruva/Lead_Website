@@ -8,23 +8,32 @@ import type {
 } from "@/types";
 
 const configuredUrl =
-  typeof process !== "undefined" ? process.env.NEXT_PUBLIC_SITE_URL : undefined;
+  typeof process !== "undefined"
+    ? process.env.NEXT_PUBLIC_SITE_URL?.trim()
+    : undefined;
 const vercelUrl =
-  typeof process !== "undefined" ? process.env.VERCEL_URL : undefined;
-const siteUrl =
-  configuredUrl ??
-  (vercelUrl ? `https://${vercelUrl}` : "http://localhost:3000");
+  typeof process !== "undefined" ? process.env.VERCEL_URL?.trim() : undefined;
 
-if (
-  typeof process !== "undefined" &&
-  process.env.NODE_ENV === "production" &&
-  !configuredUrl &&
-  !vercelUrl
-) {
-  console.warn(
-    "[site] NEXT_PUBLIC_SITE_URL is not set and VERCEL_URL is unavailable — production metadata uses http://localhost:3000. Set NEXT_PUBLIC_SITE_URL in the hosting environment.",
-  );
+function resolveSiteUrl(): string {
+  if (configuredUrl) {
+    let url: URL;
+    try {
+      url = new URL(configuredUrl);
+    } catch {
+      throw new Error("NEXT_PUBLIC_SITE_URL must be an absolute HTTP(S) URL.");
+    }
+
+    if (url.protocol !== "http:" && url.protocol !== "https:") {
+      throw new Error("NEXT_PUBLIC_SITE_URL must use HTTP or HTTPS.");
+    }
+
+    return url.toString().replace(/\/$/, "");
+  }
+
+  return vercelUrl ? `https://${vercelUrl}` : "http://localhost:3000";
 }
+
+const siteUrl = resolveSiteUrl();
 
 export const siteConfig: SiteConfig = {
   name: "The Dhruva",

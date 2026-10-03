@@ -21,6 +21,9 @@ function setScrollActive(next: boolean): void {
   if (scrollActive === next) return;
   scrollActive = next;
   getScrollContainer()?.classList.toggle(SCROLL_ACTIVE_CLASS, next);
+  // P1 mobile paint: mirror the state on <html> so CSS can simplify
+  // fixed/blurred layers during active scroll without JS per frame.
+  document.documentElement.classList.toggle("is-scrolling", next);
   pointerEngine.setScrollPaused(next);
 }
 

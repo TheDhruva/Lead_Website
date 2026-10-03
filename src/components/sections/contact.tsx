@@ -56,7 +56,7 @@ export function Contact() {
         <div className="contact-scene__main grid min-h-0 min-w-0 flex-1 grid-cols-1 items-start gap-4 max-md:gap-3.5 lg:items-start lg:gap-0">
           <div className="cinematic-layer cinematic-layer--links min-w-0 lg:self-center">
             <div className="contact-scene__intro flex min-w-0 flex-col gap-4 max-md:gap-3 md:gap-4">
-              <Reveal y={16}>
+              <Reveal>
                 <h2
                   id="contact-heading"
                   className="contact-scene__heading cinematic-layer cinematic-layer--heading font-headline-xl font-extrabold text-foreground"
@@ -82,17 +82,17 @@ export function Contact() {
               </Reveal>
 
               <div className="flex min-w-0 flex-col gap-4 max-md:gap-3 md:gap-4">
-                <Reveal index={1}>
+                <Reveal>
                   <a
                     href={resumeLink.href}
                     target="_blank"
                     rel="noopener noreferrer"
                     onMouseEnter={hoverTick}
                     onClick={() => play("ui-click")}
-                    className="contact-scene__resume-desktop group hidden min-h-11 w-fit items-center gap-3 text-foreground-secondary transition-[transform,color] duration-[280ms] ease-[cubic-bezier(0.22,1,0.36,1)] hover:translate-x-1 hover:text-foreground active:scale-[0.985] motion-reduce:active:scale-100 focus-visible:rounded-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--background)] md:inline-flex"
+                    className="contact-scene__resume-desktop group hidden min-h-11 w-fit items-center gap-3 text-foreground-secondary transition-colors duration-200 hover:text-foreground active:scale-[0.985] motion-reduce:active:scale-100 focus-visible:rounded-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--background)] md:inline-flex"
                   >
                     <FileText
-                      className="h-5 w-5 transition-transform duration-[280ms] ease-[cubic-bezier(0.22,1,0.36,1)] group-hover:scale-110"
+                      className="h-5 w-5"
                       aria-hidden="true"
                       strokeWidth={1.75}
                     />
@@ -106,7 +106,7 @@ export function Contact() {
                   aria-label="Social links"
                   className="contact-scene__links flex flex-col gap-2 md:gap-2"
                 >
-                  <Reveal index={2} className="min-w-0">
+                  <Reveal className="min-w-0">
                     <a
                       href={resumeLink.href}
                       target="_blank"
@@ -114,10 +114,10 @@ export function Contact() {
                       aria-label={`View ${resumeLink.label}`}
                       onMouseEnter={hoverTick}
                       onClick={() => play("ui-click")}
-                      className="contact-scene__link contact-scene__link--resume group inline-flex min-h-10 w-fit max-w-full min-w-0 items-center gap-1.5 text-foreground-secondary transition-[transform,color] duration-[250ms] ease-[cubic-bezier(0.22,1,0.36,1)] hover:translate-x-1 hover:text-foreground active:scale-[0.985] motion-reduce:active:scale-100 focus-visible:rounded-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--background)] md:hidden"
+                      className="contact-scene__link contact-scene__link--resume group inline-flex min-h-10 w-fit max-w-full min-w-0 items-center gap-1.5 text-foreground-secondary transition-colors duration-200 hover:text-foreground active:scale-[0.985] motion-reduce:active:scale-100 focus-visible:rounded-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--background)] md:hidden"
                     >
                       <FileText
-                        className="h-[18px] w-[18px] shrink-0 transition-transform duration-[250ms] ease-out group-hover:scale-110"
+                        className="h-[18px] w-[18px] shrink-0"
                         aria-hidden="true"
                         strokeWidth={1.75}
                       />
@@ -126,8 +126,8 @@ export function Contact() {
                       </span>
                     </a>
                   </Reveal>
-                  {socialLinks.map((link, i) => (
-                    <Reveal key={link.id} index={3 + i} className="min-w-0">
+                  {socialLinks.map((link) => (
+                    <Reveal key={link.id} className="min-w-0">
                       <SocialIcon link={link} className="contact-scene__link" />
                     </Reveal>
                   ))}
@@ -137,12 +137,7 @@ export function Contact() {
           </div>
 
           <div className="cinematic-layer cinematic-layer--panel min-w-0 w-full max-w-full self-start lg:self-center">
-            <Reveal
-              index={2}
-              y={24}
-              scale={0.985}
-              className="contact-scene__panel w-full overflow-hidden"
-            >
+            <Reveal className="contact-scene__panel w-full overflow-hidden">
               <ContactFormLazy />
             </Reveal>
           </div>

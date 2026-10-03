@@ -218,7 +218,9 @@ export function AudioProvider({ children }: AudioProviderProps) {
 
     const ambient = new Audio(AMBIENT_TRACK);
     ambient.loop = true;
-    ambient.preload = "auto";
+    // P2: keep the ~4MB ambient bed off the critical path — nothing
+    // fetches until the unlock gesture actually starts playback.
+    ambient.preload = "none";
     ambient.volume = 0;
     ambientRef.current = ambient;
     return ambient;

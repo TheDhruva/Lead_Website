@@ -131,8 +131,8 @@ function buildWords(
 }
 
 /**
- * AnimatedText — typography that assembles on entry and deconstructs
- * on exit.
+ * AnimatedText — lightweight word reveals for supporting sections. Hero
+ * mount animations retain the richer character assembly.
  *
  * ENTER (micro-assembly): characters start with a small deterministic
  * displacement (±2deg, 0.96 scale, 3px blur) and lock into the exact
@@ -156,6 +156,7 @@ function AnimatedTextComponent({
   level = "char",
 }: AnimatedTextProps) {
   const prefersReducedMotion = useReducedMotion();
+  const simpleReveal = mode === "inview";
   // Viewport presence drives both directions: entrance on arrival,
   // de-assembly on departure, re-assembly on return.
   const { ref: presenceRef, state: presenceState } =
@@ -172,8 +173,14 @@ function AnimatedTextComponent({
   );
 
   const words = useMemo(
-    () => buildWords(normalized, gentle, level, delay),
-    [normalized, gentle, level, delay],
+    () =>
+      buildWords(
+        normalized,
+        simpleReveal ? true : gentle,
+        simpleReveal ? "word" : level,
+        delay,
+      ),
+    [normalized, gentle, level, delay, simpleReveal],
   );
 
   if (prefersReducedMotion) {
@@ -193,11 +200,15 @@ function AnimatedTextComponent({
     );
   }
 
-  const isWord = level === "word";
+  const isWord = simpleReveal || level === "word";
   const duration = isWord ? MOTION.word.duration : MOTION.char.duration;
   const exitDuration = duration * MOTION.exit.durationScale;
   const restScale = isWord ? 1 : MOTION.char.scale;
-  const restBlur = isWord ? MOTION.word.blur : MOTION.char.blur;
+  const restBlur = simpleReveal
+    ? 0
+    : isWord
+      ? MOTION.word.blur
+      : MOTION.char.blur;
 
   // State labels propagate parent → characters; values come from each
   // character's custom prop and timing from its explicit transition,
@@ -216,10 +227,10 @@ function AnimatedTextComponent({
   const charVariants: Variants = {
     hidden: (custom: CharCustom) => ({
       opacity: 0,
-      x: custom.x,
-      y: isWord ? MOTION.word.y : custom.y,
+      x: simpleReveal ? 0 : custom.x,
+      y: simpleReveal ? 6 : isWord ? MOTION.word.y : custom.y,
       scale: restScale,
-      rotate: custom.rot,
+      rotate: simpleReveal ? 0 : custom.rot,
       filter: `blur(${restBlur}px)`,
     }),
     show: {
@@ -232,11 +243,11 @@ function AnimatedTextComponent({
     },
     exit: (custom: CharCustom) => ({
       opacity: 0,
-      x: Math.round(custom.x * -0.5 + custom.cx * 6),
-      y: Math.round(custom.y * -0.5 - 7 * custom.s),
+      x: simpleReveal ? 0 : Math.round(custom.x * -0.5 + custom.cx * 6),
+      y: simpleReveal ? -4 : Math.round(custom.y * -0.5 - 7 * custom.s),
       scale: isWord ? 1 : 0.985,
-      rotate: custom.rot * -0.5,
-      filter: "blur(4px)",
+      rotate: simpleReveal ? 0 : custom.rot * -0.5,
+      filter: simpleReveal ? "blur(0px)" : "blur(4px)",
     }),
   };
 
@@ -262,10 +273,10 @@ function AnimatedTextComponent({
                 // equals "hidden" on mount. Direction labels drive transitions.
                 const resting = {
                   opacity: 0,
-                  x: entry.x,
-                  y: isWord ? MOTION.word.y : entry.y,
+                  x: simpleReveal ? 0 : entry.x,
+                  y: simpleReveal ? 6 : isWord ? MOTION.word.y : entry.y,
                   scale: restScale,
-                  rotate: entry.rot,
+                  rotate: simpleReveal ? 0 : entry.rot,
                   filter: `blur(${restBlur}px)`,
                 };
                 return (

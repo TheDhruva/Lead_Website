@@ -116,7 +116,8 @@ export async function POST(request: Request) {
 
   try {
     await resend.emails.send({ from, to, subject, text, replyTo: email });
-  } catch {
+  } catch (error) {
+    console.error("[contact] Failed to send email.", error);
     return NextResponse.json(
       { error: "Something went wrong. Please try again." },
       { status: 500 },

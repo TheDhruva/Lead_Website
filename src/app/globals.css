@@ -307,9 +307,17 @@
   /* Native anchor jumps land exactly on the section start — sections
      clear the floating navbar with their own padding-top. */
   section[id],
-  [data-snap-frame],
   .section-contact {
     scroll-margin-top: 0;
+  }
+
+  /* P2: placeholder-only rendering containment. LazySection renders the
+     placeholder as <section> and the mounted content as <div>, so this
+     selector never touches mounted (possibly sticky/choreographed)
+     content — it only skips rendering the offscreen placeholder box. */
+  section.section-placeholder {
+    content-visibility: auto;
+    contain-intrinsic-size: auto 100svh;
   }
 
   body {
@@ -498,6 +506,20 @@
   @media (pointer: coarse) {
     body::after {
       display: none;
+    }
+  }
+
+  /* P1 mobile paint: while actively scrolling, drop the two most
+     expensive over-scroll effects to visually identical cheap states.
+     At rest everything renders exactly as before. */
+  html.is-scrolling body::before {
+    opacity: 0;
+  }
+  @media (max-width: 767px) {
+    html.is-scrolling .navbar {
+      -webkit-backdrop-filter: none;
+      backdrop-filter: none;
+      background-color: var(--background);
     }
   }
 }
@@ -702,19 +724,16 @@ html.theatre-done body {
   transition:
     opacity 0.8s ease,
     transform 0.9s var(--ease-out),
-    filter 0.8s ease,
     clip-path 0.9s var(--ease-out);
   transition-delay: var(--st-delay, 0ms);
 }
 
 .st--rise {
   transform: translateY(28px);
-  filter: blur(6px);
 }
 
 .st--scale {
   transform: translateY(16px) scale(0.96);
-  filter: blur(4px);
 }
 
 .st--clip {
@@ -725,7 +744,6 @@ html.theatre-done body {
 .st.is-visible {
   opacity: 1;
   transform: none;
-  filter: blur(0);
   clip-path: inset(0 0 0 0);
 }
 
@@ -751,7 +769,6 @@ html.theatre-done body {
   .st {
     opacity: 1;
     transform: none;
-    filter: none;
     clip-path: none;
     transition: none;
   }
@@ -1198,36 +1215,9 @@ html.theatre-settling [data-page-shell] {
   min-width: 0;
   min-height: 0;
   flex: 1 1 0%;
-  transition:
-    flex-grow 700ms cubic-bezier(0.16, 1, 0.3, 1),
-    opacity 450ms cubic-bezier(0.16, 1, 0.3, 1),
-    border-color 450ms cubic-bezier(0.16, 1, 0.3, 1),
-    box-shadow 450ms cubic-bezier(0.16, 1, 0.3, 1);
-}
-
-/* ── CSS viewport reveals (IntersectionObserver + .is-visible, no Framer) ── */
-.css-reveal {
-  opacity: 0;
-  transform: translateY(22px) scale(0.99);
-}
-
-.css-reveal.is-visible {
-  opacity: 1;
-  transform: translateY(0) scale(1);
-  transition:
-    opacity 700ms cubic-bezier(0.16, 1, 0.3, 1),
-    transform 700ms cubic-bezier(0.16, 1, 0.3, 1);
-  transition-delay: var(--reveal-delay, 0ms);
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .css-reveal {
-    opacity: 1;
-    transform: none;
-  }
-  .css-reveal.is-visible {
-    transition: none;
-  }
+  /* A longer settle keeps expansion and compression feeling intentional
+     without tying the accordion to a per-frame scroll animation. */
+  transition: flex-grow 850ms cubic-bezier(0.22, 1, 0.36, 1);
 }
 
 @media (max-width: 767px) {
@@ -1402,6 +1392,10 @@ html.theatre-settling [data-page-shell] {
 
 .scroll-panel:not(.is-scroll-active) .hero-mobile__portrait-levitate {
   will-change: transform;
+}
+
+.hero-mobile__portrait-levitate--paused {
+  animation-play-state: paused;
 }
 
 @keyframes hero-portrait-levitate {

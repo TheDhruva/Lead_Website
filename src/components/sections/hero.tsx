@@ -335,7 +335,7 @@ function PortraitStack({
   );
 }
 
-function HeroMobile() {
+function HeroMobile({ heroInView }: { heroInView: boolean }) {
   const prefersReducedMotion = useReducedMotion();
   const { scrollTo } = useSmoothScroll();
   const { departing, hasEntered } = useTheatreIntro();
@@ -378,7 +378,12 @@ function HeroMobile() {
                     : { duration: 0.9, ease: MOBILE_LINE_EASE }
               }
             >
-              <div className="hero-mobile__portrait-levitate h-full">
+              <div
+                className={cn(
+                  "hero-mobile__portrait-levitate h-full",
+                  !heroInView && "hero-mobile__portrait-levitate--paused",
+                )}
+              >
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img
                   src={portrait.src}
@@ -528,7 +533,6 @@ export function Hero() {
     <section
       ref={sectionRef}
       id="work"
-      data-snap-frame
       className="section-frame section-frame--hero section-tone-hero relative items-center"
       aria-labelledby="hero-heading"
     >
@@ -570,7 +574,7 @@ export function Hero() {
             ) : null}
           </div>
         ) : (
-          <HeroMobile />
+          <HeroMobile heroInView={heroInView} />
         )}
       </Container>
     </section>

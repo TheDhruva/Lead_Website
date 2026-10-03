@@ -1,57 +1,10 @@
-"use client";
-
-import { type CSSProperties, type ReactNode, useEffect, useRef } from "react";
-
-import { getScrollContainer } from "@/lib/scroll-container";
-import { cn } from "@/lib/utils";
+import { type ReactNode } from "react";
 
 interface CssRevealProps {
   children: ReactNode;
   className?: string;
-  /** Stagger delay in ms — applied as --reveal-delay */
-  delay?: number;
 }
 
-/**
- * Viewport-entry reveal without Framer Motion:
- * IntersectionObserver toggles .is-visible, CSS owns the motion.
- * Replays in both scroll directions (arrival assembles, departure
- * reverses); the distinctive exit choreography lives in AnimatedText
- * and the cinematic layers. Respects prefers-reduced-motion via CSS
- * (content always visible).
- */
-export function CssReveal({ children, className, delay = 0 }: CssRevealProps) {
-  const ref = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    const el = ref.current;
-    if (!el) return;
-    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
-      el.classList.add("is-visible");
-      return;
-    }
-
-    const root = getScrollContainer();
-    const observer = new IntersectionObserver(
-      ([entry]) => {
-        if (!entry) return;
-        // Toggle (never disconnect): replays on re-entry in both
-        // scroll directions. Threshold crossings only — no per-frame work.
-        el.classList.toggle("is-visible", entry.isIntersecting);
-      },
-      { threshold: 0.15, rootMargin: "0px 0px -6% 0px", root: root ?? null },
-    );
-    observer.observe(el);
-    return () => observer.disconnect();
-  }, []);
-
-  return (
-    <div
-      ref={ref}
-      className={cn("css-reveal", className)}
-      style={{ "--reveal-delay": `${delay}ms` } as CSSProperties}
-    >
-      {children}
-    </div>
-  );
+export function CssReveal({ children, className }: CssRevealProps) {
+  return <div className={className}>{children}</div>;
 }

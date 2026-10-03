@@ -25,6 +25,7 @@ import { useCinematicSection } from "@/hooks/use-cinematic-section";
 import { useMediaQuery } from "@/hooks/use-media-query";
 import { useReducedMotion } from "@/hooks/use-reduced-motion";
 import { useSectionEnterSound } from "@/hooks/use-section-enter-sound";
+import { BLUR_PLACEHOLDER_DATA_URL } from "@/lib/image-placeholder";
 import { getScrollContainer } from "@/lib/scroll-container";
 import { cn } from "@/lib/utils";
 import { useAudio } from "@/providers/audio-provider";
@@ -258,8 +259,11 @@ function ImageSheet({
             alt=""
             fill
             sizes="(min-width: 1024px) 48vw, 94vw"
-            priority={index < 2}
-            loading={index < 2 ? "eager" : "lazy"}
+            priority={index === 0}
+            loading={index === 0 ? "eager" : "lazy"}
+            fetchPriority={isActive ? "high" : "low"}
+            placeholder="blur"
+            blurDataURL={BLUR_PLACEHOLDER_DATA_URL}
             className="object-contain object-center"
           />
         </div>
@@ -400,7 +404,7 @@ function StackDeck({ gentle }: { gentle: boolean }) {
             id="projects-heading"
             className="font-sans text-[clamp(2rem,12vw,4rem)] leading-[1.0] font-extrabold tracking-[-0.03em] text-foreground lg:text-[clamp(2.5rem,7vw,4.5rem)]"
           >
-            <AnimatedText segments="DESIGN WORK" />
+            <AnimatedText segments="DESIGN WORK" level="word" />
           </h2>
         </header>
 
@@ -468,9 +472,6 @@ export function Projects() {
       <Container className="w-full max-w-none">
         <div className="cinematic-layer cinematic-layer--media">
           {prefersReducedMotion ? (
-            /* Reduced motion: honest document flow, no sticky, no
-               scroll-linked transforms, no crossfade motion.
-               Content fully preserved. */
             <div className="mx-auto flex max-w-[min(94vw,80rem)] flex-col gap-10 md:gap-14">
               <h2
                 id="projects-heading"
@@ -498,6 +499,8 @@ export function Projects() {
                         sizes="(min-width: 1024px) 48vw, 94vw"
                         loading={i === 0 ? "eager" : "lazy"}
                         priority={i === 0}
+                        placeholder="blur"
+                        blurDataURL={BLUR_PLACEHOLDER_DATA_URL}
                         className="object-contain object-center"
                       />
                     </div>
@@ -508,7 +511,6 @@ export function Projects() {
               <div className="h-[8svh]" aria-hidden />
             </div>
           ) : (
-            /* Heading lives inside the sticky stage (id for a11y). */
             <StackDeck gentle={isMobile} />
           )}
         </div>

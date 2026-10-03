@@ -7,7 +7,7 @@ import { SpeedInsights } from "@vercel/speed-insights/next";
 
 import { JsonLd } from "@/components/seo/json-ld";
 import { siteConfig } from "@/data";
-import { heroPortraits } from "@/data";
+import { heroPortraits, videoItems } from "@/data";
 import { anton, instrumentSerif, manrope } from "@/lib/fonts";
 import { cn } from "@/lib/utils";
 import {
@@ -135,6 +135,9 @@ const structuredData: Record<string, unknown>[] = [
 
 export default function RootLayout({ children }: RootLayoutProps) {
   const heroPreload = heroPortraits[0]?.src;
+  // P1: first video poster only (never video files) — warms the video
+  // section's cold entry without competing with LCP.
+  const firstVideoPoster = videoItems[0]?.poster;
 
   return (
     <html
@@ -152,9 +155,18 @@ export default function RootLayout({ children }: RootLayoutProps) {
             fetchPriority="high"
           />
         ) : null}
-        {/* Basic layout must never depend on JavaScript: reveal gates off */}
+        {firstVideoPoster ? (
+          <link
+            rel="preload"
+            href={firstVideoPoster}
+            as="image"
+            type="image/webp"
+            fetchPriority="low"
+          />
+        ) : null}
+        {/* Basic layout must never depend on JavaScript. */}
         <noscript>
-          <style>{`.st,.css-reveal{opacity:1!important;transform:none!important;filter:none!important;clip-path:none!important}`}</style>
+          <style>{`.st{opacity:1!important;transform:none!important;filter:none!important;clip-path:none!important}`}</style>
         </noscript>
       </head>
       <body className="antialiased">

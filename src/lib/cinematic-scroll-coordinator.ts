@@ -51,6 +51,13 @@ const entries = new Map<HTMLElement, CinematicEntry>();
 let layoutValid = false;
 let cachedLimit = -1;
 let cachedViewportH = 0;
+// P0: coalesced invalidation — bursts of image/font/mount signals collapse
+// into one trailing rAF measurement instead of N synchronous re-measures.
+let invalidateQueued = false;
+let invalidateRaf = 0;
+// Hysteresis: sub-pixel limit jitter (rounding, scrollbar) never
+// invalidates geometry.
+const LIMIT_EPS = 2;
 
 function clearCinematicVars(el: HTMLElement): void {
   el.style.removeProperty("--section-progress");
@@ -93,13 +100,60 @@ function measureAll(): boolean {
  * cache.
  */
 function ensureLayout(limit: number): boolean {
-  if (layoutValid && Math.abs(limit - cachedLimit) <= 1) return true;
+  if (layoutValid && Math.abs(limit - cachedLimit) <= LIMIT_EPS) return true;
   cachedLimit = limit;
   return measureAll();
 }
 
 function invalidateLayout(): void {
   layoutValid = false;
+}
+
+/**
+ * Coalesced invalidation for bursty signals (image load, font swap,
+ * lazy-mount storms): multiple calls within one frame schedule a single
+ * trailing validation flag — the next tick measures once, batched.
+ */
+export function requestCinematicRemeasure(): void {
+  invalidateLayout();
+  if (invalidateQueued) return;
+  invalidateQueued = true;
+  invalidateRaf = requestAnimationFrame(() => {
+    invalidateQueued = false;
+    invalidateRaf = 0;
+    // Measurement itself stays lazy: the next scroll tick re-measures
+    // once via ensureLayout. If nothing scrolls, refresh eagerly so
+    // navigation cache never goes stale while idle.
+    if (entries.size > 0) {
+      const container = getScrollContainer();
+      if (container) {
+        const limit = Math.max(
+          0,
+          container.scrollHeight - container.clientHeight,
+        );
+        ensureLayout(limit);
+      }
+    }
+  });
+}
+
+export function cancelCinematicRemeasure(): void {
+  if (invalidateQueued) {
+    cancelAnimationFrame(invalidateRaf);
+    invalidateQueued = false;
+    invalidateRaf = 0;
+  }
+}
+
+/**
+ * P1 navigation fast path: cached content-space top for an element,
+ * or null when the cache is cold/invalid (caller falls back to GBR).
+ */
+export function getCachedSectionTop(element: HTMLElement): number | null {
+  if (!layoutValid) return null;
+  const entry = entries.get(element);
+  if (!entry) return null;
+  return entry.contentTop;
 }
 
 export function tickCinematicSections(motion: ScrollMotionFrame): void {
@@ -166,9 +220,29 @@ export function registerCinematicSection(
     lastVelocity: null,
   });
   element.dataset.cinematic = preset;
-  invalidateLayout();
+  // Bursty mounts coalesce via the trailing invalidator.
+  requestCinematicRemeasure();
   ensureScrollBus();
   tickCinematicSections(getScrollMotionFrame());
+  armFontRemeasure();
+}
+
+// Font swaps shift section geometry without changing scroll height much;
+// re-validate once when webfonts settle instead of per-frame.
+let fontArmed = false;
+function armFontRemeasure(): void {
+  if (fontArmed || typeof document === "undefined") return;
+  fontArmed = true;
+  try {
+    const fonts = (
+      document as Document & { fonts?: { ready?: Promise<unknown> } }
+    ).fonts;
+    void fonts?.ready?.then(() => {
+      requestCinematicRemeasure();
+    });
+  } catch {
+    // Non-fatal: geometry still refreshes on scroll-limit changes.
+  }
 }
 
 export function unregisterCinematicSection(element: HTMLElement): void {

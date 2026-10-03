@@ -17,9 +17,7 @@ export type EnterExitState = "hidden" | "show" | "exit";
 
 interface UseEnterExitOptions {
   /**
-   * Optional margin around the observation root (e.g. "0px 0px -6% 0px"
-   * to share the css-reveal/section-transition reveal clock). Omitted
-   * by default — no margin shift unless a caller opts in.
+   * Optional margin around the observation root. Omitted by default.
    */
   rootMargin?: string;
   /**

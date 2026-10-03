@@ -10,7 +10,7 @@ import { Container } from "@/components/ui/container";
 import { services } from "@/data";
 import { useCinematicSection } from "@/hooks/use-cinematic-section";
 import { useMediaQuery } from "@/hooks/use-media-query";
-import { getScrollContainer } from "@/lib/scroll-container";
+import { BLUR_PLACEHOLDER_DATA_URL } from "@/lib/image-placeholder";
 import { cn } from "@/lib/utils";
 import { useAudio } from "@/providers/audio-provider";
 
@@ -37,7 +37,7 @@ function ServicePanel({
       onMouseEnter={() => onActivate(service.id)}
       style={{ flexGrow: isActive ? 3.2 : 1 }}
       className={cn(
-        "service-acc group relative flex min-h-0 min-w-0 flex-col overflow-hidden rounded-lg border border-border bg-card",
+        "service-acc group relative flex min-h-0 min-w-0 flex-col overflow-hidden rounded-lg border border-border bg-card will-change-[flex-grow]",
         "focus-within:ring-2 focus-within:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--background-secondary)]",
         "hover:z-[1] hover:border-border-hover hover:shadow-[var(--shadow-md)]",
         "focus-within:z-[1] focus-within:border-border-hover focus-within:shadow-[var(--shadow-md)]",
@@ -58,8 +58,8 @@ function ServicePanel({
       <div className="absolute inset-0 overflow-hidden">
         <div
           className={cn(
-            "service-acc__media absolute inset-0 transition-[transform,opacity] duration-700 ease-[cubic-bezier(0.16,1,0.3,1)] motion-reduce:transition-none",
-            isActive ? "scale-[1.05] opacity-90" : "scale-[1.02] opacity-35",
+            "service-acc__media absolute inset-0 transition-opacity duration-500 ease-out motion-reduce:transition-none",
+            isActive ? "opacity-90" : "opacity-35",
           )}
         >
           <Image
@@ -72,6 +72,8 @@ function ServicePanel({
             // own preload). No `priority`: the desktop subtree is hidden
             // on mobile, where a priority image would still download.
             loading="lazy"
+            placeholder="blur"
+            blurDataURL={BLUR_PLACEHOLDER_DATA_URL}
           />
         </div>
         <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/45 to-black/20" />
@@ -87,10 +89,8 @@ function ServicePanel({
       {/* quiet state — centered title only, clearly secondary */}
       <div
         className={cn(
-          "relative z-10 flex h-full min-h-0 flex-col items-center justify-center p-5 text-center transition-[opacity,transform] duration-300 ease-[cubic-bezier(0.16,1,0.3,1)] motion-reduce:transition-none",
-          isActive
-            ? "pointer-events-none translate-y-1 opacity-0"
-            : "opacity-100",
+          "relative z-10 flex h-full min-h-0 flex-col items-center justify-center p-5 text-center transition-opacity duration-300 ease-out motion-reduce:transition-none",
+          isActive ? "pointer-events-none opacity-0" : "opacity-100",
         )}
         aria-hidden="true"
       >
@@ -102,10 +102,8 @@ function ServicePanel({
       {/* focal state — title, description, capabilities */}
       <div
         className={cn(
-          "relative z-10 flex h-full min-h-0 flex-col justify-end p-5 transition-[opacity,transform] duration-500 ease-[cubic-bezier(0.16,1,0.3,1)] motion-reduce:transition-none md:p-6 lg:p-7",
-          isActive
-            ? "translate-y-0 opacity-100 delay-150"
-            : "pointer-events-none translate-y-2 opacity-0",
+          "relative z-10 flex h-full min-h-0 flex-col justify-end p-5 transition-opacity duration-500 ease-out motion-reduce:transition-none md:p-6 lg:p-7",
+          isActive ? "opacity-100" : "pointer-events-none opacity-0",
         )}
         aria-hidden="true"
       >
@@ -155,55 +153,15 @@ function MobileStack({
   activeId: string | null;
   onActiveChange: (id: string | null) => void;
 }) {
-  const cardRefs = useRef<(HTMLDivElement | null)[]>([]);
-
-  useEffect(() => {
-    const root = getScrollContainer();
-    const targets = cardRefs.current.filter(
-      (el): el is HTMLDivElement => el !== null,
-    );
-    if (targets.length === 0) return;
-
-    const mid = () => window.innerHeight / 2;
-    const observer = new IntersectionObserver(
-      (entries) => {
-        const visible = entries
-          .filter((entry) => entry.isIntersecting)
-          .sort((a, b) => {
-            const rectA = a.boundingClientRect;
-            const rectB = b.boundingClientRect;
-            const distA = Math.abs((rectA.top + rectA.bottom) / 2 - mid());
-            const distB = Math.abs((rectB.top + rectB.bottom) / 2 - mid());
-            return distA - distB;
-          });
-        const nearest = visible[0];
-        const id = nearest?.target.getAttribute("data-service-id");
-        if (id) onActiveChange(id);
-      },
-      {
-        root: root ?? null,
-        rootMargin: "-38% 0px -38% 0px",
-        threshold: [0, 0.25, 0.5, 0.75, 1],
-      },
-    );
-    targets.forEach((el) => observer.observe(el));
-    return () => observer.disconnect();
-    // Scroll-spy writes into the shared canonical state; the parent
-    // owns the single change sound. Never add one here.
-  }, [onActiveChange]);
-
   return (
     <div className="flex flex-col gap-4">
-      {services.map((service, idx) => {
+      {services.map((service) => {
         const isExpanded = activeId === service.id;
         const panelId = `service-panel-${service.id}`;
         const buttonId = `service-button-${service.id}`;
         return (
-          <Reveal key={service.id} index={idx} className="min-w-0">
+          <Reveal key={service.id} className="min-w-0">
             <div
-              ref={(el) => {
-                cardRefs.current[idx] = el;
-              }}
               data-service-id={service.id}
               className={cn(
                 "relative overflow-hidden rounded-lg border border-border bg-card",
@@ -227,11 +185,10 @@ function MobileStack({
                     aria-hidden
                     fill
                     sizes="100vw"
-                    className={cn(
-                      "object-cover transition-transform duration-700 ease-[cubic-bezier(0.16,1,0.3,1)] motion-reduce:transition-none",
-                      isExpanded ? "scale-[1.03]" : "scale-100",
-                    )}
+                    className="object-cover"
                     loading="lazy"
+                    placeholder="blur"
+                    blurDataURL={BLUR_PLACEHOLDER_DATA_URL}
                   />
                   <span
                     aria-hidden
@@ -337,7 +294,6 @@ export function Services() {
     <section
       ref={sectionRef}
       id="services"
-      data-snap-frame
       className="section-frame section-tone-services !h-auto !min-h-0 !max-h-none overflow-visible py-8 md:py-10 lg:py-12"
       aria-labelledby="services-heading"
     >
@@ -346,7 +302,7 @@ export function Services() {
           id="services-heading"
           className="cinematic-layer cinematic-layer--title mb-5 text-center font-sans text-[min(clamp(3.5rem,7vw,6rem),calc((100vw-2.5rem)/5.2))] leading-[1.02] font-extrabold tracking-[-0.05em] text-foreground md:mb-8"
         >
-          <AnimatedText segments="Services" />
+          <AnimatedText segments="Services" level="word" />
         </h2>
 
         {/* Desktop — state-driven accordion. Card height derives
@@ -354,7 +310,7 @@ export function Services() {
             breathing room, so cards always finish above the pill. */}
         {isDesktopLayout ? (
           <div className="hidden md:block">
-            <CssReveal delay={80}>
+            <CssReveal>
               <div
                 className="cinematic-layer cinematic-layer--grid services-accordion flex h-[clamp(300px,calc(100svh-var(--nav-safe-top)-var(--floating-nav-clearance)-11rem),560px)] min-w-0 gap-4 lg:gap-5"
                 onMouseLeave={() => setActiveId(null)}
@@ -373,7 +329,7 @@ export function Services() {
         ) : (
           /* Mobile — vertical scroll-spy stack (no carousel) */
           <div className="md:hidden">
-            <CssReveal delay={80}>
+            <CssReveal>
               <MobileStack activeId={activeId} onActiveChange={setActiveId} />
             </CssReveal>
             {/* breathing room for floating navbar */}
