@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from "next";
 import Script from "next/script";
 import type { ReactNode } from "react";
 
+import { Analytics } from "@vercel/analytics/next";
 import { SpeedInsights } from "@vercel/speed-insights/next";
 
 import { JsonLd } from "@/components/seo/json-ld";
@@ -183,7 +184,10 @@ export default function RootLayout({ children }: RootLayoutProps) {
         </ThemeProvider>
         <JsonLd data={structuredData} />
         {process.env.NODE_ENV === "production" ? (
-          <SpeedInsights sampleRate={0.1} />
+          <>
+            <Analytics />
+            <SpeedInsights sampleRate={0.1} />
+          </>
         ) : null}
       </body>
     </html>
