@@ -49,7 +49,6 @@ export function Contact() {
     <section
       ref={sectionRef}
       id="contact"
-      data-snap-frame
       className="section-contact section-tone-contact contact-scene"
       aria-labelledby="contact-heading"
     >
@@ -63,13 +62,21 @@ export function Contact() {
                   className="contact-scene__heading cinematic-layer cinematic-layer--heading font-headline-xl font-extrabold text-foreground"
                 >
                   <span className="contact-scene__heading-line block">
-                    <AnimatedText segments="Your Brand Deserves" />
+                    <AnimatedText segments="Your Brand Deserves" level="word" />
                   </span>
                   <span className="contact-scene__heading-line block">
-                    <AnimatedText delay={0.12} segments="More Than Another" />
+                    <AnimatedText
+                      delay={0.12}
+                      segments="More Than Another"
+                      level="word"
+                    />
                   </span>
                   <span className="contact-scene__heading-line contact-scene__heading-line--accent font-display block italic">
-                    <AnimatedText delay={0.24} segments="Template." />
+                    <AnimatedText
+                      delay={0.24}
+                      segments="Template."
+                      level="word"
+                    />
                   </span>
                 </h2>
               </Reveal>

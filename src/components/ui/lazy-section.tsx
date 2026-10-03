@@ -79,7 +79,6 @@ export function LazySection({
     <section
       ref={ref}
       id={id}
-      data-snap-frame
       className={cn("min-h-0", className)}
       style={{ minHeight }}
       aria-hidden={srContent ? undefined : "true"}

@@ -1,3 +1,4 @@
+import { getCachedSectionTop } from "@/lib/cinematic-scroll-coordinator";
 import { requestLazySectionMount } from "@/lib/lazy-section-mount";
 import {
   getOffsetInScrollContainer,
@@ -76,7 +77,12 @@ export function scrollToSectionElement(target: HTMLElement): () => void {
   const targetTop = () => {
     const el = resolveTarget();
     const maxScroll = getPageEndScrollY();
-    return Math.max(0, Math.min(getOffsetInScrollContainer(el), maxScroll));
+    // P1: prefer the coordinator's cached content-space geometry (no
+    // layout read). Fall back to synchronous measurement only when the
+    // cache is cold or the element isn't registered.
+    const cached = getCachedSectionTop(el);
+    const raw = cached ?? getOffsetInScrollContainer(el);
+    return Math.max(0, Math.min(raw, maxScroll));
   };
 
   const firstTop = targetTop();

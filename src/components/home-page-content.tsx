@@ -1,16 +1,15 @@
 "use client";
 
 import dynamic from "next/dynamic";
+import { useEffect } from "react";
 
 import { PageTransition } from "@/components/animations/page-transition";
-import { AudioGestureUnlock } from "@/components/audio-gesture-unlock";
 import { FloatingNav } from "@/components/layout/floating-nav";
 import { GlobalCanvas } from "@/components/layout/global-canvas";
 import { Navbar } from "@/components/layout/navbar";
 import { Hero } from "@/components/sections/hero";
 import { TheatreIntro } from "@/components/sections/theatre-intro";
 import { LazySection } from "@/components/ui/lazy-section";
-import { MuteButton } from "@/components/ui/mute-button";
 import { SectionSkeleton } from "@/components/ui/section-skeleton";
 import { SECTION_IDS } from "@/constants";
 import { projectRows, services, videoItems } from "@/data";
@@ -55,9 +54,84 @@ const Contact = dynamic(
   { ssr: false },
 );
 
+// P1 hydration: post-enter-only UI (no visual content) splits out of the
+// initial client bundle. Both render null / gated button only.
+const AudioGestureUnlock = dynamic(
+  () =>
+    import("@/components/audio-gesture-unlock").then(
+      (mod) => mod.AudioGestureUnlock,
+    ),
+  { ssr: false },
+);
+
+const MuteButton = dynamic(
+  () => import("@/components/ui/mute-button").then((mod) => mod.MuteButton),
+  { ssr: false },
+);
+
 function HashScrollSync() {
   useHashScroll();
   useContainerKeyboardScroll();
+  return null;
+}
+
+/**
+ * P1 cold-entry staging: warm the next dynamic chunk ~1 viewport before
+ * its LazySection mounts. IntersectionObserver on section anchors with a
+ * generous prefetch margin triggers a fire-and-forget import() so chunk
+ * download + evaluation happen off the entry frame. Never force-mounts —
+ * LazySection still owns mounting.
+ */
+function SectionChunkPrefetch() {
+  useEffect(() => {
+    if (typeof window === "undefined" || !("IntersectionObserver" in window))
+      return;
+    const jobs: { id: string; load: () => Promise<unknown> }[] = [
+      {
+        id: SECTION_IDS.services,
+        load: () => import("@/components/sections/services"),
+      },
+      {
+        id: SECTION_IDS.video,
+        load: () => import("@/components/sections/video-showcase"),
+      },
+      {
+        id: SECTION_IDS.projects,
+        load: () => import("@/components/sections/projects"),
+      },
+      {
+        id: SECTION_IDS.contact,
+        load: () => import("@/components/sections/contact"),
+      },
+    ];
+    const prefetched = new Set<string>();
+    const observer = new IntersectionObserver(
+      (entries) => {
+        for (const entry of entries) {
+          if (!entry.isIntersecting) continue;
+          const id = entry.target.id;
+          const job = jobs.find((j) => j.id === id);
+          if (!job || prefetched.has(id)) continue;
+          prefetched.add(id);
+          void job.load().catch(() => {});
+          observer.unobserve(entry.target);
+        }
+      },
+      // ~1 viewport + margin ahead of the 600/900px mount margins.
+      { rootMargin: "0px 0px 1500px 0px", threshold: 0 },
+    );
+    // Observe lazily: targets may not exist until first paint.
+    const raf = requestAnimationFrame(() => {
+      for (const job of jobs) {
+        const el = document.getElementById(job.id);
+        if (el) observer.observe(el);
+      }
+    });
+    return () => {
+      cancelAnimationFrame(raf);
+      observer.disconnect();
+    };
+  }, []);
   return null;
 }
 
@@ -69,6 +143,7 @@ export function HomePageContent() {
     <>
       {!hasEntered ? <TheatreIntro /> : null}
       <HashScrollSync />
+      <SectionChunkPrefetch />
       <AudioGestureUnlock />
       {showMute ? <MuteButton /> : null}
       <PageTransition data-page-shell className="relative h-[100svh]">
