@@ -57,7 +57,8 @@ let navSeq = 0;
  * This lands exactly on the section border-box start (internal section
  * padding `--nav-safe-top` already clears the floating navbar, and the
  * Design Work deck entry lands on its heading with card 1 active). Exactly
- * one controlled scroll action; no scroll-snap assistance is involved.
+ * one controlled scroll action; native scroll snapping handles manual
+ * wheel, trackpad, touch, and keyboard section landing separately.
  *
  * Navigation marks the choreography `navigating` so observers treat the
  * travel as arrival, and ALWAYS yields: user input or a newer request

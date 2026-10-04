@@ -26,7 +26,10 @@ import { useMediaQuery } from "@/hooks/use-media-query";
 import { useReducedMotion } from "@/hooks/use-reduced-motion";
 import { useSectionEnterSound } from "@/hooks/use-section-enter-sound";
 import { BLUR_PLACEHOLDER_DATA_URL } from "@/lib/image-placeholder";
-import { getScrollContainer } from "@/lib/scroll-container";
+import {
+  getOffsetInScrollContainer,
+  getScrollContainer,
+} from "@/lib/scroll-container";
 import { cn } from "@/lib/utils";
 import { useAudio } from "@/providers/audio-provider";
 import type { Project } from "@/types";
@@ -73,6 +76,7 @@ const gallery: GalleryItem[] = (() => {
 })();
 
 const COUNT = gallery.length;
+const CARD_BOUNDARY_EPSILON = 0.001;
 /**
  * Scroll-progress half-window (in 0–1 track units) each takeover
  * occupies. MUST stay below half a segment (1/6 ÷ 2 ≈ 0.083) or the
@@ -343,6 +347,9 @@ function InfoBlock({ project }: { project: GalleryItem }) {
 
 function StackDeck({ gentle }: { gentle: boolean }) {
   const trackRef = useRef<HTMLDivElement>(null);
+  const isDesktopWheel = useMediaQuery(
+    "(min-width: 768px) and (hover: hover) and (pointer: fine)",
+  );
   // Canonical scrollport via subscription (no effect-setState cascade):
   // getElementById returns a stable node identity, so the snapshot is
   // cached by reference. Until it resolves, useScroll holds instead of
@@ -383,7 +390,7 @@ function StackDeck({ gentle }: { gentle: boolean }) {
     // invalid index.
     const next = Math.min(
       COUNT - 1,
-      Math.max(0, Math.floor(v * COUNT + Number.EPSILON)),
+      Math.max(0, Math.floor(v * COUNT + CARD_BOUNDARY_EPSILON)),
     );
     if (next !== activeRef.current) {
       activeRef.current = next;
@@ -391,6 +398,89 @@ function StackDeck({ gentle }: { gentle: boolean }) {
     }
     setActive(next);
   });
+
+  useEffect(() => {
+    const track = trackRef.current;
+    const container = scrollRoot;
+    if (!track || !container || !isDesktopWheel) return;
+
+    let wheelTotal = 0;
+    let resetWheelTimer = 0;
+    let unlockTimer = 0;
+    let snapLocked = false;
+
+    const getDeckPosition = () => {
+      const deckStart = getOffsetInScrollContainer(track);
+      const deckTravel = Math.max(
+        0,
+        track.offsetHeight - container.clientHeight,
+      );
+      const progress = Math.max(
+        0,
+        Math.min(
+          1,
+          (container.scrollTop - deckStart) / Math.max(1, deckTravel),
+        ),
+      );
+      return { deckStart, deckTravel, progress };
+    };
+
+    const unlock = () => {
+      snapLocked = false;
+      window.clearTimeout(unlockTimer);
+    };
+
+    const handleWheel = (event: WheelEvent) => {
+      if (event.deltaY === 0) return;
+
+      const { deckStart, deckTravel, progress } = getDeckPosition();
+      const currentIndex = Math.min(
+        COUNT - 1,
+        Math.max(0, Math.floor(progress * COUNT + CARD_BOUNDARY_EPSILON)),
+      );
+      const movingOutOfDeck =
+        (event.deltaY < 0 && currentIndex === 0 && progress <= 0.001) ||
+        (event.deltaY > 0 && currentIndex === COUNT - 1);
+
+      // Let the page leave the deck naturally at either edge.
+      if (movingOutOfDeck) {
+        unlock();
+        return;
+      }
+
+      event.preventDefault();
+      if (snapLocked) return;
+
+      wheelTotal += event.deltaY;
+      window.clearTimeout(resetWheelTimer);
+      resetWheelTimer = window.setTimeout(() => {
+        wheelTotal = 0;
+      }, 120);
+
+      if (Math.abs(wheelTotal) < 24) return;
+
+      const direction = wheelTotal > 0 ? 1 : -1;
+      wheelTotal = 0;
+      const targetIndex = Math.min(
+        COUNT - 1,
+        Math.max(0, currentIndex + direction),
+      );
+      const targetTop = deckStart + (deckTravel * targetIndex) / COUNT;
+
+      snapLocked = true;
+      container.scrollTo({ top: targetTop, behavior: "smooth" });
+      unlockTimer = window.setTimeout(unlock, 650);
+    };
+
+    track.addEventListener("wheel", handleWheel, { passive: false });
+
+    return () => {
+      track.removeEventListener("wheel", handleWheel);
+      window.clearTimeout(resetWheelTimer);
+      window.clearTimeout(unlockTimer);
+    };
+  }, [isDesktopWheel, scrollRoot]);
+
   const current = gallery[active] ?? gallery[0]!;
 
   return (
@@ -398,7 +488,7 @@ function StackDeck({ gentle }: { gentle: boolean }) {
       {/* Clipped full-viewport stage: heading + viewer persist while
           the track scrolls. Overflow on the sticky element itself
           does not break its sticking. */}
-      <div className="sticky top-0 flex h-[100svh] flex-col overflow-hidden pt-12 md:pt-6">
+      <div className="sticky top-0 flex h-[100svh] flex-col overflow-hidden pt-[var(--nav-safe-top)]">
         <header className="mx-auto mb-8 w-full max-w-[min(94vw,80rem)] shrink-0 text-center md:mb-10">
           <h2
             id="projects-heading"
@@ -466,7 +556,7 @@ export function Projects() {
     <section
       ref={ref}
       id="projects"
-      className="section-tone-projects relative z-0 overflow-visible scroll-mt-[var(--nav-safe-top)] px-4 pt-[calc(var(--nav-safe-top)+0.75rem)] pb-10 sm:px-5 md:px-[var(--layout-nav-inset)] md:pb-14"
+      className="section-tone-projects relative z-0 overflow-visible scroll-mt-[var(--nav-safe-top)] px-4 pt-0 pb-10 sm:px-5 md:px-[var(--layout-nav-inset)] md:pb-14"
       aria-labelledby="projects-heading"
     >
       <Container className="w-full max-w-none">

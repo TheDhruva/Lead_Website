@@ -530,14 +530,10 @@ html.theatre-done body {
   height: 100svh;
 }
 
-/* Vertical scroll snap was removed after runtime A/B measurement showed
-   proximity snap fighting gentle wheel input: with snap on, small wheel
-   deltas trapped and re-settled near section boundaries (final position
-   ~74px after a 600px+ intended traversal) and each settle re-ran restyle
-   work; identical input with snap off traversed linearly. Normal native
-   scrolling is the intended behavior: input responds immediately, no
-   snap-back, no re-settling. Sections keep their own start positions for
-   programmatic navigation (scrollContainerTo targets offsets directly). */
+/* Native section landing: the browser owns wheel, trackpad, touch, and
+   keyboard physics while each major section provides one stable start
+   position. This matches the navbar destination without a competing JS
+   wheel controller. */
 .scroll-panel {
   overscroll-behavior-y: contain;
   -webkit-overflow-scrolling: touch;

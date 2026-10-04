@@ -533,7 +533,7 @@ export function Hero() {
     <section
       ref={sectionRef}
       id="work"
-      className="section-frame section-frame--hero section-tone-hero relative items-center"
+      className="section-frame section-frame--hero section-tone-hero relative snap-start snap-always items-center"
       aria-labelledby="hero-heading"
     >
       <h1 id="hero-heading" className="sr-only">

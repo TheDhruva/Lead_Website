@@ -22,12 +22,13 @@ interface SmoothScrollProviderProps {
  * visible teleport), and nav targets computed for anchor-centering never
  * matched snap-start rest positions.
  *
- * This provider now only publishes native scroll frames (rAF-throttled,
- * passive listener) so the scroll-bus cinematic vars, is-scroll-active
- * gating, and pointer pausing keep working with zero scroll ownership.
- * The scrollable limit (scrollHeight - clientHeight) is cached and
- * refreshed on structural signals only — the hot scroll path reads
- * scrollTop and reuses the cached limit, never measuring layout.
+ * This provider publishes native scroll frames (rAF-throttled, passive
+ * listener). Section landing is handled by native CSS scroll snapping on
+ * the scroll container, so wheel, trackpad, touch, and keyboard input all
+ * share one browser-native interaction model.
+ * The scrollable limit (scrollHeight - clientHeight) is cached and refreshed
+ * on structural signals only — the hot scroll path reads scrollTop and
+ * reuses the cached limit, never measuring layout.
  * Context stays (always null) so existing consumers don't break.
  */
 export function SmoothScrollProvider({ children }: SmoothScrollProviderProps) {
@@ -36,7 +37,6 @@ export function SmoothScrollProvider({ children }: SmoothScrollProviderProps) {
   const lastScrollRef = useRef(0);
   const lastTimeRef = useRef(0);
   const lastDirectionRef = useRef<ScrollDirection>(0);
-
   useEffect(() => {
     if (!hasEntered) return;
 

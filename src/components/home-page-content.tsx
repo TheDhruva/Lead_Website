@@ -163,7 +163,7 @@ export function HomePageContent() {
         <GlobalCanvas />
         <div
           id={SCROLL_CONTAINER_ID}
-          className="scroll-panel relative h-[100svh] w-full overflow-x-hidden overflow-y-auto"
+          className="scroll-panel relative h-[100svh] w-full snap-y snap-mandatory overflow-x-hidden overflow-y-auto"
         >
           <Navbar />
           <FloatingNav />
@@ -171,7 +171,7 @@ export function HomePageContent() {
             <Hero />
             <LazySection
               id={SECTION_IDS.services}
-              className="section-tone-services section-placeholder"
+              className="section-tone-services section-placeholder snap-start snap-always"
               minHeight="100svh"
               srContent={
                 <>
@@ -191,7 +191,7 @@ export function HomePageContent() {
             </LazySection>
             <LazySection
               id={SECTION_IDS.video}
-              className="section-tone-videos section-placeholder"
+              className="section-tone-videos section-placeholder snap-start snap-always"
               minHeight="100svh"
               // Heavier section (player + media): start preparing while the
               // section is still well below the fold so chunk evaluation,
@@ -218,7 +218,7 @@ export function HomePageContent() {
             </LazySection>
             <LazySection
               id={SECTION_IDS.projects}
-              className="section-tone-projects section-placeholder"
+              className="section-tone-projects section-placeholder snap-start snap-always"
               minHeight="100svh"
               // Design Work carries the six-image stack — mount early so
               // chunk + image fetches clear the scroll path before entry.
@@ -242,7 +242,7 @@ export function HomePageContent() {
             </LazySection>
             <LazySection
               id={SECTION_IDS.contact}
-              className="section-tone-contact section-placeholder"
+              className="section-tone-contact section-placeholder snap-start snap-always"
               minHeight="100svh"
               srContent={
                 <>
