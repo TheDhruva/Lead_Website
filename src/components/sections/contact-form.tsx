@@ -6,6 +6,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { AnimatePresence, m } from "framer-motion";
 import { ArrowUpRight } from "lucide-react";
 import {
+  type Control,
   Controller,
   type FieldErrors,
   useForm,
@@ -41,6 +42,24 @@ const defaultValues: ContactFormValues = {
   website: "",
 };
 
+/**
+ * Isolated character counter — owns the message useWatch subscription so
+ * the parent ContactForm tree never re-renders on every keystroke. Only
+ * this <p> updates as the user types.
+ */
+function MessageCounter({ control }: { control: Control<ContactFormValues> }) {
+  const messageValue = useWatch({ control, name: "message" });
+  const messageLength = messageValue?.length ?? 0;
+  return (
+    <p
+      className="contact-form__char-count mt-1.5 text-right text-xs text-foreground-secondary"
+      aria-live="polite"
+    >
+      {messageLength}/{CONTACT_MESSAGE_MAX}
+    </p>
+  );
+}
+
 export function ContactForm() {
   const [submitted, setSubmitted] = useState(false);
   const [submissionError, setSubmissionError] = useState<string | null>(null);
@@ -61,9 +80,6 @@ export function ContactForm() {
     mode: "onTouched",
     defaultValues,
   });
-
-  const messageValue = useWatch({ control, name: "message" });
-  const messageLength = messageValue?.length ?? 0;
 
   const onInvalid = (fieldErrors: FieldErrors<ContactFormValues>) => {
     const firstKey = Object.keys(fieldErrors)[0] as
@@ -281,12 +297,7 @@ export function ContactForm() {
               {...messageField}
               onFocus={() => playInputFocus()}
             />
-            <p
-              className="contact-form__char-count mt-1.5 text-right text-xs text-foreground-secondary"
-              aria-live="polite"
-            >
-              {messageLength}/{CONTACT_MESSAGE_MAX}
-            </p>
+            <MessageCounter control={control} />
           </div>
 
           {submissionError ? (

@@ -15,9 +15,10 @@ const SECTION_LIST = [
 /**
  * GlobalCanvas — one continuous atmosphere behind all content.
  *
- * Two static wash layers (lacquer glow, cinematic veil) crossfade with
- * the active section through CSS opacity only: no scroll listeners with
- * React state, no per-frame work, no layout. Sections themselves stay
+ * A SINGLE static wash layer (merged section gradients on one element)
+ * whose opacity follows the active section through CSS only: no scroll
+ * listeners with React state, no per-frame work, no layout, and only
+ * one fullscreen surface to composite. Sections themselves stay
  * transparent so chapters blend instead of cutting.
  *
  * Layer order: BACKGROUND → WASH → CONTENT → NAVIGATION.
@@ -31,8 +32,7 @@ export function GlobalCanvas({ className }: { className?: string }) {
       data-wash={activeId}
       aria-hidden="true"
     >
-      <div className="global-canvas__wash global-canvas__wash--lacquer" />
-      <div className="global-canvas__wash global-canvas__wash--veil" />
+      <div className="global-canvas__wash" />
     </div>
   );
 }

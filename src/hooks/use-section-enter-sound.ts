@@ -8,6 +8,14 @@ import { useAudio } from "@/providers/audio-provider";
 
 /** Quiet period after a section-enter sound — absorbs boundary jitter. */
 const ENTER_COOLDOWN_MS = 4000;
+/**
+ * Stagger after meaningful entry before the non-critical sound plays.
+ * Section activation already triggers content mount, wash crossfade, and
+ * entrance choreography on the same frame — the decorative tick waits
+ * one beat so it never contends with them. Cancelled if the section
+ * leaves before the beat (fast pass-through stays silent).
+ */
+const ENTER_STAGGER_MS = 350;
 
 /**
  * Plays one sound when its section becomes meaningfully visible.
@@ -30,6 +38,7 @@ export function useSectionEnterSound(
     const el = ref.current;
     if (!el) return;
     const root = getScrollContainer();
+    let staggerTimer: number | null = null;
 
     const obs = new IntersectionObserver(
       ([entry]) => {
@@ -47,16 +56,33 @@ export function useSectionEnterSound(
               rect.bottom > rootH * 0.3));
         const was = wasVisibleRef.current;
         wasVisibleRef.current = meaningful;
-        if (!meaningful || was) return;
+        if (!meaningful) {
+          // Left before the stagger beat — a fast pass-through stays
+          // silent instead of spending a voice on a section already gone.
+          if (staggerTimer !== null) {
+            window.clearTimeout(staggerTimer);
+            staggerTimer = null;
+          }
+          return;
+        }
+        if (was || staggerTimer !== null) return;
         const now =
           typeof performance !== "undefined" ? performance.now() : Date.now();
         if (now - lastPlayedRef.current < ENTER_COOLDOWN_MS) return;
-        lastPlayedRef.current = now;
-        play(key);
+        staggerTimer = window.setTimeout(() => {
+          staggerTimer = null;
+          if (!wasVisibleRef.current) return;
+          lastPlayedRef.current =
+            typeof performance !== "undefined" ? performance.now() : Date.now();
+          play(key);
+        }, ENTER_STAGGER_MS);
       },
       { threshold: 0, root: root ?? null },
     );
     obs.observe(el);
-    return () => obs.disconnect();
+    return () => {
+      if (staggerTimer !== null) window.clearTimeout(staggerTimer);
+      obs.disconnect();
+    };
   }, [ref, key, play]);
 }

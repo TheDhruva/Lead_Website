@@ -18,9 +18,12 @@ import { VIDEO_PLAYBACK_VOLUME } from "@/constants/audio";
 import { videoItems } from "@/data";
 import { useCanPointerReact } from "@/hooks/use-can-pointer-react";
 import { useCinematicSection } from "@/hooks/use-cinematic-section";
+import { usePerformanceTier } from "@/hooks/use-performance-tier";
 import { useReducedMotion } from "@/hooks/use-reduced-motion";
 import { useSectionEnterSound } from "@/hooks/use-section-enter-sound";
+import { isScrollActive } from "@/lib/scroll-bus";
 import { getScrollContainer } from "@/lib/scroll-container";
+import { subscribeScrollMotion } from "@/lib/scroll-motion-engine";
 import { cn } from "@/lib/utils";
 import { getVideoSources } from "@/lib/video-source";
 import { useAudio } from "@/providers/audio-provider";
@@ -31,13 +34,13 @@ import type { VideoItem } from "@/types";
    The switch is a fast editorial CUT (300–500ms total):
    push → cut → settle. No bounce, no elastic easing.
    ───────────────────────────────────────────────────────────── */
-const VIDEO_SWITCH_MS = 420;
+const VIDEO_SWITCH_MS = 360;
 /** Bounded wait for the swapped source to become playable — never hangs. */
 const VIDEO_READY_TIMEOUT_MS = 900;
 const VIDEO_CUT_OFFSET_PX = 26;
 const VIDEO_EXIT_SCALE = 1.022;
 const VIDEO_ENTRY_SCALE = 0.985;
-const VIDEO_CUT_BLUR_PX = 3;
+
 const VIDEO_ENTRANCE_HEADING_MS = 520;
 const VIDEO_ENTRANCE_PLAYER_MS = 560;
 const VIDEO_ENTRANCE_ROW_MS = 440;
@@ -214,10 +217,23 @@ export function VideoShowcase() {
   /** Id of the item whose sources are currently loaded on activeRef. */
   const sourcesLoadedRef = useRef<string | null>(null);
   const prefersReducedMotion = useReducedMotion();
+  const tier = usePerformanceTier();
   const { play, setVideoAudioActive, muted: globalMuted } = useAudio();
 
   const [currentIndex, setCurrentIndex] = useState(0);
   const [isSectionVisible, setIsSectionVisible] = useState(false);
+  /**
+   * Settle-debounced visibility — drives ONLY the play/pause media-pipeline
+   * toggle below. Slow/precise manual scrolling can straddle the -6%
+   * observation band, flipping the raw signal repeatedly; each flip would
+   * otherwise flap v.play()/v.pause() + the global audio broadcast +
+   * progress-loop churn mid-gesture. A navbar flight crosses decisively
+   * once, which is why nav feels smooth and manual doesn't. Committing
+   * after ~150ms of stability absorbs straddles; genuine crossings are
+   * delayed imperceptibly (the poster bridge covers the picture).
+   * Init/entrance still use the raw signal so nothing mounts late.
+   */
+  const [isSectionVisibleSettled, setIsSectionVisibleSettled] = useState(false);
   const [enteredOnce, setEnteredOnce] = useState(false);
   const [initialized, setInitialized] = useState(false);
   const [isMuted, setIsMuted] = useState(true);
@@ -225,11 +241,24 @@ export function VideoShowcase() {
   const [isTransitioning, setIsTransitioning] = useState(false);
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [autoplayBlocked, setAutoplayBlocked] = useState(false);
+  /**
+   * Scroll-settle video state (SCROLLING_PAUSED). While the user actively
+   * scrolls, decoding + texture upload + progress writes would compete
+   * with scroll compositing — so the showcase holds its currentTime and
+   * stays paused, resuming ~350ms after motion truly ends (not per
+   * velocity dip: every motion frame resets the timer, so slow continuous
+   * scrolling never flaps play/pause). Toggles at most twice per
+   * gesture — never per frame.
+   */
+  const [scrollPaused, setScrollPaused] = useState(false);
 
   const isMutedRef = useRef(true);
   const currentIndexRef = useRef(0);
   const isPlayingRef = useRef(false);
   const reducedMotionRef = useRef(false);
+  // True while SCROLLING_PAUSED owns the pause (distinct from the user's
+  // explicit pause and from visibility gating).
+  const scrollPausedRef = useRef(false);
   // Explicit user stop (pause) — autoplay must not override it.
   const userPausedRef = useRef(false);
 
@@ -308,17 +337,31 @@ export function VideoShowcase() {
     return () => obs.disconnect();
   }, []);
 
-  // pause when section leaves viewport
+  // Settle the raw visibility signal before it may touch the media
+  // pipeline (see state declaration for rationale).
+  useEffect(() => {
+    const id = window.setTimeout(
+      () => setIsSectionVisibleSettled(isSectionVisible),
+      150,
+    );
+    return () => window.clearTimeout(id);
+  }, [isSectionVisible]);
+
+  // pause when section leaves viewport — or while the user is actively
+  // scrolling through it (SCROLLING_PAUSED: hold currentTime, decode
+  // nothing, resume after settle via the scroll effect below).
   useEffect(() => {
     if (!initialized) return;
     const v = activeRef.current;
     if (!v) return;
-    if (!isSectionVisible) {
+    if (!isSectionVisibleSettled || scrollPaused) {
       v.pause();
       if (!isMutedRef.current) setVideoAudioActive(false);
       if (rafRef.current) cancelAnimationFrame(rafRef.current);
     } else if (
-      isSectionVisible &&
+      isSectionVisibleSettled &&
+      !scrollPaused &&
+      !isScrollActive() &&
       !isPlayingRef.current &&
       !autoplayBlocked &&
       !userPausedRef.current
@@ -328,12 +371,52 @@ export function VideoShowcase() {
       void v.play().catch(() => setAutoplayBlocked(true));
     }
   }, [
-    isSectionVisible,
+    isSectionVisibleSettled,
+    scrollPaused,
     initialized,
     autoplayBlocked,
     globalMuted,
     setVideoAudioActive,
   ]);
+
+  // Scroll-settle state machine: OUTSIDE / VISIBLE_IDLE / VISIBLE_PLAYING
+  // transitions stay in the visibility effect above; this effect only
+  // owns SCROLLING_PAUSED. Motion frames arrive only while scroll offset
+  // changes, so "no frames for 350ms" reliably means the gesture (and
+  // its momentum tail) ended — every frame resets the timer, which is
+  // what prevents play/pause flapping during slow continuous scrolls.
+  // currentTime is preserved: pause/resume never seeks.
+  useEffect(() => {
+    if (!initialized) return;
+    let resumeTimer: number | null = null;
+    const clearResume = () => {
+      if (resumeTimer !== null) {
+        window.clearTimeout(resumeTimer);
+        resumeTimer = null;
+      }
+    };
+    const unsubscribe = subscribeScrollMotion((motion) => {
+      const v = activeRef.current;
+      if (!v) return;
+      if (Math.abs(motion.velocity) > 0.05) {
+        clearResume();
+        if (!v.paused && !userPausedRef.current && !scrollPausedRef.current) {
+          scrollPausedRef.current = true;
+          setScrollPaused(true);
+        }
+      } else if (scrollPausedRef.current && resumeTimer === null) {
+        resumeTimer = window.setTimeout(() => {
+          resumeTimer = null;
+          scrollPausedRef.current = false;
+          setScrollPaused(false);
+        }, 350);
+      }
+    });
+    return () => {
+      clearResume();
+      unsubscribe();
+    };
+  }, [initialized]);
 
   // helper to set sources on a video element
   const setVideoSources = useCallback(
@@ -355,9 +438,11 @@ export function VideoShowcase() {
     [],
   );
 
-  // Fast cinematic cut on the player frame — transform/opacity/filter
-  // only, cancellable so rapid switching never stacks animations.
-  // Single stable <video> element: no remount, no ref races.
+  // Fast cinematic cut on the player frame — transform/opacity only
+  // (compositor), cancellable so rapid switching never stacks animations.
+  // Single stable <video> element: no remount, no ref races. Deliberately
+  // no filter:blur() — fullscreen blur over a decoding video is paint per
+  // frame; the directional push + settle carries the cut instead.
   const playCut = useCallback((dir: 1 | -1) => {
     const frame = frameRef.current;
     if (!frame || typeof frame.animate !== "function") return;
@@ -378,25 +463,21 @@ export function VideoShowcase() {
             {
               opacity: 1,
               transform: "translate3d(0, 0, 0) scale(1)",
-              filter: "blur(0px)",
               offset: 0,
             },
             {
               opacity: 0.55,
               transform: `translate3d(${(-x * 0.5).toFixed(1)}px, 0, 0) scale(${VIDEO_EXIT_SCALE})`,
-              filter: `blur(${VIDEO_CUT_BLUR_PX}px)`,
               offset: 0.28,
             },
             {
               opacity: 0,
               transform: `translate3d(${x.toFixed(1)}px, 0, 0) scale(${VIDEO_ENTRY_SCALE})`,
-              filter: `blur(${VIDEO_CUT_BLUR_PX}px)`,
               offset: 0.7,
             },
             {
               opacity: 1,
               transform: "translate3d(0, 0, 0) scale(1)",
-              filter: "blur(0px)",
               offset: 1,
             },
           ],
@@ -484,8 +565,8 @@ export function VideoShowcase() {
       v.addEventListener("playing", markReady, { once: true });
     }
 
-    // autoplay muted when visible
-    if (isSectionVisible) {
+    // autoplay muted when visible (settled signal — see declaration)
+    if (isSectionVisibleSettled) {
       const p = v.play();
       if (p) {
         p.then(() => {
@@ -515,7 +596,7 @@ export function VideoShowcase() {
   }, [
     current,
     initialized,
-    isSectionVisible,
+    isSectionVisibleSettled,
     globalMuted,
     setVideoSources,
     setVideoAudioActive,
@@ -545,8 +626,18 @@ export function VideoShowcase() {
           bar.style.setProperty("--progress", next);
           lastWritten = next;
         }
-        // two-window preload at ~75%
-        if (!preloadStartedRef.current && pct >= PRELOAD_THRESHOLD * 100) {
+        // two-window preload at ~75% — deferred while actively
+        // scrolling so fetch + source-swap work never lands on the most
+        // demanding scroll frames; the next progress tick retries.
+        // Constrained tiers skip speculative preload: the poster bridge
+        // + bounded ready-wait cover explicit selection without
+        // background decode contention.
+        if (
+          !preloadStartedRef.current &&
+          pct >= PRELOAD_THRESHOLD * 100 &&
+          !isScrollActive() &&
+          tier !== "low"
+        ) {
           preloadStartedRef.current = true;
           const nextItem = videoItems[(currentIndexRef.current + 1) % total];
           if (nextItem && nextRef.current) {
@@ -559,7 +650,7 @@ export function VideoShowcase() {
       if (!v.paused && !v.ended) rafRef.current = requestAnimationFrame(tick);
     };
     rafRef.current = requestAnimationFrame(tick);
-  }, [setVideoSources, total]);
+  }, [setVideoSources, total, tier]);
 
   const stopProgressLoop = useCallback(() => {
     if (rafRef.current) {
@@ -581,9 +672,13 @@ export function VideoShowcase() {
       stopProgressLoop();
     };
     const onTimeUpdate = () => {
-      // rAF handles progress, but keep as fallback for preload trigger if rAF paused
+      // rAF handles progress, but keep as fallback for preload trigger if rAF paused.
+      // Same guards as the rAF path: never preload mid-scroll, and never
+      // speculatively on constrained tiers.
       if (
         !preloadStartedRef.current &&
+        tier !== "low" &&
+        !isScrollActive() &&
         v.duration &&
         v.currentTime / v.duration >= PRELOAD_THRESHOLD
       ) {
@@ -621,6 +716,7 @@ export function VideoShowcase() {
     startProgressLoop,
     stopProgressLoop,
     total,
+    tier,
     setVideoSources,
     commitIndex,
   ]);
@@ -820,7 +916,7 @@ export function VideoShowcase() {
                     contained (never cropped); unused area is plain ink. */}
               <div
                 ref={frameRef}
-                className="relative aspect-video w-full overflow-hidden bg-black will-change-transform"
+                className="relative aspect-video w-full overflow-hidden bg-black"
               >
                 {/* poster bridge — keyed so each film resolves its own frame */}
                 {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -883,7 +979,7 @@ export function VideoShowcase() {
                         type="button"
                         onClick={toggleMute}
                         aria-label={isMuted ? "Unmute video" : "Mute video"}
-                        className="inline-flex h-11 w-11 items-center justify-center rounded-full border border-white/20 bg-black/40 text-white backdrop-blur-[6px] transition-colors hover:bg-black/55 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/60 md:h-8 md:w-8"
+                        className="inline-flex h-11 w-11 items-center justify-center rounded-full border border-white/20 bg-black/55 text-white transition-colors hover:bg-black/70 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/60 md:h-8 md:w-8"
                       >
                         {isMuted ? (
                           <VolumeX className="h-4 w-4 md:h-3.5 md:w-3.5" />
@@ -897,7 +993,7 @@ export function VideoShowcase() {
                         aria-label={
                           isFullscreen ? "Exit fullscreen" : "Enter fullscreen"
                         }
-                        className="inline-flex h-11 w-11 items-center justify-center rounded-full border border-white/20 bg-black/40 text-white backdrop-blur-[6px] transition-colors hover:bg-black/55 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/60 md:h-8 md:w-8"
+                        className="inline-flex h-11 w-11 items-center justify-center rounded-full border border-white/20 bg-black/55 text-white transition-colors hover:bg-black/70 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/60 md:h-8 md:w-8"
                       >
                         {isFullscreen ? (
                           <Minimize className="h-4 w-4 md:h-3.5 md:w-3.5" />
@@ -940,7 +1036,7 @@ export function VideoShowcase() {
                   <span className="flex flex-col items-center gap-2">
                     <span
                       className={cn(
-                        "inline-flex h-[60px] w-[60px] items-center justify-center rounded-full border border-white/30 bg-black/45 text-white backdrop-blur-[6px] transition-[background-color,opacity] duration-300 ease-[cubic-bezier(0.22,1,0.36,1)] motion-reduce:transition-none md:h-[72px] md:w-[72px]",
+                        "inline-flex h-[60px] w-[60px] items-center justify-center rounded-full border border-white/30 bg-black/55 text-white transition-[background-color,opacity] duration-300 ease-[cubic-bezier(0.22,1,0.36,1)] motion-reduce:transition-none md:h-[72px] md:w-[72px]",
                         isPlaying &&
                           "opacity-0 group-hover:opacity-100 group-focus-visible:opacity-100",
                       )}

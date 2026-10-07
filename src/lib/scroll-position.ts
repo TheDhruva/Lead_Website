@@ -57,7 +57,7 @@ let navSeq = 0;
  * This lands exactly on the section border-box start (internal section
  * padding `--nav-safe-top` already clears the floating navbar, and the
  * Design Work deck entry lands on its heading with card 1 active). Exactly
- * one controlled scroll action; native scroll snapping handles manual
+ * one controlled scroll action; the post-gesture settle handles manual
  * wheel, trackpad, touch, and keyboard section landing separately.
  *
  * Navigation marks the choreography `navigating` so observers treat the
@@ -118,17 +118,23 @@ export function scrollToSectionElement(target: HTMLElement): () => void {
     onSettled,
   });
 
-  // Single re-aim ONLY if lazy mounting moved the target (placeholder →
-  // real section height change). No polling loop, no correction fighting:
-  // identical positions never trigger a second scroll action. Skipped for
-  // superseded flights (they no longer own the pin) and interrupted ones
-  // (the user has control — never restart a cancelled flight).
+  // Single re-aim ONLY if lazy mounting moved the target meaningfully
+  // (placeholder → real section height change). No polling loop, no
+  // correction fighting: positions within arrival tolerance never trigger
+  // a second scroll action — the post-gesture settle absorbs the remainder.
+  // Skipped for superseded flights (they no longer own the pin) and
+  // interrupted ones (the user has control — never restart a cancelled
+  // flight).
   //
   // The limit gate makes the common case free: when total scrollable
   // height has not shifted, nothing above the target moved, so no geometry
   // is read and no forced layout happens inside the timer. Measurement
   // runs only after a real layout change (mount swap / content growth),
   // and only then can the target have actually moved.
+  //
+  // Tolerance (~8px): sub-8px drift is imperceptible and the
+  // post-gesture settle absorbs it — a second tween for less would read
+  // as double-motion.
   const reaimTimer = window.setTimeout(() => {
     if (navId !== navSeq || interrupted) return;
     const limitNow = getScrollMotionFrame().limit;
@@ -136,7 +142,7 @@ export function scrollToSectionElement(target: HTMLElement): () => void {
     const el = resolveTarget();
     if (!document.contains(el)) return;
     const nextTop = targetTop();
-    if (Math.abs(nextTop - firstTop) > 2) {
+    if (Math.abs(nextTop - firstTop) > 8) {
       const nextDistance = Math.abs(nextTop - getScrollTop());
       cancel();
       setNavigationTarget(el.id || null);

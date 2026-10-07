@@ -15,17 +15,18 @@ interface SmoothScrollProviderProps {
 
 /**
  * Main scroll path is 100% native browser scrolling inside
- * #scroll-container with natural scrolling (no CSS snap).
+ * #scroll-container with natural scrolling (no CSS snap, no library).
  *
  * Lenis was removed from this path: its RAF-driven scrollTop interpolation
  * fought native snap (snap yanked mid-flight → Lenis re-interpolated →
  * visible teleport), and nav targets computed for anchor-centering never
  * matched snap-start rest positions.
  *
- * This provider publishes native scroll frames (rAF-throttled, passive
- * listener). Section landing is handled by native CSS scroll snapping on
- * the scroll container, so wheel, trackpad, touch, and keyboard input all
- * share one browser-native interaction model.
+ * Section landing after manual scrolling is handled by the post-gesture
+ * settle (see section-settle.ts): native scrolling runs free during the
+ * gesture, then one short correction lands near section starts — so
+ * wheel, trackpad, touch, and keyboard input all share one
+ * browser-native interaction model without continuous snap evaluation.
  * The scrollable limit (scrollHeight - clientHeight) is cached and refreshed
  * on structural signals only — the hot scroll path reads scrollTop and
  * reuses the cached limit, never measuring layout.

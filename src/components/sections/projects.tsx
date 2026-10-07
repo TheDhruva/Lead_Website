@@ -1,19 +1,13 @@
 "use client";
 
 import Image from "next/image";
-import {
-  useEffect,
-  useMemo,
-  useRef,
-  useState,
-  useSyncExternalStore,
-} from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 
 import {
   AnimatePresence,
+  type MotionValue,
   m,
-  useMotionValueEvent,
-  useScroll,
+  useMotionValue,
   useTransform,
 } from "framer-motion";
 
@@ -23,6 +17,7 @@ import { projectRows } from "@/data";
 import { useCanPointerReact } from "@/hooks/use-can-pointer-react";
 import { useCinematicSection } from "@/hooks/use-cinematic-section";
 import { useMediaQuery } from "@/hooks/use-media-query";
+import { usePerformanceTier } from "@/hooks/use-performance-tier";
 import { useReducedMotion } from "@/hooks/use-reduced-motion";
 import { useSectionEnterSound } from "@/hooks/use-section-enter-sound";
 import { BLUR_PLACEHOLDER_DATA_URL } from "@/lib/image-placeholder";
@@ -30,6 +25,7 @@ import {
   getOffsetInScrollContainer,
   getScrollContainer,
 } from "@/lib/scroll-container";
+import { subscribeScrollMotion } from "@/lib/scroll-motion-engine";
 import { cn } from "@/lib/utils";
 import { useAudio } from "@/providers/audio-provider";
 import type { Project } from "@/types";
@@ -166,83 +162,97 @@ function ImageSheet({
   progress,
   isActive,
   gentle,
+  eagerFetch,
 }: {
   project: GalleryItem;
   index: number;
-  progress: ReturnType<typeof useScroll>["scrollYProgress"];
+  progress: MotionValue<number>;
   isActive: boolean;
   gentle: boolean;
+  /** True for the takeover target: fetch its full image eagerly (with a
+      framework preload hint for the exact optimized URL) well before the
+      rise window, so the takeover decodes instead of stuttering. */
+  eagerFetch: boolean;
 }) {
-  const b0 = index / COUNT;
+  // Keyframe channels are pure functions of (index, gentle): build once
+  // per sheet instead of reconstructing string arrays on every render
+  // (renders happen at each takeover + midpoint; scroll frames never
+  // re-render — they only push the shared MotionValue).
+  const channels = useMemo(() => {
+    const b0 = index / COUNT;
 
-  // Rise window, then one settle window per takeover above this
-  // sheet: it recedes, then deepens a step for every further card
-  // that stacks on top. Replaced sheets REMAIN beneath as a visible
-  // pile instead of flying out of the stage. Monotonic inputs;
-  // interpolation clamps at both ends.
-  const riseY = gentle ? "40svh" : "60svh";
-  const nearY = gentle ? "10svh" : "14svh";
-  const stepScale = gentle ? 0.008 : 0.012;
-  const stepY = gentle ? 1 : 1.5;
-  const stepOpacity = gentle ? 0.03 : 0.05;
-  const baseScale = gentle ? 0.985 : 0.97;
-  const baseY = gentle ? -2 : -3;
-  const baseOpacity = gentle ? 0.88 : 0.82;
+    // Rise window, then one settle window per takeover above this
+    // sheet: it recedes, then deepens a step for every further card
+    // that stacks on top. Replaced sheets REMAIN beneath as a visible
+    // pile instead of flying out of the stage. Monotonic inputs;
+    // interpolation clamps at both ends.
+    const riseY = gentle ? "40svh" : "60svh";
+    const nearY = gentle ? "10svh" : "14svh";
+    const stepScale = gentle ? 0.008 : 0.012;
+    const stepY = gentle ? 1 : 1.5;
+    const stepOpacity = gentle ? 0.03 : 0.05;
+    const baseScale = gentle ? 0.985 : 0.97;
+    const baseY = gentle ? -2 : -3;
+    const baseOpacity = gentle ? 0.88 : 0.82;
 
-  const keys: number[] = [];
-  const ys: string[] = [];
-  const scales: number[] = [];
-  const opacities: number[] = [];
+    const keys: number[] = [];
+    const ys: string[] = [];
+    const scales: number[] = [];
+    const opacities: number[] = [];
 
-  if (index === 0) {
-    // Card 0 starts primary — no entrance travel.
-    keys.push(0);
-    ys.push("0svh");
-    scales.push(1);
-    opacities.push(1);
-  } else {
-    // Takeover window translated one WINDOW earlier so the rise
-    // COMPLETES exactly at the index boundary b0: the incoming card
-    // reaches full opacity the moment the active index flips to it,
-    // so text and visual dominance change as one card. Same window
-    // width and curve — only the placement moved.
-    keys.push(b0 - WINDOW * 2, b0 - WINDOW * 1.3, b0);
-    ys.push(riseY, nearY, "0svh");
-    scales.push(baseScale, 0.985, 1);
-    opacities.push(0, 0.3, 1);
-  }
-  // Settle windows: one per takeover above this sheet. Depth d =
-  // cards resting above after boundary j. Flat holds between
-  // windows come free from duplicate consecutive values.
-  for (let j = index + 1; j < COUNT; j++) {
-    const d = j - index;
-    keys.push(j / COUNT - WINDOW, j / COUNT + WINDOW);
-    const deepY = `${(baseY - stepY * (d - 1)).toFixed(2)}svh`;
-    const prevY =
-      d === 1 ? "0svh" : `${(baseY - stepY * (d - 2)).toFixed(2)}svh`;
-    ys.push(prevY, deepY);
-    const deepS = Number((baseScale - stepScale * (d - 1)).toFixed(4));
-    const prevS =
-      d === 1 ? 1 : Number((baseScale - stepScale * (d - 2)).toFixed(4));
-    scales.push(prevS, deepS);
-    const deepO = Number(
-      Math.max(0.5, baseOpacity - stepOpacity * (d - 1)).toFixed(3),
-    );
-    const prevO =
-      d === 1
-        ? 1
-        : Number(Math.max(0.5, baseOpacity - stepOpacity * (d - 2)).toFixed(3));
-    opacities.push(prevO, deepO);
-  }
+    if (index === 0) {
+      // Card 0 starts primary — no entrance travel.
+      keys.push(0);
+      ys.push("0svh");
+      scales.push(1);
+      opacities.push(1);
+    } else {
+      // Takeover window translated one WINDOW earlier so the rise
+      // COMPLETES exactly at the index boundary b0: the incoming card
+      // reaches full opacity the moment the active index flips to it,
+      // so text and visual dominance change as one card in both scroll
+      // directions. Same window width and curve — only placement moved.
+      keys.push(b0 - WINDOW * 2, b0 - WINDOW * 1.3, b0);
+      ys.push(riseY, nearY, "0svh");
+      scales.push(baseScale, 0.985, 1);
+      opacities.push(0, 0.3, 1);
+    }
+    // Settle windows: one per takeover above this sheet. Depth d =
+    // cards resting above after boundary j. Flat holds between
+    // windows come free from duplicate consecutive values.
+    for (let j = index + 1; j < COUNT; j++) {
+      const d = j - index;
+      keys.push(j / COUNT - WINDOW, j / COUNT + WINDOW);
+      const deepY = `${(baseY - stepY * (d - 1)).toFixed(2)}svh`;
+      const prevY =
+        d === 1 ? "0svh" : `${(baseY - stepY * (d - 2)).toFixed(2)}svh`;
+      ys.push(prevY, deepY);
+      const deepS = Number((baseScale - stepScale * (d - 1)).toFixed(4));
+      const prevS =
+        d === 1 ? 1 : Number((baseScale - stepScale * (d - 2)).toFixed(4));
+      scales.push(prevS, deepS);
+      const deepO = Number(
+        Math.max(0.5, baseOpacity - stepOpacity * (d - 1)).toFixed(3),
+      );
+      const prevO =
+        d === 1
+          ? 1
+          : Number(
+              Math.max(0.5, baseOpacity - stepOpacity * (d - 2)).toFixed(3),
+            );
+      opacities.push(prevO, deepO);
+    }
 
-  // Pin both ends of the range before handing the arrays to Framer
-  // (accelerated WAAPI) — see extendKeyframesToFullRange.
-  extendKeyframesToFullRange(keys, ys, scales, opacities);
-  assertKeyframesCoherent(keys, [keys, ys, scales, opacities]);
+    // Pin both ends of the range before handing the arrays to Framer
+    // (accelerated WAAPI) — see extendKeyframesToFullRange.
+    extendKeyframesToFullRange(keys, ys, scales, opacities);
+    assertKeyframesCoherent(keys, [keys, ys, scales, opacities]);
+    return { keys, ys, scales, opacities };
+  }, [index, gentle]);
 
-  const y = useTransform(progress, keys, ys);
-  const scale = useTransform(progress, keys, scales);
-  const opacity = useTransform(progress, keys, opacities);
+  const y = useTransform(progress, channels.keys, channels.ys);
+  const scale = useTransform(progress, channels.keys, channels.scales);
+  const opacity = useTransform(progress, channels.keys, channels.opacities);
 
   return (
     <m.div
@@ -263,9 +273,12 @@ function ImageSheet({
             alt=""
             fill
             sizes="(min-width: 1024px) 48vw, 94vw"
-            priority={index === 0}
-            loading={index === 0 ? "eager" : "lazy"}
-            fetchPriority={isActive ? "high" : "low"}
+            priority={index === 0 || eagerFetch}
+            loading={index === 0 || eagerFetch ? "eager" : "lazy"}
+            // Static per mount: eagerFetch is fixed for the lifetime of
+            // this sheet instance (a new instance mounts when the role
+            // changes), so this never re-prioritizes mid-scroll.
+            fetchPriority={index === 0 || eagerFetch ? "high" : "low"}
             placeholder="blur"
             blurDataURL={BLUR_PLACEHOLDER_DATA_URL}
             className="object-contain object-center"
@@ -347,27 +360,70 @@ function InfoBlock({ project }: { project: GalleryItem }) {
 
 function StackDeck({ gentle }: { gentle: boolean }) {
   const trackRef = useRef<HTMLDivElement>(null);
-  const isDesktopWheel = useMediaQuery(
-    "(min-width: 768px) and (hover: hover) and (pointer: fine)",
-  );
-  // Canonical scrollport via subscription (no effect-setState cascade):
-  // getElementById returns a stable node identity, so the snapshot is
-  // cached by reference. Until it resolves, useScroll holds instead of
-  // silently subscribing to window scrolling (which never moves here).
-  const scrollRoot = useSyncExternalStore(
-    () => () => {},
-    () => getScrollContainer(),
-    () => null,
-  );
-  const containerRef = useMemo(() => ({ current: scrollRoot }), [scrollRoot]);
+  //
+  // NOTE: no wheel interception — the browser owns scrolling. The deck
+  // responds to scroll position (progress MotionValue → useTransforms →
+  // compositor). A previous passive:false + preventDefault takeover fought
+  // native snap and forced layout reads per wheel event; removed.
+  //
+  // Progress is derived from the app's already-published scroll frame, NOT
+  // from framer's useScroll: useScroll re-measures the target (offsetParent
+  // walk + client/scroll size reads) on every scroll event via its own
+  // listener + frame loop. The deck's geometry only changes on mount /
+  // resize / font settle, so it is measured there (rAF-coalesced) and
+  // progress is computed arithmetically per frame — identical values for
+  // offset ["start start", "end end"]:
+  //   progress = clamp((scroll - deckStart) / deckTravel).
+  // Manual scrolling spends ~480/600svh inside this track (a nav jump
+  // lands on its top), so this removes the hottest layout-read source on
+  // the manual-scroll path. Sheets keep consuming the same MotionValue.
+  const scrollYProgress = useMotionValue(0);
+  const geometryRef = useRef({ start: 0, travel: 1 });
 
-  const { scrollYProgress } = useScroll({
-    target: trackRef,
-    container: containerRef,
-    offset: ["start start", "end end"],
+  useEffect(() => {
+    const track = trackRef.current;
+    const container = getScrollContainer();
+    if (!track || !container) return;
+    let raf = 0;
+    const measureDeck = () => {
+      raf = 0;
+      geometryRef.current = {
+        start: getOffsetInScrollContainer(track),
+        travel: Math.max(1, track.offsetHeight - container.clientHeight),
+      };
+    };
+    const scheduleMeasure = () => {
+      if (raf) return;
+      raf = requestAnimationFrame(measureDeck);
+    };
+    measureDeck();
+    let ro: ResizeObserver | null = null;
+    if (typeof ResizeObserver !== "undefined") {
+      ro = new ResizeObserver(scheduleMeasure);
+      ro.observe(track);
+      ro.observe(container);
+    }
+    window.addEventListener("resize", scheduleMeasure);
+    // Fonts settle without resize events but shift section geometry.
+    try {
+      const fonts = (
+        document as Document & { fonts?: { ready?: Promise<unknown> } }
+      ).fonts;
+      void fonts?.ready?.then(() => scheduleMeasure());
+    } catch {
+      // Non-fatal: geometry still refreshes on scroll-limit changes below.
+    }
+    return () => {
+      if (raf) cancelAnimationFrame(raf);
+      ro?.disconnect();
+      window.removeEventListener("resize", scheduleMeasure);
+    };
+  }, []);
+
+  const [deck, setDeck] = useState<{ active: number; side: 1 | -1 }>({
+    active: 0,
+    side: 1,
   });
-
-  const [active, setActive] = useState(0);
   // THE single source of truth: image emphasis + info content +
   // hairline all follow this index. Sheet motion stays on
   // MotionValues with zero re-renders per scroll frame.
@@ -381,107 +437,50 @@ function StackDeck({ gentle }: { gentle: boolean }) {
   useEffect(() => {
     playRef.current = play;
   });
-  const activeRef = useRef(0);
-  useMotionValueEvent(scrollYProgress, "change", (v) => {
-    // Boundaries sit exactly where each sheet's rise window completes
-    // (index / COUNT), matching the ImageSheet takeover timing — text
-    // and image change as one card in both scroll directions. round()
-    // would shift every boundary half a card late and map v=1 to an
-    // invalid index.
-    const next = Math.min(
-      COUNT - 1,
-      Math.max(0, Math.floor(v * COUNT + CARD_BOUNDARY_EPSILON)),
-    );
-    if (next !== activeRef.current) {
-      activeRef.current = next;
-      playRef.current("service-expand");
-    }
-    setActive(next);
-  });
-
+  const deckRef = useRef(deck);
   useEffect(() => {
-    const track = trackRef.current;
-    const container = scrollRoot;
-    if (!track || !container || !isDesktopWheel) return;
-
-    let wheelTotal = 0;
-    let resetWheelTimer = 0;
-    let unlockTimer = 0;
-    let snapLocked = false;
-
-    const getDeckPosition = () => {
-      const deckStart = getOffsetInScrollContainer(track);
-      const deckTravel = Math.max(
-        0,
-        track.offsetHeight - container.clientHeight,
-      );
-      const progress = Math.max(
-        0,
-        Math.min(
-          1,
-          (container.scrollTop - deckStart) / Math.max(1, deckTravel),
-        ),
-      );
-      return { deckStart, deckTravel, progress };
-    };
-
-    const unlock = () => {
-      snapLocked = false;
-      window.clearTimeout(unlockTimer);
-    };
-
-    const handleWheel = (event: WheelEvent) => {
-      if (event.deltaY === 0) return;
-
-      const { deckStart, deckTravel, progress } = getDeckPosition();
-      const currentIndex = Math.min(
+    return subscribeScrollMotion((motion) => {
+      const { start, travel } = geometryRef.current;
+      const raw = Math.max(0, Math.min(1, (motion.scroll - start) / travel));
+      // Quantize: sub-0.001 progress deltas are visually identical but
+      // would each push a WAAPI update through every mounted sheet.
+      const v = Math.round(raw * 1000) / 1000;
+      // Skip identical values so idle frames never notify the sheets.
+      if (v !== scrollYProgress.get()) scrollYProgress.set(v);
+      // Boundaries sit exactly where each sheet's rise window completes
+      // (index / COUNT), matching the ImageSheet takeover timing — text
+      // and image change as one card in both scroll directions. round()
+      // would shift every boundary half a card late and map v=1 to an
+      // invalid index.
+      const next = Math.min(
         COUNT - 1,
-        Math.max(0, Math.floor(progress * COUNT + CARD_BOUNDARY_EPSILON)),
+        Math.max(0, Math.floor(v * COUNT + CARD_BOUNDARY_EPSILON)),
       );
-      const movingOutOfDeck =
-        (event.deltaY < 0 && currentIndex === 0 && progress <= 0.001) ||
-        (event.deltaY > 0 && currentIndex === COUNT - 1);
-
-      // Let the page leave the deck naturally at either edge.
-      if (movingOutOfDeck) {
-        unlock();
-        return;
+      // Two-sheet rule: the partner card follows the segment midpoint.
+      // First half keeps the outgoing (settled pile) card; second half
+      // mounts the incoming (rising) card half a segment BEFORE its
+      // takeover window — fetch + decode head start with at most 2
+      // large visual layers. Clamped at deck ends.
+      const f = v * COUNT - next;
+      let side: 1 | -1 = f < 0.5 ? -1 : 1;
+      if (next === 0) side = 1;
+      else if (next === COUNT - 1) side = -1;
+      const prev = deckRef.current;
+      if (next !== prev.active) {
+        deckRef.current = { active: next, side };
+        playRef.current("service-expand");
+        setDeck({ active: next, side });
+      } else if (side !== prev.side) {
+        deckRef.current = { active: next, side };
+        setDeck({ active: next, side });
       }
+    });
+  }, [scrollYProgress]);
 
-      event.preventDefault();
-      if (snapLocked) return;
-
-      wheelTotal += event.deltaY;
-      window.clearTimeout(resetWheelTimer);
-      resetWheelTimer = window.setTimeout(() => {
-        wheelTotal = 0;
-      }, 120);
-
-      if (Math.abs(wheelTotal) < 24) return;
-
-      const direction = wheelTotal > 0 ? 1 : -1;
-      wheelTotal = 0;
-      const targetIndex = Math.min(
-        COUNT - 1,
-        Math.max(0, currentIndex + direction),
-      );
-      const targetTop = deckStart + (deckTravel * targetIndex) / COUNT;
-
-      snapLocked = true;
-      container.scrollTo({ top: targetTop, behavior: "smooth" });
-      unlockTimer = window.setTimeout(unlock, 650);
-    };
-
-    track.addEventListener("wheel", handleWheel, { passive: false });
-
-    return () => {
-      track.removeEventListener("wheel", handleWheel);
-      window.clearTimeout(resetWheelTimer);
-      window.clearTimeout(unlockTimer);
-    };
-  }, [isDesktopWheel, scrollRoot]);
-
+  const { active, side } = deck;
   const current = gallery[active] ?? gallery[0]!;
+  // Partner index is valid by construction (side is clamped above).
+  const partnerIndex = active + side;
 
   return (
     <div ref={trackRef} className="relative h-[480svh] md:h-[600svh]">
@@ -503,16 +502,30 @@ function StackDeck({ gentle }: { gentle: boolean }) {
               aria-hidden and pointer-inert; all interaction lives
               in the single info viewport. */}
           <div className="relative flex h-[34svh] min-h-0 items-center justify-center md:h-full max-[380px]:h-[30svh]">
-            {gallery.map((project, i) => (
-              <ImageSheet
-                key={project.id}
-                project={project}
-                index={i}
-                progress={scrollYProgress}
-                isActive={i === active}
-                gentle={gentle}
-              />
-            ))}
+            {gallery.map((project, i) => {
+              // Two-sheet virtualization: the active sheet plus its
+              // segment-midpoint partner (outgoing pile first half,
+              // incoming riser second half). No other 1254px image
+              // participates in the sticky stage — distant sheets rest
+              // at opacity 0 far outside the clipped stage anyway, so
+              // unmounting them is visually identical, while halving
+              // image decode, layer memory, and per-frame MotionValue
+              // work. The partner mounts half a segment before its
+              // takeover with an eager fetch, so transitions never
+              // show gaps or decode stalls.
+              if (i !== active && i !== partnerIndex) return null;
+              return (
+                <ImageSheet
+                  key={project.id}
+                  project={project}
+                  index={i}
+                  progress={scrollYProgress}
+                  isActive={i === active}
+                  eagerFetch={i === partnerIndex}
+                  gentle={gentle}
+                />
+              );
+            })}
           </div>
 
           {/* RIGHT — ONE information viewport. Content crossfades
@@ -551,6 +564,7 @@ export function Projects() {
   useSectionEnterSound(ref, "service-expand");
   const prefersReducedMotion = useReducedMotion();
   const isMobile = useMediaQuery("(max-width: 767px)");
+  const tier = usePerformanceTier();
 
   return (
     <section
@@ -601,7 +615,7 @@ export function Projects() {
               <div className="h-[8svh]" aria-hidden />
             </div>
           ) : (
-            <StackDeck gentle={isMobile} />
+            <StackDeck gentle={isMobile || tier !== "high"} />
           )}
         </div>
       </Container>

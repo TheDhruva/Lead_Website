@@ -1,6 +1,6 @@
 "use client";
 
-import { memo, useEffect, useRef, useState } from "react";
+import { memo, useCallback, useEffect, useRef, useState } from "react";
 
 import { AnimatePresence, m } from "framer-motion";
 
@@ -43,7 +43,7 @@ const CTA_EXIT = { opacity: 0, y: -8, scale: 0.99 };
 
 /**
  * Static desktop composition — presence word, headline, copy, CTAs.
- * Memoized on primitive/stable props so the 2.4s face-cycle tick (which
+ * Memoized on primitive/stable props so the face-cycle tick (which
  * lives in `Hero` and only changes portrait indices) never re-renders
  * typography, buttons, or Motion entrance props. CTA scroll-away still
  * responds via `ctaState`; intro handoff via `started`.
@@ -176,6 +176,15 @@ function PortraitStack({
   const active = portraits[activeIndex] ?? portraits[0]!;
   const frameRef = useRef<HTMLDivElement>(null);
   const gazeRef = useRef<HTMLDivElement>(null);
+  // Stable callback ref: an inline closure would detach/reattach the
+  // observed node on every portrait tick (remount churn in useEnterExit).
+  const setFrameRef = useCallback(
+    (el: HTMLDivElement | null) => {
+      frameRef.current = el;
+      stackRef(el);
+    },
+    [stackRef],
+  );
 
   useEffect(() => {
     if (!gazeEnabled) {
@@ -245,10 +254,7 @@ function PortraitStack({
 
   return (
     <m.div
-      ref={(el) => {
-        frameRef.current = el;
-        stackRef(el);
-      }}
+      ref={setFrameRef}
       className={cn(
         "pointer-events-none absolute top-[44%] hidden h-[34rem] w-80 -translate-y-1/2 lg:block xl:h-[42rem] xl:w-96",
         side === "left" ? "left-0" : "right-0",
@@ -533,7 +539,7 @@ export function Hero() {
     <section
       ref={sectionRef}
       id="work"
-      className="section-frame section-frame--hero section-tone-hero relative snap-start snap-always items-center"
+      className="section-frame section-frame--hero section-tone-hero relative items-center"
       aria-labelledby="hero-heading"
     >
       <h1 id="hero-heading" className="sr-only">

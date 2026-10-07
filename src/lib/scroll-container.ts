@@ -58,6 +58,47 @@ interface ActiveTween {
 let activeTween: ActiveTween | null = null;
 let tweenSeq = 0;
 
+/**
+ * Snap-suspend coordination — the single authority over snap interference
+ * during programmatic movement.
+ *
+ * Manual scrolling runs snap-free (post-gesture section settling owns
+ * landing — see section-settle.ts). A controlled tween still suspends
+ * any snap alignment defensively for its duration so nothing can
+ * re-target scroll position mid-flight, then restores it. Refcounted
+ * so overlapping/superseded flights never leave snap disabled.
+ */
+let snapSuspendCount = 0;
+
+export function suspendContainerSnap(): void {
+  if (typeof document === "undefined") return;
+  const container = getScrollContainer();
+  if (!container) return;
+  if (snapSuspendCount === 0) {
+    container.dataset.snapSuspended = "true";
+    // Inline style beats the Tailwind snap utilities without touching
+    // class lists (no layout churn from class swaps mid-flight).
+    container.style.scrollSnapType = "none";
+  }
+  snapSuspendCount += 1;
+}
+
+export function restoreContainerSnap(): void {
+  if (typeof document === "undefined") return;
+  if (snapSuspendCount === 0) return;
+  snapSuspendCount -= 1;
+  if (snapSuspendCount > 0) return;
+  const container = getScrollContainer();
+  if (!container) return;
+  delete container.dataset.snapSuspended;
+  container.style.removeProperty("scroll-snap-type");
+}
+
+/** For tests/diagnostics only — never branch runtime behavior on this. */
+export function isContainerSnapSuspended(): boolean {
+  return snapSuspendCount > 0;
+}
+
 function stopActiveTween(): void {
   const current = activeTween;
   activeTween = null;
@@ -135,6 +176,7 @@ export function scrollContainerTo(
     activeTween = null;
     cancelAnimationFrame(raf);
     detach();
+    restoreContainerSnap();
     onSettled?.({ cancelled });
   };
 
@@ -199,6 +241,9 @@ export function scrollContainerTo(
   };
 
   const cancel = () => finish(true);
+  // Suspend snap for the whole flight: the browser must not re-target
+  // scroll position while this tween owns it. Restored in finish().
+  suspendContainerSnap();
   raf = requestAnimationFrame(tick);
   activeTween = { id, raf, cancel };
   return cancel;

@@ -135,13 +135,16 @@ function buildWords(
  * mount animations retain the richer character assembly.
  *
  * ENTER (micro-assembly): characters start with a small deterministic
- * displacement (±2deg, 0.96 scale, 3px blur) and lock into the exact
- * original typography.
+ * displacement (±2deg, 0.985 scale, 10–14px offset) and lock into the
+ * exact original typography via opacity + transform only (compositor).
  *
  * EXIT (de-assembly, not a reversed replay): characters separate
  * outward from their settled positions with halved mirrored offsets,
- * a slight lift, half rotation, 4px blur and opacity falloff — faster
- * and more restrained than the entrance. Re-entering replays assembly.
+ * a slight lift, half rotation and opacity falloff — faster and more
+ * restrained than the entrance. Re-entering replays assembly.
+ *
+ * Deliberately no filter:blur() — per-character blur is paint per frame
+ * × N nodes; opacity + translate + scale is visually cleaner and free.
  *
  * Accessibility: the full text lives on one aria-label; animated
  * characters are hidden from assistive technology.
@@ -203,12 +206,9 @@ function AnimatedTextComponent({
   const isWord = simpleReveal || level === "word";
   const duration = isWord ? MOTION.word.duration : MOTION.char.duration;
   const exitDuration = duration * MOTION.exit.durationScale;
-  const restScale = isWord ? 1 : MOTION.char.scale;
-  const restBlur = simpleReveal
-    ? 0
-    : isWord
-      ? MOTION.word.blur
-      : MOTION.char.blur;
+  // Slightly deeper rest scale compensates for the removed blur: the
+  // assembly still reads as depth (0.985 → 1 + rise) without any paint.
+  const restScale = isWord ? 1 : 0.985;
 
   // State labels propagate parent → characters; values come from each
   // character's custom prop and timing from its explicit transition,
@@ -231,7 +231,6 @@ function AnimatedTextComponent({
       y: simpleReveal ? 6 : isWord ? MOTION.word.y : custom.y,
       scale: restScale,
       rotate: simpleReveal ? 0 : custom.rot,
-      filter: `blur(${restBlur}px)`,
     }),
     show: {
       opacity: 1,
@@ -239,7 +238,6 @@ function AnimatedTextComponent({
       y: 0,
       scale: 1,
       rotate: 0,
-      filter: "blur(0px)",
     },
     exit: (custom: CharCustom) => ({
       opacity: 0,
@@ -247,7 +245,6 @@ function AnimatedTextComponent({
       y: simpleReveal ? -4 : Math.round(custom.y * -0.5 - 7 * custom.s),
       scale: isWord ? 1 : 0.985,
       rotate: simpleReveal ? 0 : custom.rot * -0.5,
-      filter: simpleReveal ? "blur(0px)" : "blur(4px)",
     }),
   };
 
@@ -277,7 +274,6 @@ function AnimatedTextComponent({
                   y: simpleReveal ? 6 : isWord ? MOTION.word.y : entry.y,
                   scale: restScale,
                   rotate: simpleReveal ? 0 : entry.rot,
-                  filter: `blur(${restBlur}px)`,
                 };
                 return (
                   <m.span

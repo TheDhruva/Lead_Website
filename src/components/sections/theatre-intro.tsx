@@ -233,8 +233,8 @@ export function TheatreIntro() {
                       key={index}
                       aria-hidden="true"
                       className="theatre-stage__the-letter"
-                      initial={{ opacity: 0, y: 10, filter: "blur(3px)" }}
-                      animate={{ opacity: 1, y: 0, filter: "blur(0px)" }}
+                      initial={{ opacity: 0, y: 10, scale: 0.98 }}
+                      animate={{ opacity: 1, y: 0, scale: 1 }}
                       transition={{
                         duration: 0.55,
                         ease: ENTRANCE_EASE,
@@ -281,13 +281,11 @@ export function TheatreIntro() {
                           opacity: 0,
                           y: 14,
                           scale: 0.96,
-                          filter: "blur(3px)",
                         }}
                         animate={{
                           opacity: 1,
                           y: 0,
                           scale: 1,
-                          filter: "blur(0px)",
                         }}
                         transition={{
                           duration: 0.6,

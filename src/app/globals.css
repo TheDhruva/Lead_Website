@@ -322,7 +322,16 @@
 
   body {
     position: relative;
-    background-color: var(--background);
+    /* Ambient tonal lighting lives in the page background itself (single
+       static gradient, no extra fixed layer to composite over scrolling
+       pixels). The scrollport never moves the body, so this is paint-once. */
+    background:
+      radial-gradient(
+        ellipse 90% 55% at 50% -8%,
+        rgb(255 253 248 / 0.55),
+        transparent 62%
+      ),
+      var(--background);
     color: var(--foreground);
     overflow-x: hidden;
     font-family: var(--font-manrope), ui-sans-serif, system-ui, sans-serif;
@@ -340,56 +349,37 @@
   }
 
   /* Site-wide film grain — felt, not seen (single restrained layer).
-     No blend mode: multiply/overlay force a fullscreen blend pass over
-     scrolled content every frame, yet measure <1.5 luma levels different
-     from plain compositing — imperceptible, so blend is pure cost. */
+     A deliberately small (144px) static noise tile, repeated at low
+     opacity: rasterized once and cached, one cheap texture sample per
+     pixel. No procedural filter surface, no blend mode (multiply/overlay
+     would force a fullscreen blend pass over scrolled content every
+     frame for an imperceptible difference), and no scroll-time opacity
+     toggling — the layer stays visually identical so gestures never
+     invalidate it. See scripts/generate-grain-tile.mjs. */
   body::before {
     content: "";
     position: fixed;
     inset: 0;
     z-index: 9998;
     pointer-events: none;
-    opacity: 0.022;
-    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
-    background-size: 180px 180px;
-  }
-
-  /* Ambient tonal lighting — warm paper glow, lacquer whisper */
-  body::after {
-    content: "";
-    position: fixed;
-    inset: 0;
-    z-index: 9997;
-    pointer-events: none;
-    background:
-      radial-gradient(
-        ellipse 90% 55% at 50% -8%,
-        rgb(255 253 248 / 0.55),
-        transparent 62%
-      ),
-      radial-gradient(
-        ellipse 45% 40% at 92% 88%,
-        rgb(181 18 27 / 0.025),
-        transparent 55%
-      );
+    opacity: 0.05;
+    background-image: url("/images/grain-tile.png");
+    background-size: 144px 144px;
+    background-repeat: repeat;
   }
 
   .dark body::before {
-    opacity: 0.04;
+    opacity: 0.08;
   }
 
-  .dark body::after {
+  .dark body {
     background:
       radial-gradient(
         ellipse 85% 50% at 50% -5%,
         rgb(250 247 240 / 0.04),
         transparent 60%
       ),
-      radial-gradient(
-        ellipse 40% 35% at 8% 92%,
-        rgb(197 29 37 / 0.035),
-        transparent 50%
-      );
+      var(--background);
   }
 
   ::selection {
@@ -492,48 +482,81 @@
     }
   }
 
-  /* ── Mobile / coarse-pointer perf: thin out fixed grain/vignette layers ── */
+  /* ── Mobile / coarse-pointer perf: thinner grain, plain page background ── */
   @media (max-width: 767px) {
     body::before {
-      opacity: 0.015;
-      background-size: 120px 120px;
+      opacity: 0.04;
     }
-    body::after {
-      display: none;
+    body,
+    .dark body {
+      background: var(--background);
     }
   }
 
   @media (pointer: coarse) {
-    body::after {
-      display: none;
+    body,
+    .dark body {
+      background: var(--background);
     }
   }
 
-  /* P1 mobile paint: while actively scrolling, drop the two most
-     expensive over-scroll effects to visually identical cheap states.
-     At rest everything renders exactly as before. */
-  html.is-scrolling body::before {
-    opacity: 0;
+  /* Active-scroll paint relief: while scrolling, the small mobile navbar
+     swaps its frosted blur for a solid surface (more readable in motion,
+     cheaper over moving pixels). The fullscreen grain is intentionally
+     NOT touched here — toggling a viewport-size layer at every gesture
+     start/stop invalidates it twice per scroll for zero visual gain. */
+  html.is-scrolling .navbar {
+    -webkit-backdrop-filter: none;
+    backdrop-filter: none;
+    background-color: color-mix(in srgb, var(--background) 92%, transparent);
   }
-  @media (max-width: 767px) {
-    html.is-scrolling .navbar {
-      -webkit-backdrop-filter: none;
-      backdrop-filter: none;
-      background-color: var(--background);
+
+  /* Constrained devices: frosted pills over video become solid
+     translucent surfaces. Same hierarchy (border + dim), no backdrop
+     sampling cost. Applies to coarse pointers and reduced motion. */
+  @media (pointer: coarse) {
+    .scroll-panel [class*="backdrop-blur"] {
+      -webkit-backdrop-filter: none !important;
+      backdrop-filter: none !important;
+    }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .scroll-panel [class*="backdrop-blur"] {
+      -webkit-backdrop-filter: none !important;
+      backdrop-filter: none !important;
+    }
+    body::before {
+      display: none;
+    }
+    body,
+    .dark body {
+      background: var(--background);
     }
   }
 }
 
-/* ── Full-viewport scroll container (native scroll) ── */
+/* ── Full-viewport scroll container (native scroll) ──
+   vh fallbacks precede every svh so pre-108 Chrome / pre-15.4 Safari /
+   pre-101 Firefox still get full-height layout instead of collapse. */
 html.theatre-done body {
   overflow: hidden;
+  height: 100vh;
   height: 100svh;
 }
 
-/* Native section landing: the browser owns wheel, trackpad, touch, and
-   keyboard physics while each major section provides one stable start
-   position. This matches the navbar destination without a competing JS
-   wheel controller. */
+.scroll-panel,
+[data-page-shell] {
+  height: 100vh;
+  height: 100svh;
+}
+
+/* Section landing without continuous snap: the browser owns wheel,
+   trackpad, touch, and keyboard physics while each major section
+   provides one stable start position, and a post-gesture settle
+   (section-settle.ts) performs one short correction after motion stops.
+   No scroll-snap-type here — snap geometry evaluation on every manual
+   scroll frame (especially across the tall Projects track) was a
+   sustained compositing cost with no visual benefit over settling. */
 .scroll-panel {
   overscroll-behavior-y: contain;
   -webkit-overflow-scrolling: touch;
@@ -543,8 +566,11 @@ html.theatre-done body {
 .section-frame,
 .section-contact {
   box-sizing: border-box;
+  height: 100vh;
   height: 100svh;
+  min-height: 100vh;
   min-height: 100svh;
+  max-height: 100vh;
   max-height: 100svh;
   overflow: hidden;
   display: flex;
@@ -597,6 +623,7 @@ html.theatre-done body {
   .section-frame {
     height: auto;
     max-height: none;
+    min-height: 100vh;
     min-height: 100svh;
     overflow-x: hidden;
     overflow-y: visible;
@@ -607,6 +634,7 @@ html.theatre-done body {
 
   #work.section-frame--hero {
     overflow: visible;
+    min-height: 100vh;
     min-height: 100svh;
   }
 
@@ -681,11 +709,13 @@ html.theatre-done body {
 }
 
 .section-placeholder {
+  min-height: 100vh;
   min-height: 100svh;
 }
 
 /* Section layout system — legacy rhythm helpers */
 .section-frame {
+  min-height: 100vh;
   min-height: 100svh;
 }
 
@@ -712,71 +742,16 @@ html.theatre-done body {
   background-color: transparent;
 }
 
-/* ── SectionTransition — chapter changes (rise / clip / scale) ──
-   Fire-once .is-visible; transform/opacity/blur/clip only, never layout.
-   Delay via --st-delay. Reduced motion renders the final state. */
-.st {
-  opacity: 0;
-  transition:
-    opacity 0.8s ease,
-    transform 0.9s var(--ease-out),
-    clip-path 0.9s var(--ease-out);
-  transition-delay: var(--st-delay, 0ms);
-}
-
-.st--rise {
-  transform: translateY(28px);
-}
-
-.st--scale {
-  transform: translateY(16px) scale(0.96);
-}
-
-.st--clip {
-  clip-path: inset(0 0 100% 0);
-  transform: translateY(14px);
-}
-
-.st.is-visible {
-  opacity: 1;
-  transform: none;
-  clip-path: inset(0 0 0 0);
-}
-
-/* ── Controlled media entrance (video switching) ──
-   Incoming media rises through opacity + restrained scale, never a
-   hard cut. Elements remount per video, replaying the entrance. */
-@keyframes media-in {
-  from {
-    opacity: 0;
-    transform: scale(0.985);
-  }
-  to {
-    opacity: 1;
-    transform: scale(1);
-  }
-}
-
-.media-in {
-  animation: media-in 0.55s var(--ease-out);
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .st {
-    opacity: 1;
-    transform: none;
-    clip-path: none;
-    transition: none;
-  }
-  .media-in {
-    animation: none;
-  }
-}
+/* ── NOTE: the legacy .st scroll-reveal classes and .media-in entrance
+   were removed: no component renders them (CssReveal is a passthrough,
+   entrances are owned by Framer Motion). Dead paint/transition code. */
 
 /* ── GlobalCanvas — continuous atmosphere behind content ──
    Fixed, negative z (above body paint, below all content),
-   pointer-transparent. Washes crossfade on section change via
-   opacity transitions only — zero per-frame cost. */
+   pointer-transparent. ONE fullscreen wash layer whose opacity follows
+   the active section (merged lacquer + veil gradients on a single
+   element = one layer, one paint). The 120ms transition delay lets
+   section content win the entry frame; the wash follows decoratively. */
 .global-canvas {
   position: fixed;
   inset: 0;
@@ -789,46 +764,32 @@ html.theatre-done body {
   position: absolute;
   inset: 0;
   opacity: 0;
-  transition: opacity 1.1s ease;
-}
-
-.global-canvas__wash--lacquer {
+  transition: opacity 1.1s ease 120ms;
   background:
     radial-gradient(58% 42% at 80% 10%, rgb(201 21 36 / 0.1), transparent 70%),
-    radial-gradient(46% 38% at 10% 90%, rgb(120 10 18 / 0.08), transparent 70%);
-}
-
-.global-canvas__wash--veil {
-  background:
-    linear-gradient(180deg, transparent 30%, rgb(23 19 19 / 0.1) 100%),
-    radial-gradient(70% 55% at 50% 110%, rgb(23 19 19 / 0.12), transparent 70%);
+    radial-gradient(46% 38% at 10% 90%, rgb(120 10 18 / 0.08), transparent 70%),
+    linear-gradient(180deg, transparent 55%, rgb(23 19 19 / 0.08) 100%);
 }
 
 /* Hero: quiet neutral — canvas rests on the base background */
-.global-canvas[data-wash="services"] .global-canvas__wash--lacquer {
+.global-canvas[data-wash="services"] .global-canvas__wash {
+  opacity: 0.9;
+}
+.global-canvas[data-wash="video"] .global-canvas__wash {
   opacity: 1;
 }
-.global-canvas[data-wash="video"] .global-canvas__wash--lacquer,
-.global-canvas[data-wash="video"] .global-canvas__wash--veil {
-  opacity: 1;
+.global-canvas[data-wash="projects"] .global-canvas__wash {
+  opacity: 0.5;
 }
-.global-canvas[data-wash="projects"] .global-canvas__wash--veil {
-  opacity: 0.55;
-}
-.global-canvas[data-wash="contact"] .global-canvas__wash--lacquer {
+.global-canvas[data-wash="contact"] .global-canvas__wash {
   opacity: 0.35;
 }
 
-.dark .global-canvas__wash--lacquer {
+.dark .global-canvas__wash {
   background:
     radial-gradient(58% 42% at 80% 10%, rgb(217 38 54 / 0.14), transparent 70%),
-    radial-gradient(46% 38% at 10% 90%, rgb(217 38 54 / 0.08), transparent 70%);
-}
-
-.dark .global-canvas__wash--veil {
-  background:
-    linear-gradient(180deg, transparent 30%, rgb(0 0 0 / 0.22) 100%),
-    radial-gradient(70% 55% at 50% 110%, rgb(0 0 0 / 0.28), transparent 70%);
+    radial-gradient(46% 38% at 10% 90%, rgb(217 38 54 / 0.08), transparent 70%),
+    linear-gradient(180deg, transparent 55%, rgb(0 0 0 / 0.24) 100%);
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -1202,7 +1163,11 @@ html.theatre-settling [data-page-shell] {
    Geometry (flex-grow) and content (opacity/translate) are driven
    together by conditional classes in ServicePanel; CSS below owns
    ONLY the transitions. 3 cards: 1:1:1 at rest, active expands to
-   ~61% while siblings compress to ~19% — never slivers. */
+   ~61% while siblings compress to ~19% — never slivers.
+   NOTE: flex-grow is a layout property by design here (proportional
+   redistribution cannot be composited without distorting content).
+   Cost is bounded: hover/focus-driven (never scroll), isolated via
+   contain:layout, no will-change layer. Mobile uses grid-rows instead. */
 .services-accordion {
   contain: layout style;
 }
@@ -1213,7 +1178,7 @@ html.theatre-settling [data-page-shell] {
   flex: 1 1 0%;
   /* A longer settle keeps expansion and compression feeling intentional
      without tying the accordion to a per-frame scroll animation. */
-  transition: flex-grow 850ms cubic-bezier(0.22, 1, 0.36, 1);
+  transition: flex-grow 650ms cubic-bezier(0.22, 1, 0.36, 1);
 }
 
 @media (max-width: 767px) {
@@ -1234,7 +1199,9 @@ html.theatre-settling [data-page-shell] {
   background: transparent;
   -webkit-user-drag: none;
   user-select: none;
-  filter: drop-shadow(0 16px 28px rgb(0 0 0 / 0.18));
+  /* Static treatment (never swapped at runtime): ancestor transforms
+     composite the cached filtered layer instead of repainting. */
+  filter: drop-shadow(0 12px 24px rgb(0 0 0 / 0.15));
 }
 
 .hero-cutout-gaze {
@@ -1242,7 +1209,7 @@ html.theatre-settling [data-page-shell] {
 }
 
 .dark .hero-cutout {
-  filter: drop-shadow(0 18px 32px rgb(0 0 0 / 0.55));
+  filter: drop-shadow(0 14px 28px rgb(0 0 0 / 0.45));
 }
 
 /* PRESENCE — giant editorial background layer.
@@ -1301,19 +1268,22 @@ html.theatre-settling [data-page-shell] {
   overflow: visible;
 }
 
+/* No saturate(): the full-image color matrix forces a repaint pass on
+   every levitate/entrance frame for a barely-visible tone shift.
+   A single restrained drop-shadow carries the premium lift. */
 .hero-mobile__portrait-top-img {
   height: 100%;
   width: auto;
   max-width: 94vw;
   object-fit: contain;
   object-position: center bottom;
-  opacity: 0.88;
-  filter: saturate(0.8) drop-shadow(0 22px 40px rgb(0 0 0 / 0.12));
+  opacity: 0.9;
+  filter: drop-shadow(0 14px 26px rgb(0 0 0 / 0.12));
 }
 
 .dark .hero-mobile__portrait-top-img {
-  opacity: 0.82;
-  filter: saturate(0.76) drop-shadow(0 24px 44px rgb(0 0 0 / 0.28));
+  opacity: 0.86;
+  filter: drop-shadow(0 16px 30px rgb(0 0 0 / 0.28));
 }
 
 /* PRESENCE anchor — zero-height in-flow marker between headline and
@@ -1409,17 +1379,18 @@ html.theatre-settling [data-page-shell] {
    on scroll start/stop forces full repaint churn for zero visual benefit). */
 .hero-mobile__portrait-img {
   width: auto;
+  height: clamp(22rem, 82vh, 32rem);
   height: clamp(22rem, 82svh, 32rem);
   max-width: 108%;
   object-fit: contain;
   object-position: center 42%;
-  opacity: 0.72;
-  filter: saturate(0.72) drop-shadow(0 22px 40px rgb(0 0 0 / 0.1));
+  opacity: 0.78;
+  filter: drop-shadow(0 14px 26px rgb(0 0 0 / 0.1));
 }
 
 .dark .hero-mobile__portrait-img {
-  opacity: 0.66;
-  filter: saturate(0.68) drop-shadow(0 24px 44px rgb(0 0 0 / 0.28));
+  opacity: 0.74;
+  filter: drop-shadow(0 16px 30px rgb(0 0 0 / 0.28));
 }
 
 .hero-mobile__headline {
@@ -1623,12 +1594,16 @@ html.theatre-settling [data-page-shell] {
 
 @media (min-width: 768px) {
   .section-contact {
+    height: 100vh;
     height: 100svh;
+    min-height: 100vh;
     min-height: 100svh;
+    max-height: 100vh;
     max-height: 100svh;
     justify-content: flex-start;
     /* The navbar scrolls away (in-flow) — reserve breathing room,
        not a full navbar offset, so content stops sitting low. */
+    padding-top: clamp(2rem, 8vh, 5rem);
     padding-top: clamp(2rem, 8svh, 5rem);
     padding-inline: var(--layout-nav-inset);
     /* Floating pill clearance lives HERE (unlayered): an earlier
@@ -2039,58 +2014,11 @@ html.theatre-settling [data-page-shell] {
     will-change: transform;
   }
 
-  /* Hero — layered exit drift: headline leads, portrait travels
-     furthest (multi-speed parallax), PRESENCE atmosphere slowest */
-  [data-cinematic="hero"] .cinematic-layer--headline {
-    transform: translate3d(0, calc(var(--cinematic-exit) * -1.25rem), 0)
-      scale(calc(1 - var(--cinematic-exit) * 0.015));
-    opacity: calc(1 - var(--cinematic-exit) * 0.32);
-  }
-
-  [data-cinematic="hero"] .cinematic-layer--copy {
-    transform: translate3d(0, calc(var(--cinematic-exit) * -0.75rem), 0);
-    opacity: calc(1 - var(--cinematic-exit) * 0.48);
-  }
-
-  [data-cinematic="hero"] .cinematic-layer--visual {
-    transform: translate3d(0, calc(var(--cinematic-exit) * -1rem), 0)
-      scale(calc(1 - var(--cinematic-exit) * 0.015));
-    opacity: calc(1 - var(--cinematic-exit) * 0.22);
-  }
-
-  [data-cinematic="hero"] .cinematic-layer--cta {
-    transform: translate3d(0, calc(var(--cinematic-exit) * -0.4rem), 0);
-    opacity: calc(1 - var(--cinematic-exit) * 0.38);
-  }
-
-  [data-cinematic="hero"] .cinematic-layer--atmosphere {
-    transform: translate3d(0, calc(var(--cinematic-exit) * -0.75rem), 0);
-  }
-
-  /* Hero → Services overlap: services title/grid enter as hero recedes */
-  [data-cinematic="services"] .cinematic-layer--title {
-    transform: translate3d(0, calc((1 - var(--cinematic-enter)) * 1rem), 0);
-    opacity: calc(0.55 + var(--cinematic-enter) * 0.45);
-  }
-
-  [data-cinematic="services"] .cinematic-layer--grid {
-    transform: translate3d(0, calc((1 - var(--cinematic-enter)) * 1.6rem), 0)
-      scale(calc(0.99 + var(--cinematic-enter) * 0.01));
-    opacity: calc(0.78 + var(--cinematic-enter) * 0.22);
-  }
-
-  /* Videos */
-  [data-cinematic="videos"] .cinematic-layer--header {
-    transform: translate3d(0, calc((1 - var(--cinematic-enter)) * 0.75rem), 0);
-    opacity: calc(0.6 + var(--cinematic-enter) * 0.4);
-  }
-
-  [data-cinematic="videos"] .cinematic-layer--media {
-    transform: translate3d(0, calc((1 - var(--cinematic-enter)) * 1.6rem), 0)
-      scale(calc(0.98 + var(--cinematic-enter) * 0.015));
-    opacity: calc(0.8 + var(--cinematic-enter) * 0.2);
-  }
-
+  /* Only the "projects" preset ever registers (see use-cinematic-section:
+     hero/services/videos/contact keep native scrolling, so their rules
+     were removed as dead paint code). The deck's own card motion lives
+     in Projects' MotionValues; these vars drive the section-level
+     heading/media/detail drift only. */
   /* Projects */
   [data-cinematic="projects"] .cinematic-layer--heading {
     transform: translate3d(0, calc((1 - var(--cinematic-enter)) * 0.85rem), 0);
@@ -2108,66 +2036,11 @@ html.theatre-settling [data-page-shell] {
     opacity: calc(0.78 + var(--cinematic-enter) * 0.22);
   }
 
-  /* Contact — final scene */
-  [data-cinematic="contact"] .cinematic-layer--heading {
-    transform: translate3d(0, calc((1 - var(--cinematic-enter)) * 1rem), 0)
-      scale(calc(0.99 + var(--cinematic-enter) * 0.01));
-    opacity: calc(0.68 + var(--cinematic-enter) * 0.32);
-  }
-
-  [data-cinematic="contact"] .cinematic-layer--links {
-    transform: translate3d(0, calc((1 - var(--cinematic-enter)) * 0.6rem), 0);
-    opacity: calc(0.72 + var(--cinematic-enter) * 0.28);
-  }
-
-  [data-cinematic="contact"] .cinematic-layer--panel {
-    transform: translate3d(0, calc((1 - var(--cinematic-enter)) * 0.9rem), 0)
-      scale(calc(0.985 + var(--cinematic-enter) * 0.015));
-    opacity: calc(0.8 + var(--cinematic-enter) * 0.2);
-  }
+  /* Contact — final scene: native scrolling, no scroll-linked vars.
+     Entrance choreography is owned by Framer Motion. */
 
   /* Desktop — restrained depth (same ≤1.5rem / ≤1.015 budget) */
   @media (min-width: 768px) {
-    [data-cinematic="hero"] .cinematic-layer--headline {
-      transform: translate3d(
-          calc(var(--cinematic-exit) * 0.25rem),
-          calc(var(--cinematic-exit) * -1.4rem),
-          0
-        )
-        scale(calc(1 - var(--cinematic-exit) * 0.015));
-    }
-
-    [data-cinematic="hero"] .cinematic-layer--visual {
-      transform: translate3d(
-          calc(var(--cinematic-exit) * -0.35rem),
-          calc(var(--cinematic-exit) * -1.5rem),
-          0
-        )
-        scale(calc(1 - var(--cinematic-exit) * 0.015));
-    }
-
-    [data-cinematic="hero"] .cinematic-layer--atmosphere {
-      transform: translate3d(0, calc(var(--cinematic-exit) * -0.75rem), 0);
-    }
-
-    [data-cinematic="services"] .cinematic-layer--grid {
-      transform: translate3d(
-          calc((1 - var(--cinematic-enter)) * -0.25rem),
-          calc((1 - var(--cinematic-enter)) * 1.5rem),
-          0
-        )
-        scale(calc(0.988 + var(--cinematic-enter) * 0.012));
-    }
-
-    [data-cinematic="videos"] .cinematic-layer--media {
-      transform: translate3d(
-          calc((1 - var(--cinematic-enter)) * -0.2rem),
-          calc((1 - var(--cinematic-enter)) * 1.45rem),
-          0
-        )
-        scale(calc(0.982 + var(--cinematic-enter) * 0.015));
-    }
-
     [data-cinematic="projects"] .cinematic-layer--media {
       transform: translate3d(
           calc((1 - var(--cinematic-enter)) * -0.3rem),
@@ -2178,35 +2051,8 @@ html.theatre-settling [data-page-shell] {
     }
   }
 
-  /* Mobile — vertical reveal, minimal parallax */
+  /* Mobile — vertical reveal, minimal parallax (projects only) */
   @media (max-width: 767px) {
-    [data-cinematic="hero"] .cinematic-layer--headline {
-      transform: translate3d(0, calc(var(--cinematic-exit) * -1.25rem), 0)
-        scale(
-          calc(1 - var(--cinematic-exit) * 0.04 * var(--cinematic-velocity))
-        );
-      opacity: calc(1 - var(--cinematic-exit) * 0.28);
-    }
-
-    [data-cinematic="hero"] .cinematic-layer--visual {
-      transform: translate3d(0, calc(var(--cinematic-exit) * -1rem), 0)
-        scale(calc(1 - var(--cinematic-exit) * 0.02));
-    }
-
-    [data-cinematic="hero"] .cinematic-layer--atmosphere {
-      transform: translate3d(0, calc(var(--cinematic-exit) * -0.5rem), 0);
-    }
-
-    [data-cinematic="services"] .cinematic-layer--grid {
-      transform: translate3d(0, calc((1 - var(--cinematic-enter)) * 1.25rem), 0)
-        scale(calc(0.97 + var(--cinematic-enter) * 0.03));
-    }
-
-    [data-cinematic="videos"] .cinematic-layer--media {
-      transform: translate3d(0, calc((1 - var(--cinematic-enter)) * 1.1rem), 0)
-        scale(calc(0.97 + var(--cinematic-enter) * 0.03));
-    }
-
     [data-cinematic="projects"] .cinematic-layer--media {
       transform: translate3d(0, calc((1 - var(--cinematic-enter)) * 1.2rem), 0)
         scale(calc(0.975 + var(--cinematic-enter) * 0.025));
@@ -2219,9 +2065,13 @@ html.theatre-settling [data-page-shell] {
     scroll-behavior: auto;
   }
 
-  body::before,
-  body::after {
+  body::before {
     display: none;
+  }
+
+  body,
+  .dark body {
+    background: var(--background);
   }
 
   html.theme-ready,

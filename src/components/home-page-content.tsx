@@ -15,6 +15,7 @@ import { SECTION_IDS } from "@/constants";
 import { projectRows, services, videoItems } from "@/data";
 import { useContainerKeyboardScroll } from "@/hooks/use-container-keyboard-scroll";
 import { useHashScroll } from "@/hooks/use-hash-scroll";
+import { useSectionSettle } from "@/hooks/use-section-settle";
 import {
   SCROLL_CONTAINER_ID,
   getScrollContainer,
@@ -75,15 +76,20 @@ const MuteButton = dynamic(
 function HashScrollSync() {
   useHashScroll();
   useContainerKeyboardScroll();
+  useSectionSettle();
   return null;
 }
 
 /**
- * P1 cold-entry staging: warm the next dynamic chunk ~1 viewport before
- * its LazySection mounts. IntersectionObserver on section anchors with a
- * generous prefetch margin triggers a fire-and-forget import() so chunk
- * download + evaluation happen off the entry frame. Never force-mounts —
- * LazySection still owns mounting.
+ * P1 cold-entry staging: warm the next dynamic chunk well before
+ * its LazySection mounts. Stage 1 of the heavy-section pipeline:
+ *   Stage 1 (this observer, ~2 viewports out): prefetch JS chunk
+ *     → download + evaluation happen off the entry frame.
+ *   Stage 2 (LazySection mount margin): mount section + DOM.
+ *   Stage 3 (section code): prepare important media (eager first
+ *     image/poster, video metadata arm).
+ *   Stage 4 (visibility): animations + autoplay begin.
+ * Never force-mounts — LazySection still owns mounting.
  */
 function SectionChunkPrefetch() {
   useEffect(() => {
@@ -120,10 +126,10 @@ function SectionChunkPrefetch() {
           observer.unobserve(entry.target);
         }
       },
-      // ~1 viewport + margin ahead of the 600/900px mount margins.
+      // ~2 viewports + margin ahead of the 900/2000px mount margins.
       {
         root: getScrollContainer(),
-        rootMargin: "0px 0px 1500px 0px",
+        rootMargin: "0px 0px 2200px 0px",
         threshold: 0,
       },
     );
@@ -163,7 +169,7 @@ export function HomePageContent() {
         <GlobalCanvas />
         <div
           id={SCROLL_CONTAINER_ID}
-          className="scroll-panel relative h-[100svh] w-full snap-y snap-mandatory overflow-x-hidden overflow-y-auto"
+          className="scroll-panel relative h-[100svh] w-full overflow-x-hidden overflow-y-auto"
         >
           <Navbar />
           <FloatingNav />
@@ -171,8 +177,9 @@ export function HomePageContent() {
             <Hero />
             <LazySection
               id={SECTION_IDS.services}
-              className="section-tone-services section-placeholder snap-start snap-always"
+              className="section-tone-services section-placeholder"
               minHeight="100svh"
+              rootMargin="0px 0px 900px 0px"
               srContent={
                 <>
                   <h2 className="sr-only">Our Services</h2>
@@ -191,13 +198,13 @@ export function HomePageContent() {
             </LazySection>
             <LazySection
               id={SECTION_IDS.video}
-              className="section-tone-videos section-placeholder snap-start snap-always"
+              className="section-tone-videos section-placeholder"
               minHeight="100svh"
-              // Heavier section (player + media): start preparing while the
-              // section is still well below the fold so chunk evaluation,
-              // render, and the first video's byte fetch happen off the
-              // entry frame instead of during active scrolling.
-              rootMargin="0px 0px 900px 0px"
+              // Heavier section (player + media): mount well before entry
+              // so chunk evaluation, render, and the first video's byte
+              // fetch clear the scroll path before active scrolling
+              // arrives instead of bursting mid-gesture.
+              rootMargin="0px 0px 2000px 0px"
               srContent={
                 <>
                   <h2 className="sr-only">Video Showcase</h2>
@@ -218,11 +225,11 @@ export function HomePageContent() {
             </LazySection>
             <LazySection
               id={SECTION_IDS.projects}
-              className="section-tone-projects section-placeholder snap-start snap-always"
+              className="section-tone-projects section-placeholder"
               minHeight="100svh"
-              // Design Work carries the six-image stack — mount early so
+              // Design Work carries the image stack — mount early so
               // chunk + image fetches clear the scroll path before entry.
-              rootMargin="0px 0px 900px 0px"
+              rootMargin="0px 0px 2000px 0px"
               srContent={
                 <>
                   <h2 className="sr-only">Projects</h2>
@@ -242,7 +249,7 @@ export function HomePageContent() {
             </LazySection>
             <LazySection
               id={SECTION_IDS.contact}
-              className="section-tone-contact section-placeholder snap-start snap-always"
+              className="section-tone-contact section-placeholder"
               minHeight="100svh"
               srContent={
                 <>

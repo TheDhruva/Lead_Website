@@ -38,7 +38,7 @@ function ServicePanel({
       onMouseEnter={() => onActivate(service.id)}
       style={{ flexGrow: isActive ? 3.2 : 1 }}
       className={cn(
-        "service-acc group relative flex min-h-0 min-w-0 flex-col overflow-hidden rounded-lg border border-border bg-card will-change-[flex-grow]",
+        "service-acc group relative flex min-h-0 min-w-0 flex-col overflow-hidden rounded-lg border border-border bg-card",
         "focus-within:ring-2 focus-within:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--background-secondary)]",
         "hover:z-[1] hover:border-border-hover hover:shadow-[var(--shadow-md)]",
         "focus-within:z-[1] focus-within:border-border-hover focus-within:shadow-[var(--shadow-md)]",
@@ -163,13 +163,22 @@ function MobileStack({
 
     const visibility = new Map<Element, boolean>();
     const observer = new IntersectionObserver(
-      (entries) => {
+      (entries, obs) => {
         for (const entry of entries) {
           visibility.set(entry.target, entry.isIntersecting);
         }
 
-        const rootRect = scrollContainer.getBoundingClientRect();
-        const rootCenter = rootRect.top + rootRect.height / 2;
+        // Observer-supplied geometry only: entry.boundingClientRect and
+        // rootBounds arrive with the callback — no getBoundingClientRect()
+        // forced layout inside the hot path.
+        const sample = entries[entries.length - 1];
+        const rootBounds =
+          sample?.rootBounds ??
+          (typeof obs.root === "object" && obs.root instanceof Element
+            ? obs.root.getBoundingClientRect()
+            : null);
+        if (!rootBounds) return;
+        const rootCenter = rootBounds.top + rootBounds.height / 2;
         let nearestId: string | null = null;
         let nearestDistance = Number.POSITIVE_INFINITY;
 
@@ -177,7 +186,9 @@ function MobileStack({
           .querySelectorAll<HTMLElement>("[data-service-id]")
           .forEach((card) => {
             if (!visibility.get(card)) return;
-            const rect = card.getBoundingClientRect();
+            const known = entries.find((e) => e.target === card);
+            const rect =
+              known?.boundingClientRect ?? card.getBoundingClientRect();
             const distance = Math.abs(rect.top + rect.height / 2 - rootCenter);
             if (distance < nearestDistance) {
               nearestId = card.dataset.serviceId ?? null;
