@@ -44,6 +44,12 @@ class PointerEngine {
   private lastTime = 0;
 
   private onMove = (event: PointerEvent) => {
+    if (this.scrollPaused) return;
+    if (this.awaitingPointerReactivation) {
+      this.awaitingPointerReactivation = false;
+      this.currentX = event.clientX;
+      this.currentY = event.clientY;
+    }
     this.targetX = event.clientX;
     this.targetY = event.clientY;
     this.lastTarget = event.target;
@@ -58,12 +64,14 @@ class PointerEngine {
   };
 
   private scrollPaused = false;
+  private awaitingPointerReactivation = false;
 
   setScrollPaused(paused: boolean) {
-    if (this.scrollPaused === paused) return;
+    if (this.scrollPaused === paused && paused === false) return;
     this.scrollPaused = paused;
 
     if (paused) {
+      this.awaitingPointerReactivation = true;
       if (this.rafId !== null) {
         cancelAnimationFrame(this.rafId);
         this.rafId = null;
@@ -71,9 +79,9 @@ class PointerEngine {
       return;
     }
 
-    if (this.enabled && this.subscribers.size > 0 && this.rafId === null) {
-      this.wake();
-    }
+    // Scrolling settling is not a pointer interaction. Keep the visual
+    // cursor frozen until the next meaningful pointer move.
+    this.awaitingPointerReactivation = true;
   }
 
   /** Start the RAF loop on demand (pointer moved, subscriber added, scroll resumed). */
@@ -144,6 +152,7 @@ class PointerEngine {
     }
     this.active = false;
     this.lastTarget = null;
+    this.awaitingPointerReactivation = false;
   }
 
   private tick = (time: number) => {

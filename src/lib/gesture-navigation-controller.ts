@@ -1,4 +1,4 @@
-import { SECTION_IDS } from "@/constants";
+import { SECTION_IDS, SECTION_ORDER } from "@/constants";
 import {
   getOffsetInScrollContainer,
   getScrollContainer,
@@ -16,18 +16,21 @@ import {
  * Hybrid gesture navigation — a lightweight INTENT layer on top of the
  * existing native scroll system.
  *
- * One deliberate gesture navigates at most one major section; small or
- * controlled movements keep scrolling natively. The controller never
- * calls preventDefault, never writes scroll position itself, and never
- * touches React state: once intent is established it hands a single
- * canonical destination to the existing navigation machinery
+ * One deliberate desktop wheel gesture navigates at most one major section.
+ * The controller claims root-container wheel input before native scrolling
+ * can advance the page, but yields to nested scrollers and non-navigation
+ * targets. It never writes scroll position itself and never touches React
+ * state: once intent is established it hands a single canonical destination
+ * to the existing navigation machinery
  * (`navigateToSectionId` → `scrollToSectionElement`, the exact function
  * navbar navigation uses) and the existing tween owns the travel.
  *
- * Transaction model: IDLE → TRACKING → LOCKED → (settle) → IDLE.
- * A locked target never reinterprets the same gesture's residual
- * momentum as a second gesture — a new navigation requires a new
- * gesture (input silence for wheel, a fresh touch sequence for touch).
+ * Transaction model: IDLE → GESTURE_DETECTED → TARGET_LOCKED →
+ * PROGRAMMATIC_SCROLL → SETTLED → WAIT_FOR_NEW_GESTURE → IDLE.
+ * A locked target is immutable during flight — it never reinterprets the
+ * same gesture's residual momentum as a second gesture. A new navigation
+ * requires a fresh gesture after the previous one has settled and the
+ * input stream has ended.
  *
  * Cost model: per input event only timestamp + arithmetic writes run.
  * DOM queries and layout reads happen at most ONCE per deliberate
@@ -61,7 +64,13 @@ const PROJECTS_TALL_RATIO = 1.5;
  */
 const REVERSAL_TAKEOVER_PX = 100;
 
-type Phase = "idle" | "tracking" | "locked";
+type Phase =
+  | "idle"
+  | "gesture_detected"
+  | "target_locked"
+  | "programmatic_scroll"
+  | "settled"
+  | "wait_for_new_gesture";
 
 interface TouchSample {
   y: number;
@@ -142,8 +151,11 @@ export function startGestureNavigation(): () => void {
     gestureTarget = null;
   };
 
-  /** True while OUR flight owns the tween — the deadband shield predicate. */
-  const shieldWheel = () => phase === "locked" && flightCancel !== null;
+  /** True while OUR flight owns the tween — the deadband shield predicate.
+   * Active when phase is not idle/gesture_detected (i.e. target_locked,
+   * programmatic_scroll, settled, or wait_for_new_gesture). */
+  const shieldWheel = () =>
+    flightCancel !== null && phase !== "idle" && phase !== "gesture_detected";
 
   const armReleaseCheck = () => {
     clearReleaseTimer();
@@ -174,7 +186,7 @@ export function startGestureNavigation(): () => void {
   };
 
   const enterLocked = () => {
-    phase = "locked";
+    phase = "target_locked";
     suppressed = false;
     lockStartedAt = nowMs();
     armReleaseCheck();
@@ -244,6 +256,27 @@ export function startGestureNavigation(): () => void {
     return "interior";
   }
 
+  function geometryCurrentSectionId(): string {
+    const container = getScrollContainer();
+    if (!container) return getSectionChoreography().activeId;
+
+    const scrollTop = container.scrollTop;
+    let closestId = getSectionChoreography().activeId;
+    let closestDistance = Number.POSITIVE_INFINITY;
+    for (const id of SECTION_ORDER) {
+      const element = document.getElementById(id);
+      if (!element) continue;
+      const distance = Math.abs(
+        getOffsetInScrollContainer(element) - scrollTop,
+      );
+      if (distance < closestDistance) {
+        closestDistance = distance;
+        closestId = id;
+      }
+    }
+    return closestId;
+  }
+
   /**
    * Single decision point for every navigation. Returns after either
    * locking one canonical target or suppressing this gesture — never
@@ -265,7 +298,7 @@ export function startGestureNavigation(): () => void {
       suppressed = true;
       return;
     }
-    const currentId = getSectionChoreography().activeId;
+    const currentId = geometryCurrentSectionId();
     const neighbor = getSectionNeighbor(currentId, direction);
     if (!neighbor) {
       // Past the ends — leave native overscroll alone.
@@ -314,7 +347,7 @@ export function startGestureNavigation(): () => void {
   }
 
   const resetWheelTracking = () => {
-    if (phase === "tracking") {
+    if (phase === "gesture_detected") {
       phase = "idle";
       wheelAccum = 0;
       gestureTarget = null;
@@ -326,7 +359,22 @@ export function startGestureNavigation(): () => void {
     const gap = now - prevWheelAt;
     prevWheelAt = now;
     lastInputAt = now;
-    if (phase === "locked") {
+    const container = getScrollContainer();
+    const canOwnWheel =
+      container !== null &&
+      !event.ctrlKey &&
+      !event.metaKey &&
+      !isSuppressedTarget(event.target) &&
+      !isFormFocused() &&
+      !isNestedScroller(event.target, container);
+    if (
+      phase === "target_locked" ||
+      phase === "programmatic_scroll" ||
+      phase === "settled"
+    ) {
+      if (canOwnWheel && event.cancelable) {
+        event.preventDefault();
+      }
       // Locked flight: same-direction residual stays shielded and is
       // never interpreted. Only sustained OPPOSITE pushing means the
       // user is fighting the tween — that explicit intent takes over.
@@ -383,8 +431,25 @@ export function startGestureNavigation(): () => void {
     // Horizontal browsing (rails, carousels) is never section intent.
     if (Math.abs(dx) > Math.abs(dy) * 1.4) return;
     const sign: 1 | -1 = dy > 0 ? 1 : -1;
+    const currentId = geometryCurrentSectionId();
+    const projectZone =
+      currentId === SECTION_IDS.projects ? projectsZone() : null;
+    const freeProjectScroll =
+      projectZone === "interior" ||
+      (projectZone === "entry" && sign > 0) ||
+      (projectZone === "exit" && sign < 0);
+    if (
+      canOwnWheel &&
+      !freeProjectScroll &&
+      getSectionNeighbor(currentId, sign) !== null &&
+      event.cancelable
+    ) {
+      // Native scrolling must not advance the container while this gesture
+      // is being classified. The locked target is the sole owner of motion.
+      event.preventDefault();
+    }
     if (phase === "idle") {
-      phase = "tracking";
+      phase = "gesture_detected";
       wheelAccum = 0;
       wheelSign = sign;
       gestureTarget = event.target;
@@ -410,12 +475,8 @@ export function startGestureNavigation(): () => void {
 
   const onTouchStart = (event: TouchEvent) => {
     lastInputAt = nowMs();
-    if (phase === "locked") {
-      touchActive = false;
-      touchSuppressed = true;
-      return;
-    }
     if (
+      phase === "target_locked" ||
       getSectionChoreography().navigating ||
       isScrollPanelLocked() ||
       event.touches.length !== 1
@@ -457,7 +518,7 @@ export function startGestureNavigation(): () => void {
       return;
     }
     touchActive = false;
-    if (touchSuppressed || phase === "locked") {
+    if (touchSuppressed || phase === "target_locked") {
       touchSuppressed = false;
       return;
     }
@@ -499,7 +560,7 @@ export function startGestureNavigation(): () => void {
   const attach = (): boolean => {
     const container = getScrollContainer();
     if (!container) return false;
-    container.addEventListener("wheel", onWheel, { passive: true });
+    container.addEventListener("wheel", onWheel, { passive: false });
     container.addEventListener("touchstart", onTouchStart, { passive: true });
     container.addEventListener("touchmove", onTouchMove, { passive: true });
     container.addEventListener("touchend", onTouchEnd, { passive: true });

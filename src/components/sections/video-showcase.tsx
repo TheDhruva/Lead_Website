@@ -41,9 +41,7 @@ const VIDEO_CUT_OFFSET_PX = 26;
 const VIDEO_EXIT_SCALE = 1.022;
 const VIDEO_ENTRY_SCALE = 0.985;
 
-const VIDEO_ENTRANCE_HEADING_MS = 520;
-const VIDEO_ENTRANCE_PLAYER_MS = 560;
-const VIDEO_ENTRANCE_ROW_MS = 440;
+const VIDEO_ENTRANCE_COMPOSITION_MS = 520;
 const PRELOAD_THRESHOLD = 0.75;
 /** Motion frames above this velocity pause decoding during the gesture. */
 const SCROLL_PAUSE_VELOCITY = 0.05;
@@ -72,7 +70,6 @@ function VideoProjectRow({
   num,
   isActive,
   entered,
-  entranceDelayMs,
   reduceMotion,
   onSelect,
   onHoverItem,
@@ -81,7 +78,6 @@ function VideoProjectRow({
   num: string;
   isActive: boolean;
   entered: boolean;
-  entranceDelayMs: number;
   reduceMotion: boolean;
   onSelect: (id: string) => void;
   onHoverItem?: (id: string) => void;
@@ -94,9 +90,12 @@ function VideoProjectRow({
       initial={reduceMotion ? false : { opacity: 0, y: 14 }}
       animate={entered ? { opacity: 1, y: 0 } : {}}
       transition={{
-        duration: VIDEO_ENTRANCE_ROW_MS / 1000,
+        duration: VIDEO_ENTRANCE_COMPOSITION_MS / 1000,
         ease: [0.22, 1, 0.36, 1],
-        delay: reduceMotion ? 0 : entranceDelayMs / 1000,
+        // Rows are part of the section's structural composition. They
+        // enter together; per-row staggering made the rail visibly assemble
+        // after the player had already arrived.
+        delay: 0,
       }}
       onClick={() => onSelect(item.id)}
       onMouseEnter={() => onHoverItem?.(item.id)}
@@ -190,7 +189,6 @@ function VideoProjectList({
             num={formatNum(idx + 1)}
             isActive={idx === currentIndex}
             entered={entered}
-            entranceDelayMs={100 + idx * 30}
             reduceMotion={reduceMotion}
             onSelect={onSelect}
             onHoverItem={onHoverItem}
@@ -947,7 +945,7 @@ export function VideoShowcase() {
             initial={prefersReducedMotion ? false : { opacity: 0 }}
             animate={enteredOnce ? { opacity: 1 } : {}}
             transition={{
-              duration: VIDEO_ENTRANCE_HEADING_MS / 1000,
+              duration: VIDEO_ENTRANCE_COMPOSITION_MS / 1000,
               ease: [0.22, 1, 0.36, 1],
             }}
           >
@@ -972,7 +970,7 @@ export function VideoShowcase() {
             initial={prefersReducedMotion ? false : { opacity: 0 }}
             animate={enteredOnce ? { opacity: 1 } : {}}
             transition={{
-              duration: VIDEO_ENTRANCE_PLAYER_MS / 1000,
+              duration: VIDEO_ENTRANCE_COMPOSITION_MS / 1000,
               ease: [0.22, 1, 0.36, 1],
             }}
           >

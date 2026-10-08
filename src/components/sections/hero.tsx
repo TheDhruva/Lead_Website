@@ -254,6 +254,17 @@ function PortraitStack({
     };
   }, [gazeEnabled]);
 
+  // Suspend the pointer RAF loop while the user is actively scrolling,
+  // so cursor computation does not compete with the native scroll pipeline
+  // for frame budget. The hero gaze subscriber already returns early when
+  // scrolling is active, but the underlying pointerEngine tick continues
+  // running — stopping it entirely removes that per-frame cost.
+  useEffect(() => {
+    const enabled = !isScrollActive();
+    pointerEngine.setEnabled(enabled);
+    return () => pointerEngine.setEnabled(true);
+  }, [isScrollActive]);
+
   if (!active) return null;
 
   // Fluid flanks: same 320px@1024 → 384px@1280 endpoints as the old

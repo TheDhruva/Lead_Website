@@ -22,11 +22,11 @@ interface SmoothScrollProviderProps {
  * visible teleport), and nav targets computed for anchor-centering never
  * matched snap-start rest positions.
  *
- * Section landing after manual scrolling is handled by the post-gesture
- * settle (see section-settle.ts): native scrolling runs free during the
- * gesture, then one short correction lands near section starts — so
- * wheel, trackpad, touch, and keyboard input all share one
- * browser-native interaction model without continuous snap evaluation.
+ * Desktop root wheel intent is claimed before native scrolling can advance
+ * the page and is handed to the gesture controller's single-target tween.
+ * Touch, keyboard, and intentionally free-scrolling regions remain native;
+ * the post-gesture settle (see section-settle.ts) only corrects those paths
+ * when they come to rest near a canonical section boundary.
  * The scrollable limit (scrollHeight - clientHeight) is cached and refreshed
  * on structural signals only — the hot scroll path reads scrollTop and
  * reuses the cached limit, never measuring layout.

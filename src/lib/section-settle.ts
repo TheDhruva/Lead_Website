@@ -10,14 +10,16 @@ import { subscribeScrollMotion } from "@/lib/scroll-motion-engine";
 import { getSectionChoreography } from "@/lib/section-choreography";
 
 /**
- * Section settling — the lightweight successor to native
- * `scroll-snap-type: y proximity`.
+ * Section settling for native/manual paths — the lightweight successor to
+ * native `scroll-snap-type: y proximity`.
  *
  * Native snap evaluates snap geometry continuously while the user moves,
  * including across the 480/600svh Projects track. Settling instead lets
- * native scrolling run completely free during the gesture and performs
- * ONE short controlled correction after motion truly stops — only when
- * the resting position is already near a section start.
+ * touch, keyboard, and intentionally free native scrolling run without snap
+ * interference, then performs ONE short controlled correction after motion
+ * truly stops — only when the resting position is already near a section
+ * start. Desktop root wheel navigation is locked by the gesture controller
+ * before this path can observe native movement.
  *
  * Non-goals (by design, to preserve UX):
  * - Never pulls the user mid-gesture; only fires after 220ms of no
