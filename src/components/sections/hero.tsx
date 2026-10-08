@@ -8,6 +8,7 @@ import { AnimatedText } from "@/components/motion/animated-text";
 import { Button } from "@/components/ui/button";
 import { Container } from "@/components/ui/container";
 import { EASING_OUT, FACE_CYCLE_INTERVAL_MS, MOTION } from "@/constants";
+import { MEDIA_DESKTOP } from "@/constants/breakpoints";
 import { heroPortraits } from "@/data";
 import { useCanPointerReact } from "@/hooks/use-can-pointer-react";
 import { useCinematicSection } from "@/hooks/use-cinematic-section";
@@ -93,14 +94,16 @@ const HeroDesktopStatic = memo(function HeroDesktopStatic({
           <AnimatedText
             mode="mount"
             start={started}
-            delay={0.12}
+            exit="block"
+            delay={0.1}
             segments="Make Audience"
             className="block uppercase"
           />
           <AnimatedText
             mode="mount"
             start={started}
-            delay={0.3}
+            exit="block"
+            delay={0.22}
             segments="Feel Your"
             className="block uppercase"
           />
@@ -109,8 +112,9 @@ const HeroDesktopStatic = memo(function HeroDesktopStatic({
           <AnimatedText
             mode="mount"
             start={started}
+            exit="block"
             level="word"
-            delay={0.46}
+            delay={0.32}
             segments="Beautiful websites, powerful visuals, and videos that make your brand impossible to ignore. A cinematic approach to digital presence."
           />
         </p>
@@ -136,7 +140,7 @@ const HeroDesktopStatic = memo(function HeroDesktopStatic({
                 : {
                     duration: 0.5,
                     ease: EASING_OUT,
-                    delay: prefersReducedMotion ? 0 : 0.58,
+                    delay: prefersReducedMotion ? 0 : 0.45,
                   }
             }
           >
@@ -252,11 +256,13 @@ function PortraitStack({
 
   if (!active) return null;
 
+  // Fluid flanks: same 320px@1024 → 384px@1280 endpoints as the old
+  // w-80/xl:w-96 stops, interpolated continuously (no JS measuring).
   return (
     <m.div
       ref={setFrameRef}
       className={cn(
-        "pointer-events-none absolute top-[44%] hidden h-[34rem] w-80 -translate-y-1/2 lg:block xl:h-[42rem] xl:w-96",
+        "pointer-events-none absolute top-[44%] hidden h-[clamp(34rem,2rem+50vw,42rem)] w-[clamp(20rem,4rem+25vw,24rem)] -translate-y-1/2 lg:block",
         side === "left" ? "left-0" : "right-0",
       )}
       aria-hidden="true"
@@ -298,25 +304,21 @@ function PortraitStack({
           style={{ transformStyle: "preserve-3d" }}
         >
           <AnimatePresence mode="sync" initial={false}>
+            {/* Opacity-only crossfade (quiet visual evolution): tilt is a
+                static style, and the drop-shadow on .hero-cutout stays on
+                the cached layer — animating scale/y/rotate here used to
+                force a shadow repaint every frame of every 0.6s swap. */}
             <m.div
               key={active.id}
               className="absolute inset-0"
-              style={{ mixBlendMode: "normal" }}
-              initial={
-                prefersReducedMotion
-                  ? false
-                  : { opacity: 0.25, scale: 0.98, rotate: tilt * 1.1, y: 14 }
-              }
-              animate={{ opacity: 1, scale: 1, rotate: tilt, y: 0 }}
-              exit={
-                prefersReducedMotion
-                  ? undefined
-                  : { opacity: 0, scale: 0.98, rotate: tilt, y: -10 }
-              }
+              style={{ mixBlendMode: "normal", rotate: tilt }}
+              initial={prefersReducedMotion ? false : { opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={prefersReducedMotion ? undefined : { opacity: 0 }}
               transition={
                 prefersReducedMotion
                   ? { duration: 0.01 }
-                  : { duration: 0.6, ease: EASING_OUT }
+                  : { duration: 0.8, ease: EASING_OUT }
               }
             >
               {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -408,8 +410,9 @@ function HeroMobile({ heroInView }: { heroInView: boolean }) {
             <AnimatedText
               mode="mount"
               start={started}
+              exit="block"
               gentle
-              delay={0.12}
+              delay={0.1}
               segments={[
                 { text: "Make", className: "hero-mobile__make" },
                 { text: "Audience" },
@@ -419,8 +422,9 @@ function HeroMobile({ heroInView }: { heroInView: boolean }) {
             <AnimatedText
               mode="mount"
               start={started}
+              exit="block"
               gentle
-              delay={0.28}
+              delay={0.22}
               segments="Feel Your"
               className="block uppercase"
             />
@@ -445,9 +449,10 @@ function HeroMobile({ heroInView }: { heroInView: boolean }) {
           <AnimatedText
             mode="mount"
             start={started}
+            exit="block"
             gentle
             level="word"
-            delay={0.42}
+            delay={0.32}
             segments="Beautiful websites, powerful visuals, and videos that make your brand impossible to ignore. A cinematic approach to digital presence."
           />
         </p>
@@ -473,7 +478,7 @@ function HeroMobile({ heroInView }: { heroInView: boolean }) {
                 ? { duration: 0.35, ease: MOBILE_LINE_EASE }
                 : prefersReducedMotion
                   ? { duration: 0.01 }
-                  : { delay: 0.52, duration: 0.5, ease: MOBILE_LINE_EASE }
+                  : { delay: 0.45, duration: 0.5, ease: MOBILE_LINE_EASE }
             }
           >
             <Button
@@ -503,7 +508,7 @@ function HeroMobile({ heroInView }: { heroInView: boolean }) {
 
 export function Hero() {
   const sectionRef = useRef<HTMLElement>(null);
-  const isDesktop = useMediaQuery("(min-width: 1024px)");
+  const isDesktop = useMediaQuery(MEDIA_DESKTOP);
   const canReact = useCanPointerReact();
   useCinematicSection(sectionRef, "hero");
   const [heroInView, setHeroInView] = useState(true);

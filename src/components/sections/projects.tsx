@@ -13,13 +13,14 @@ import {
 
 import { AnimatedText } from "@/components/motion/animated-text";
 import { Container } from "@/components/ui/container";
+import { EASING_OUT, PROJECT_INFO_FOLLOW_DELAY_S } from "@/constants";
 import { projectRows } from "@/data";
 import { useCanPointerReact } from "@/hooks/use-can-pointer-react";
 import { useCinematicSection } from "@/hooks/use-cinematic-section";
-import { useMediaQuery } from "@/hooks/use-media-query";
 import { usePerformanceTier } from "@/hooks/use-performance-tier";
 import { useReducedMotion } from "@/hooks/use-reduced-motion";
 import { useSectionEnterSound } from "@/hooks/use-section-enter-sound";
+import { clearDeckGeometry, setDeckGeometry } from "@/lib/deck-geometry";
 import { BLUR_PLACEHOLDER_DATA_URL } from "@/lib/image-placeholder";
 import {
   getOffsetInScrollContainer,
@@ -257,7 +258,16 @@ function ImageSheet({
   return (
     <m.div
       aria-hidden
-      style={{ y, scale, opacity, zIndex: index + 1 }}
+      // Bounded promotion: at most two sheets ever mount (active +
+      // partner), and both animate transform/opacity every scroll frame —
+      // the only elements in the deck that earn a persistent layer.
+      style={{
+        y,
+        scale,
+        opacity,
+        zIndex: index + 1,
+        willChange: "transform, opacity",
+      }}
       className="pointer-events-none absolute inset-0 flex items-center justify-center"
     >
       <div className="relative overflow-hidden rounded-lg border border-border bg-muted shadow-[var(--shadow-sm)]">
@@ -358,6 +368,49 @@ function InfoBlock({ project }: { project: GalleryItem }) {
   );
 }
 
+/**
+ * Idle-time neighbor warm — controlled JIT decode for the takeover
+ * target only. The partner sheet mounts ~half a segment before its
+ * window (fetch head start), but fetch ≠ decode: warming the original
+ * bitmap off the scroll path via idle time means the takeover frame
+ * finds bytes already in HTTP cache and the decode already attempted,
+ * instead of bursting fetch + decode mid-gesture. Bounded to one URL
+ * per target (module cache) — never a preload-all footprint.
+ */
+const warmedSources = new Set<string>();
+
+function warmProjectImage(src: string): void {
+  if (warmedSources.has(src)) return;
+  warmedSources.add(src);
+  const warm = () => {
+    try {
+      // window.Image: the module's `Image` binding is next/image, not
+      // the DOM constructor.
+      const img = new window.Image();
+      (img as HTMLImageElement & { decoding?: string }).decoding = "async";
+      img.src = src;
+      // Decode off-path; a rejection (e.g. 404 in a preview env) is
+      // non-fatal — the sheet's own <Image> still loads normally.
+      const pending = (
+        img as HTMLImageElement & { decode?: () => Promise<void> }
+      ).decode?.();
+      void pending?.catch(() => {});
+    } catch {
+      // Non-fatal: the sheet's own <Image> still loads normally.
+    }
+  };
+  const ric = (
+    window as Window & {
+      requestIdleCallback?: (
+        cb: () => void,
+        opts?: { timeout: number },
+      ) => number;
+    }
+  ).requestIdleCallback;
+  if (typeof ric === "function") ric(warm, { timeout: 2000 });
+  else window.setTimeout(warm, 120);
+}
+
 function StackDeck({ gentle }: { gentle: boolean }) {
   const trackRef = useRef<HTMLDivElement>(null);
   //
@@ -391,6 +444,10 @@ function StackDeck({ gentle }: { gentle: boolean }) {
         start: getOffsetInScrollContainer(track),
         travel: Math.max(1, track.offsetHeight - container.clientHeight),
       };
+      // Publish for the deck-card settle: same numbers the progress
+      // subscriber consumes, so snap targets always agree with the
+      // card boundaries the sheets animate to. Idle-time only.
+      setDeckGeometry({ ...geometryRef.current, count: COUNT });
     };
     const scheduleMeasure = () => {
       if (raf) return;
@@ -417,12 +474,21 @@ function StackDeck({ gentle }: { gentle: boolean }) {
       if (raf) cancelAnimationFrame(raf);
       ro?.disconnect();
       window.removeEventListener("resize", scheduleMeasure);
+      clearDeckGeometry();
     };
   }, []);
 
-  const [deck, setDeck] = useState<{ active: number; side: 1 | -1 }>({
+  const [deck, setDeck] = useState<{
+    active: number;
+    side: 1 | -1;
+    /** Order-derived travel direction of the last takeover (+1 down
+        the deck, -1 up). Drives metadata rise direction only — image
+        keyframes, boundaries, and quantization are untouched. */
+    dir: 1 | -1;
+  }>({
     active: 0,
     side: 1,
+    dir: 1,
   });
   // THE single source of truth: image emphasis + info content +
   // hairline all follow this index. Sheet motion stays on
@@ -467,31 +533,41 @@ function StackDeck({ gentle }: { gentle: boolean }) {
       else if (next === COUNT - 1) side = -1;
       const prev = deckRef.current;
       if (next !== prev.active) {
-        deckRef.current = { active: next, side };
+        // Deterministic from canonical order (same rule as
+        // reportActiveSection): reversible, no extra motion frame reads.
+        const dir: 1 | -1 = next > prev.active ? 1 : -1;
+        deckRef.current = { active: next, side, dir };
         playRef.current("service-expand");
-        setDeck({ active: next, side });
+        setDeck({ active: next, side, dir });
       } else if (side !== prev.side) {
-        deckRef.current = { active: next, side };
-        setDeck({ active: next, side });
+        deckRef.current = { active: next, side, dir: prev.dir };
+        setDeck({ active: next, side, dir: prev.dir });
       }
     });
   }, [scrollYProgress]);
 
-  const { active, side } = deck;
+  const { active, side, dir } = deck;
   const current = gallery[active] ?? gallery[0]!;
   // Partner index is valid by construction (side is clamped above).
   const partnerIndex = active + side;
+
+  // Warm the takeover target off the scroll path: discrete (fires only
+  // when active/partner roles change — never per frame), idle-scheduled.
+  useEffect(() => {
+    const partner = gallery[partnerIndex];
+    if (partner) warmProjectImage(partner.image);
+  }, [active, partnerIndex]);
 
   return (
     <div ref={trackRef} className="relative h-[480svh] md:h-[600svh]">
       {/* Clipped full-viewport stage: heading + viewer persist while
           the track scrolls. Overflow on the sticky element itself
           does not break its sticking. */}
-      <div className="sticky top-0 flex h-[100svh] flex-col overflow-hidden pt-[var(--nav-safe-top)]">
-        <header className="mx-auto mb-8 w-full max-w-[min(94vw,80rem)] shrink-0 text-center md:mb-10">
+      <div className="projects-stage sticky top-0 flex h-[100svh] flex-col overflow-hidden pt-[var(--nav-safe-top)]">
+        <header className="projects-stage__header mx-auto mb-8 w-full max-w-[min(94vw,80rem)] shrink-0 text-center md:mb-10">
           <h2
             id="projects-heading"
-            className="font-sans text-[clamp(2rem,12vw,4rem)] leading-[1.0] font-extrabold tracking-[-0.03em] text-foreground lg:text-[clamp(2.5rem,7vw,4.5rem)]"
+            className="font-sans text-[min(clamp(3.5rem,7vw,6rem),calc((100vw-2.5rem)/5.2))] leading-[1.02] font-extrabold tracking-[-0.05em] text-balance text-foreground"
           >
             <AnimatedText segments="DESIGN WORK" level="word" />
           </h2>
@@ -500,8 +576,10 @@ function StackDeck({ gentle }: { gentle: boolean }) {
         <div className="mx-auto grid w-full max-w-[min(94vw,80rem)] flex-1 min-h-0 grid-cols-1 items-center gap-6 pb-4 md:gap-8 md:pb-[calc(var(--floating-nav-clearance)+1rem)] lg:grid-cols-[minmax(0,1.2fr)_minmax(0,0.8fr)] lg:gap-12">
           {/* LEFT — scroll-driven image stack. Sheets are
               aria-hidden and pointer-inert; all interaction lives
-              in the single info viewport. */}
-          <div className="relative flex h-[34svh] min-h-0 items-center justify-center md:h-full max-[380px]:h-[30svh]">
+              in the single info viewport. Layout/style containment
+              keeps the two mounted sheets' per-frame transform work
+              from invalidating the sibling info subtree. */}
+          <div className="relative flex h-[34svh] min-h-0 items-center justify-center [contain:layout_style] md:h-full max-[380px]:h-[30svh]">
             {gallery.map((project, i) => {
               // Two-sheet virtualization: the active sheet plus its
               // segment-midpoint partner (outgoing pile first half,
@@ -528,22 +606,50 @@ function StackDeck({ gentle }: { gentle: boolean }) {
             })}
           </div>
 
-          {/* RIGHT — ONE information viewport. Content crossfades
-              (wait mode: exit completes before enter, never
-              overlapping); min-height keeps the composition stable
-              across varying description lengths. */}
+          {/* RIGHT — ONE information viewport. Image and metadata move
+              as one unit: the entering copy mounts the same frame the
+              image takeover begins (popLayout pops the stale copy out of
+              flow, so there is never a blank gap), fades in ~100ms
+              behind the visual rise, and the old copy is already gone —
+              stale title over new image is impossible by construction.
+              min-height keeps the composition stable across varying
+              description lengths. */}
           <div
             className="min-h-[200px] min-w-0 lg:min-h-[420px]"
             aria-live="polite"
             aria-atomic="true"
           >
-            <AnimatePresence mode="wait" initial={false}>
+            <AnimatePresence mode="popLayout" initial={false}>
               <m.div
                 key={current.id}
-                initial={{ opacity: 0, y: gentle ? 8 : 10 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: gentle ? -8 : -10 }}
-                transition={{ duration: gentle ? 0.15 : 0.2, ease: "easeOut" }}
+                variants={{
+                  // Directional rise: scrolling down the deck the new
+                  // copy rises from below (+8→0); scrolling up it drops
+                  // from above (−8→0). The old copy leaves toward the
+                  // mirrored side. 8px max (6px gentle), compositor-only,
+                  // same 140/120ms + 100ms follow timing as before.
+                  hidden: { opacity: 0, y: dir * (gentle ? 6 : 8) },
+                  show: {
+                    opacity: 1,
+                    y: 0,
+                    transition: {
+                      duration: 0.14,
+                      ease: EASING_OUT,
+                      delay: PROJECT_INFO_FOLLOW_DELAY_S,
+                    },
+                  },
+                  exit: {
+                    opacity: 0,
+                    y: -dir * (gentle ? 6 : 8),
+                    transition: {
+                      duration: 0.12,
+                      ease: EASING_OUT,
+                    },
+                  },
+                }}
+                initial="hidden"
+                animate="show"
+                exit="exit"
               >
                 <InfoBlock project={current} />
               </m.div>
@@ -563,7 +669,9 @@ export function Projects() {
   // One soft paper-air breath on meaningful section entry.
   useSectionEnterSound(ref, "service-expand");
   const prefersReducedMotion = useReducedMotion();
-  const isMobile = useMediaQuery("(max-width: 767px)");
+  // Mobile layout already resolves to tier "low", so the tier check at
+  // the deck below owns the gentle path — no second media subscription
+  // for the same signal.
   const tier = usePerformanceTier();
 
   return (
@@ -579,7 +687,7 @@ export function Projects() {
             <div className="mx-auto flex max-w-[min(94vw,80rem)] flex-col gap-10 md:gap-14">
               <h2
                 id="projects-heading"
-                className="text-center font-sans text-[clamp(2rem,12vw,4rem)] leading-[1.0] font-extrabold tracking-[-0.03em] text-foreground lg:text-[clamp(2.5rem,7vw,4.5rem)]"
+                className="text-center font-sans text-[min(clamp(3.5rem,7vw,6rem),calc((100vw-2.5rem)/5.2))] leading-[1.02] font-extrabold tracking-[-0.05em] text-balance text-foreground"
               >
                 DESIGN WORK
               </h2>
@@ -615,7 +723,7 @@ export function Projects() {
               <div className="h-[8svh]" aria-hidden />
             </div>
           ) : (
-            <StackDeck gentle={isMobile || tier !== "high"} />
+            <StackDeck gentle={tier !== "high"} />
           )}
         </div>
       </Container>

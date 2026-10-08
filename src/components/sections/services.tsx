@@ -1,12 +1,11 @@
 "use client";
 
 import Image from "next/image";
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 
-import { CssReveal } from "@/components/animations/css-reveal";
-import { Reveal } from "@/components/animations/reveal";
 import { AnimatedText } from "@/components/motion/animated-text";
 import { Container } from "@/components/ui/container";
+import { MEDIA_DESKTOP } from "@/constants/breakpoints";
 import { services } from "@/data";
 import { useCinematicSection } from "@/hooks/use-cinematic-section";
 import { useMediaQuery } from "@/hooks/use-media-query";
@@ -78,19 +77,12 @@ function ServicePanel({
           />
         </div>
         <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/45 to-black/20" />
-        <div
-          className={cn(
-            "absolute inset-0 bg-black/20 transition-opacity duration-500 motion-reduce:transition-none",
-            isActive ? "opacity-0" : "opacity-100",
-          )}
-          aria-hidden
-        />
       </div>
 
       {/* quiet state — centered title only, clearly secondary */}
       <div
         className={cn(
-          "relative z-10 flex h-full min-h-0 flex-col items-center justify-center p-5 text-center transition-opacity duration-300 ease-out motion-reduce:transition-none",
+          "relative z-10 flex h-full min-h-0 flex-col items-center justify-center p-4 text-center transition-opacity duration-300 ease-out motion-reduce:transition-none md:p-5",
           isActive ? "pointer-events-none opacity-0" : "opacity-100",
         )}
         aria-hidden="true"
@@ -100,16 +92,25 @@ function ServicePanel({
         </h3>
       </div>
 
-      {/* focal state — title, description, capabilities */}
+      {/* focal state — title, description, capabilities.
+          Settles with the card: opacity + an 8px rise on the same
+          500ms clock as the media, so content feels attached to the
+          geometry (650ms) rather than floating above it. The rise is
+          transform-only; rapid hover reverses it mid-flight with no
+          stuck state — activeId is still the single source of truth. */}
       <div
         className={cn(
-          "relative z-10 flex h-full min-h-0 flex-col justify-end p-5 transition-opacity duration-500 ease-out motion-reduce:transition-none md:p-6 lg:p-7",
-          isActive ? "opacity-100" : "pointer-events-none opacity-0",
+          "service-acc__focal relative z-10 flex h-full min-h-0 flex-col justify-end p-4 transition-[opacity,transform] duration-500 ease-[cubic-bezier(0.16,1,0.3,1)] motion-reduce:translate-y-0 motion-reduce:transition-none md:p-6 lg:p-7",
+          isActive
+            ? "translate-y-0 opacity-100"
+            : "pointer-events-none translate-y-2 opacity-0",
         )}
         aria-hidden="true"
       >
         <div className="min-w-0">
-          <h3 className="max-w-[18rem] font-headline-lg text-[clamp(2.2rem,3.5vw,4rem)] leading-[0.95] font-extrabold tracking-[-0.02em] text-white">
+          {/* Wider measure (was 18rem): two calm lines instead of stacked
+              fragments. Type size untouched — measure does the work. */}
+          <h3 className="max-w-[22rem] font-headline-lg text-[clamp(2.2rem,3.5vw,4rem)] leading-[0.95] font-extrabold tracking-[-0.02em] text-balance text-white">
             {service.title}
           </h3>
           <p className="mt-3 max-w-[28rem] font-body-md text-[16px] leading-[1.5] font-medium text-white/90">
@@ -127,15 +128,6 @@ function ServicePanel({
           </ul>
         </div>
       </div>
-
-      {/* cherry accent when expanded */}
-      <span
-        aria-hidden
-        className={cn(
-          "absolute left-0 right-0 top-0 h-[2px] bg-[var(--accent-cherry)] transition-opacity duration-300 motion-reduce:transition-none",
-          isActive ? "opacity-100" : "opacity-0",
-        )}
-      />
     </article>
   );
 }
@@ -146,13 +138,19 @@ function ServicePanel({
  * no tap required. Tapping still toggles explicitly (keyboard/touch
  * control). One IntersectionObserver on the scroll container: no scroll
  * listeners, no RAF, no per-frame work.
+ *
+ * Ownership rule: an explicit tap wins for ~700ms — spy writes inside
+ * the hold window are dropped so the observer can never immediately
+ * undo the interaction. One timestamp ref, no timers.
  */
 function MobileStack({
   activeId,
   onActiveChange,
+  onExplicitChange,
 }: {
   activeId: string | null;
   onActiveChange: (id: string | null) => void;
+  onExplicitChange: (id: string | null) => void;
 }) {
   const stackRef = useRef<HTMLDivElement>(null);
 
@@ -220,103 +218,95 @@ function MobileStack({
         const panelId = `service-panel-${service.id}`;
         const buttonId = `service-button-${service.id}`;
         return (
-          <Reveal key={service.id} className="min-w-0">
-            <div
-              data-service-id={service.id}
-              className={cn(
-                "relative overflow-hidden rounded-lg border border-border bg-card",
-                isExpanded && "border-border-hover shadow-[var(--shadow-md)]",
-              )}
+          <div
+            key={service.id}
+            data-service-id={service.id}
+            className={cn(
+              "relative overflow-hidden rounded-lg border border-border bg-card",
+              isExpanded && "border-border-hover shadow-[var(--shadow-md)]",
+            )}
+          >
+            <button
+              type="button"
+              id={buttonId}
+              aria-expanded={isExpanded}
+              aria-controls={panelId}
+              onClick={() =>
+                onExplicitChange(activeId === service.id ? null : service.id)
+              }
+              className="relative block w-full text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring"
             >
-              <button
-                type="button"
-                id={buttonId}
-                aria-expanded={isExpanded}
-                aria-controls={panelId}
-                onClick={() =>
-                  onActiveChange(activeId === service.id ? null : service.id)
-                }
-                className="relative block w-full text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring"
-              >
-                <span className="relative block min-h-[132px] w-full overflow-hidden">
-                  <Image
-                    src={service.image}
-                    alt=""
-                    aria-hidden
-                    fill
-                    sizes="100vw"
-                    className="object-cover"
-                    loading="lazy"
-                    placeholder="blur"
-                    blurDataURL={BLUR_PLACEHOLDER_DATA_URL}
-                  />
+              <span className="relative block min-h-[132px] w-full overflow-hidden">
+                <Image
+                  src={service.image}
+                  alt=""
+                  aria-hidden
+                  fill
+                  sizes="100vw"
+                  className="object-cover"
+                  loading="lazy"
+                  placeholder="blur"
+                  blurDataURL={BLUR_PLACEHOLDER_DATA_URL}
+                />
+                <span
+                  aria-hidden
+                  className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/40 to-black/10"
+                />
+                <span className="absolute inset-x-0 bottom-0 flex items-end justify-between gap-3 p-5">
+                  <span className="font-headline-lg text-[24px] leading-[0.95] font-extrabold tracking-[-0.02em] text-white">
+                    {service.title.toUpperCase()}
+                  </span>
                   <span
                     aria-hidden
-                    className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/40 to-black/10"
-                  />
-                  <span className="absolute inset-x-0 bottom-0 flex items-end justify-between gap-3 p-5">
-                    <span className="font-headline-lg text-[24px] leading-[0.95] font-extrabold tracking-[-0.02em] text-white">
-                      {service.title.toUpperCase()}
-                    </span>
-                    <span
-                      aria-hidden
-                      className={cn(
-                        "inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-white/25 text-white transition-transform duration-300 motion-reduce:transition-none",
-                        isExpanded && "rotate-45",
-                      )}
+                    className={cn(
+                      "inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-white/25 text-white transition-transform duration-300 ease-[cubic-bezier(0.16,1,0.3,1)] motion-reduce:transition-none",
+                      isExpanded && "rotate-45",
+                    )}
+                  >
+                    <svg
+                      viewBox="0 0 16 16"
+                      className="h-3.5 w-3.5"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth={1.75}
+                      strokeLinecap="round"
                     >
-                      <svg
-                        viewBox="0 0 16 16"
-                        className="h-3.5 w-3.5"
-                        fill="none"
-                        stroke="currentColor"
-                        strokeWidth={1.75}
-                        strokeLinecap="round"
-                      >
-                        <path d="M8 3v10M3 8h10" />
-                      </svg>
-                    </span>
+                      <path d="M8 3v10M3 8h10" />
+                    </svg>
                   </span>
                 </span>
-              </button>
-              <div
-                id={panelId}
-                role="region"
-                aria-labelledby={buttonId}
-                className={cn(
-                  "grid transition-[grid-template-rows,opacity] duration-500 ease-[cubic-bezier(0.16,1,0.3,1)] motion-reduce:transition-none",
-                  isExpanded
-                    ? "grid-rows-[1fr] opacity-100"
-                    : "grid-rows-[0fr] opacity-0",
-                )}
-              >
-                <div className="min-h-0 overflow-hidden">
-                  <div className="px-5 pt-1 pb-5">
-                    <p className="max-w-[26rem] text-[15px] leading-[1.5] font-medium text-foreground-secondary">
-                      {service.approach}
-                    </p>
-                    <ul className="mt-4 border-t border-border">
-                      {service.focus.map((t) => (
-                        <li
-                          key={t}
-                          className="border-b border-border py-2 font-sans text-[11px] font-medium tracking-[0.04em] text-foreground"
-                        >
-                          {t}
-                        </li>
-                      ))}
-                    </ul>
-                  </div>
+              </span>
+            </button>
+            <div
+              id={panelId}
+              role="region"
+              aria-labelledby={buttonId}
+              className={cn(
+                "grid transition-[grid-template-rows,opacity] duration-500 ease-[cubic-bezier(0.16,1,0.3,1)] motion-reduce:transition-none",
+                isExpanded
+                  ? "grid-rows-[1fr] opacity-100"
+                  : "grid-rows-[0fr] opacity-0",
+              )}
+            >
+              <div className="min-h-0 overflow-hidden">
+                <div className="px-5 pt-1 pb-5">
+                  <p className="max-w-[26rem] text-[15px] leading-[1.5] font-medium text-foreground-secondary">
+                    {service.approach}
+                  </p>
+                  <ul className="mt-4 border-t border-border">
+                    {service.focus.map((t) => (
+                      <li
+                        key={t}
+                        className="border-b border-border py-2 font-sans text-[11px] font-medium tracking-[0.04em] text-foreground"
+                      >
+                        {t}
+                      </li>
+                    ))}
+                  </ul>
                 </div>
               </div>
-              <span
-                className={cn(
-                  "absolute left-0 right-0 top-0 h-[2px] bg-[var(--accent-cherry)] transition-opacity duration-300",
-                  isExpanded ? "opacity-100" : "opacity-0",
-                )}
-                aria-hidden
-              />
             </div>
-          </Reveal>
+          </div>
         );
       })}
     </div>
@@ -331,12 +321,29 @@ export function Services() {
   // mobile scroll-spy/tap all read and write this ONE state, so both
   // breakpoints (and sound) can never disagree.
   const [activeId, setActiveId] = useState<string | null>(null);
-  // Breakpoint-gated subtrees (matches md:): only the visible layout
-  // mounts, so the hidden breakpoint's next/image set never requests.
-  // Client-only section (ssr:false), so matchMedia is correct on first
-  // paint — no SSR mismatch. Same pattern as Hero's desktop/mobile split.
-  const isDesktopLayout = useMediaQuery("(min-width: 768px)");
+  // Breakpoint-gated subtrees (matches lg:, same as Hero/Video/Projects
+  // and the floating nav): only the visible layout mounts, so the hidden
+  // breakpoint's next/image set never requests. Client-only section
+  // (ssr:false), so matchMedia is correct on first paint — no SSR
+  // mismatch. The 768–1023px band renders the mobile stack, keeping one
+  // design language across the whole tablet range.
+  const isDesktopLayout = useMediaQuery(MEDIA_DESKTOP);
   const mountedRef = useRef(false);
+  // Explicit-tap hold: spy writes older than this timestamp are dropped.
+  const spyHoldUntilRef = useRef(0);
+
+  // Scroll-spy path — ignored inside an explicit-tap hold window.
+  // Stable identity: MobileStack's observer effect subscribes once.
+  const handleSpyChange = useCallback((id: string | null) => {
+    if (Date.now() < spyHoldUntilRef.current) return;
+    setActiveId(id);
+  }, []);
+
+  // Explicit tap path — commits immediately and pins ownership ~700ms.
+  const handleExplicitChange = useCallback((id: string | null) => {
+    spyHoldUntilRef.current = Date.now() + 700;
+    setActiveId(id);
+  }, []);
 
   // The single change whisper for both breakpoints — never on mount,
   // never on repeat selection (state bails out when unchanged).
@@ -358,7 +365,7 @@ export function Services() {
       <Container className="w-full max-w-none">
         <h2
           id="services-heading"
-          className="cinematic-layer cinematic-layer--title mb-5 text-center font-sans text-[min(clamp(3.5rem,7vw,6rem),calc((100vw-2.5rem)/5.2))] leading-[1.02] font-extrabold tracking-[-0.05em] text-foreground md:mb-8"
+          className="cinematic-layer cinematic-layer--title section-heading text-center font-sans text-[min(clamp(3.5rem,7vw,6rem),calc((100vw-2.5rem)/5.2))] leading-[1.02] font-extrabold tracking-[-0.05em] text-foreground"
         >
           <AnimatedText segments="Services" level="word" />
         </h2>
@@ -367,29 +374,31 @@ export function Services() {
             from viewport minus heading, navbar safe zone and
             breathing room, so cards always finish above the pill. */}
         {isDesktopLayout ? (
-          <div className="hidden md:block">
-            <CssReveal>
-              <div
-                className="cinematic-layer cinematic-layer--grid services-accordion flex h-[clamp(300px,calc(100svh-var(--nav-safe-top)-var(--floating-nav-clearance)-11rem),560px)] min-w-0 gap-4 lg:gap-5"
-                onMouseLeave={() => setActiveId(null)}
-              >
-                {services.map((service) => (
-                  <ServicePanel
-                    key={service.id}
-                    service={service}
-                    isActive={activeId === service.id}
-                    onActivate={setActiveId}
-                  />
-                ))}
-              </div>
-            </CssReveal>
+          <div className="hidden lg:block">
+            <div
+              className="cinematic-layer cinematic-layer--grid services-accordion flex h-[clamp(300px,calc(100svh-var(--nav-safe-top)-var(--floating-nav-clearance)-11rem),560px)] min-w-0 gap-3 lg:gap-5"
+              onMouseLeave={() => setActiveId(null)}
+            >
+              {services.map((service) => (
+                <ServicePanel
+                  key={service.id}
+                  service={service}
+                  isActive={activeId === service.id}
+                  onActivate={setActiveId}
+                />
+              ))}
+            </div>
           </div>
         ) : (
-          /* Mobile — vertical scroll-spy stack (no carousel) */
-          <div className="md:hidden">
-            <CssReveal>
-              <MobileStack activeId={activeId} onActiveChange={setActiveId} />
-            </CssReveal>
+          /* Mobile — vertical scroll-spy stack (no carousel).
+             Expansion keeps grid-rows (measured: discrete tap/spy commits,
+             never continuous scroll work) — see implementation notes. */
+          <div className="lg:hidden">
+            <MobileStack
+              activeId={activeId}
+              onActiveChange={handleSpyChange}
+              onExplicitChange={handleExplicitChange}
+            />
             {/* breathing room for floating navbar */}
             <div
               className="h-[max(1rem,calc(var(--nav-height)+env(safe-area-inset-bottom)+8px))]"

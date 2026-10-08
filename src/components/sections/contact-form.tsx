@@ -52,7 +52,7 @@ function MessageCounter({ control }: { control: Control<ContactFormValues> }) {
   const messageLength = messageValue?.length ?? 0;
   return (
     <p
-      className="contact-form__char-count mt-1.5 text-right text-xs text-foreground-secondary"
+      className="contact-form__char-count text-right text-xs text-foreground-secondary"
       aria-live="polite"
     >
       {messageLength}/{CONTACT_MESSAGE_MAX}
@@ -156,6 +156,8 @@ export function ContactForm() {
   return (
     <AnimatePresence mode="wait">
       {submitted ? (
+        // Stable footprint: the success panel reserves the form's height
+        // so the panel — and the page — never collapse on submit.
         <m.div
           key="success"
           role="status"
@@ -164,7 +166,7 @@ export function ContactForm() {
           animate={{ opacity: 1, y: 0 }}
           exit={prefersReducedMotion ? undefined : { opacity: 0, y: -8 }}
           transition={{ duration: 0.5, ease: EASING_OUT }}
-          className="contact-form__success flex min-h-[260px] flex-col justify-center py-2"
+          className="contact-form__success flex min-h-[440px] flex-col justify-center py-2"
         >
           <div
             className="mb-6 flex h-12 w-12 items-center justify-center rounded-full border border-border bg-card shadow-[var(--shadow-sm)]"
@@ -209,7 +211,7 @@ export function ContactForm() {
       ) : (
         <m.form
           key="form"
-          className="contact-form flex min-w-0 flex-col gap-2"
+          className="contact-form flex min-w-0 flex-col gap-[var(--form-group-gap-compact)]"
           onSubmit={handleSubmit(onSubmit, onInvalid)}
           noValidate
           aria-label="Contact form"
@@ -217,7 +219,9 @@ export function ContactForm() {
           exit={prefersReducedMotion ? undefined : { opacity: 0, y: -8 }}
           transition={{ duration: 0.4, ease: EASING_OUT }}
         >
-          <div className="grid min-w-0 grid-cols-2 gap-1.5 md:gap-2">
+          {/* Mobile gutter 6px; desktop unified to --form-grid-gap by the
+              contact density layer (the old `md:gap-2` never rendered). */}
+          <div className="grid min-w-0 grid-cols-2 gap-1.5">
             <Input
               label="Name"
               placeholder="Jane Doe"
@@ -253,7 +257,9 @@ export function ContactForm() {
             )}
           />
 
-          <div className="grid min-w-0 grid-cols-1 gap-2 sm:grid-cols-2 md:gap-2">
+          {/* Mobile gutter 8px; desktop unified to --form-grid-gap by the
+              contact density layer (the old `md:gap-2` never rendered). */}
+          <div className="grid min-w-0 grid-cols-1 gap-2 sm:grid-cols-2">
             <Controller
               name="budget"
               control={control}
@@ -320,13 +326,15 @@ export function ContactForm() {
             />
           </div>
 
+          {/* Button `lg` family base + named contact exception: 44px desktop
+              (fits the 100svh stage), 52px mobile (touch target). */}
           <Button
             type="submit"
             size="lg"
             fullWidth
             sfx
             disabled={isSubmitting}
-            className="contact-form__submit group mt-0.5 min-h-[52px] hover:-translate-y-0.5 hover:shadow-[var(--shadow-md)] md:min-h-[44px] md:py-2.5 md:text-sm"
+            className="contact-form__submit group mt-0.5 min-h-[var(--form-submit-h-compact)] md:min-h-[var(--form-submit-h)] md:py-2.5 md:text-sm"
           >
             {isSubmitting ? (
               <span className="inline-flex items-center gap-2.5">

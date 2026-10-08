@@ -1,166 +1,161 @@
 ---
-name: Cinematic Noir
+name: Paper Ink Lacquer
 colors:
-  surface: "#141313"
-  surface-dim: "#141313"
-  surface-bright: "#3a3939"
-  surface-container-lowest: "#0e0e0e"
-  surface-container-low: "#1c1b1b"
-  surface-container: "#201f1f"
-  surface-container-high: "#2a2a2a"
-  surface-container-highest: "#353434"
-  on-surface: "#e5e2e1"
-  on-surface-variant: "#c4c7c8"
-  inverse-surface: "#e5e2e1"
-  inverse-on-surface: "#313030"
-  outline: "#8e9192"
-  outline-variant: "#444748"
-  surface-tint: "#c6c6c7"
-  primary: "#ffffff"
-  on-primary: "#2f3131"
-  primary-container: "#e2e2e2"
-  on-primary-container: "#636565"
-  inverse-primary: "#5d5f5f"
-  secondary: "#c6c6c7"
-  on-secondary: "#2f3131"
-  secondary-container: "#454747"
-  on-secondary-container: "#b4b5b5"
-  tertiary: "#ffffff"
-  on-tertiary: "#2f3131"
-  tertiary-container: "#e2e2e2"
-  on-tertiary-container: "#636565"
-  error: "#ffb4ab"
-  on-error: "#690005"
-  error-container: "#93000a"
-  on-error-container: "#ffdad6"
-  primary-fixed: "#e2e2e2"
-  primary-fixed-dim: "#c6c6c7"
-  on-primary-fixed: "#1a1c1c"
-  on-primary-fixed-variant: "#454747"
-  secondary-fixed: "#e2e2e2"
-  secondary-fixed-dim: "#c6c6c7"
-  on-secondary-fixed: "#1a1c1c"
-  on-secondary-fixed-variant: "#454747"
-  tertiary-fixed: "#e2e2e2"
-  tertiary-fixed-dim: "#c6c6c7"
-  on-tertiary-fixed: "#1a1c1c"
-  on-tertiary-fixed-variant: "#454747"
-  background: "#141313"
-  on-background: "#e5e2e1"
-  surface-variant: "#353434"
+  paper: "#f5f4f0"
+  parchment: "#eae6de"
+  ink: "#171515"
+  soft-ink: "#2a2523"
+  lacquer: "#c91524"
+  dark-lacquer: "#780a12"
+  bright-lacquer: "#d62533"
+  clay: "#70413a"
+  brass: "#b8955a"
+  background-light: "#f5f4f0"
+  background-dark: "#171313"
+  foreground-light: "#171515"
+  foreground-dark: "#f5f4f0"
+  card-light: "#ffffff"
+  card-dark: "#211c1b"
+  border-light: "rgb(23 21 21 / 0.14)"
+  border-dark: "rgb(245 244 240 / 0.14)"
+  error-light: "#c91524"
+  error-dark: "#ff9d94"
 typography:
-  display-lg:
-    fontFamily: Inter
-    fontSize: 72px
-    fontWeight: "800"
-    lineHeight: "1.1"
-    letterSpacing: -0.04em
-  display-lg-mobile:
-    fontFamily: Inter
-    fontSize: 40px
-    fontWeight: "800"
-    lineHeight: "1.2"
-    letterSpacing: -0.02em
+  # Three locked families (see src/lib/fonts.ts). Roles never change.
+  ui-body:
+    fontFamily: Manrope
+    weights: ["400", "500", "600", "700", "800"]
+    roles: "body, UI, navigation, sans headings, buttons, chips, form"
+  editorial-accent:
+    fontFamily: Instrument Serif
+    weights: ["400"]
+    styles: ["normal", "italic"]
+    roles: "Presence word, Contact 'Template.' accent — personality moments only"
+  condensed-display:
+    fontFamily: Anton
+    weights: ["400"]
+    roles: "Hero headline, theatre intro wordmark — massive poster type only"
+  # Type tokens shipped in src/app/globals.css (@theme inline).
+  # Headline/body sizes below are defaults; hero/intro/section
+  # headings use fluid clamp() formulas inline (intentional editorial scale).
   headline-xl:
-    fontFamily: Inter
     fontSize: 48px
     fontWeight: "800"
-    lineHeight: "1.2"
+    lineHeight: "1.15"
     letterSpacing: -0.03em
   headline-lg:
-    fontFamily: Inter
     fontSize: 32px
     fontWeight: "700"
-    lineHeight: "1.3"
-    letterSpacing: -0.02em
+    lineHeight: "1.25"
+    letterSpacing: -0.03em
   body-lg:
-    fontFamily: Inter
     fontSize: 18px
     fontWeight: "400"
-    lineHeight: "1.6"
+    lineHeight: "1.65"
     letterSpacing: 0em
   body-md:
-    fontFamily: Inter
     fontSize: 16px
     fontWeight: "400"
-    lineHeight: "1.6"
+    lineHeight: "1.7"
     letterSpacing: 0em
   label-md:
-    fontFamily: Inter
     fontSize: 14px
     fontWeight: "600"
     lineHeight: "1.4"
     letterSpacing: 0.02em
   button:
-    fontFamily: Inter
     fontSize: 15px
     fontWeight: "600"
     lineHeight: "1"
     letterSpacing: 0.01em
 rounded:
-  sm: 0.25rem
-  DEFAULT: 0.5rem
-  md: 0.75rem
-  lg: 1rem
+  sm: 0.625rem
+  md: 0.875rem
+  lg: 1.25rem
   xl: 1.5rem
+  2xl: 2rem
   full: 9999px
+  form-compact: 0.9375rem
 spacing:
-  section-gap: 160px
-  container-max: 1280px
+  section-gap: 96px
+  container-max: 1480px
+  container-width: "min(92vw, 1480px)"
   gutter: 24px
   margin-mobile: 20px
   stack-sm: 8px
   stack-md: 16px
   stack-lg: 32px
+  section-head-gap: 1.25rem
+  section-head-gap-md: 2rem
+breakpoints:
+  # Structural layout modes. CSS media queries and JS useMediaQuery
+  # thresholds agree: everything compositional switches at lg (1024px).
+  # Gutters and contact density compress at md (768px) for fit, not language.
+  compact: "below 1024px — mobile design language (stacks, menu sheet)"
+  wide: "1024px and up — desktop compositions, floating pill nav"
+  squeeze: "380px and below — wordmark/lockup guards"
+  short: "720px/820px/940px heights — chrome compression guards"
 ---
 
 ## Brand & Style
 
 This design system is built on the principles of **Cinematic Minimalism**, emphasizing a high-end, editorial feel that prioritizes focus and prestige. The target audience includes luxury brands, tech innovators, and creative leaders who value precision and understated elegance.
 
-The visual language draws heavily from the polished aesthetics of industry leaders like Apple and Linear. It utilizes a deep, monochromatic palette to create a sense of infinite depth. The emotional response is one of calm authority, professional trust, and uncompromising quality. Motion should be perceived as "weighted"—smooth, purposeful transitions that mimic high-end cinematography rather than rapid, jittery animations.
+The visual language is **Paper × Ink × Lacquer**: a warm light-first canvas (`#f5f4f0`) with a deep cinematic dark mode (`#171313`), ink text, and a single lacquer-red identity accent (`#c91524`) reserved for active states, primary actions, and selections. Sections stay transparent — one continuous canvas painted by a global atmosphere layer — instead of hard-cut color blocks. Motion should be perceived as "weighted" — smooth, purposeful transitions that mimic high-end cinematography rather than rapid, jittery animations.
 
 ## Colors
 
-The palette is strictly monochromatic, relying on luminosity and value shifts rather than hue to create hierarchy.
-
-- **Primary Background (#0E0E0E):** The foundational layer, providing a deep, "true black" feel for maximum contrast with text.
-- **Secondary Background (#171717):** Used for structural sections or to create a slight lift from the base layer.
-- **Surface/Cards (#202020):** The highest elevation layer for interactive or grouped content.
-- **Accent (White):** Used sparingly for call-to-actions and key highlights to maintain a premium, focused aesthetic.
-- **Borders:** Extremely subtle at 8% white opacity, acting as a "whisper" of a container rather than a hard boundary.
+- **Paper (#F5F4F0) / Ink (#171515):** Light-mode foundation and text.
+- **Dark Ink (#171313):** Dark-mode foundation; text flips to warm paper.
+- **Lacquer (#C91524):** The identity accent — primary buttons, active nav pill, progress, selections. Used sparingly.
+- **Surfaces:** Cards `#ffffff` (light) / `#211c1b` (dark); secondary backgrounds `#ece9e2` / `#201b1a`.
+- **Borders:** Whisper lines at 14% ink (light) / 14% paper (dark); hover states deepen to ~28%/24%.
 
 ## Typography
 
-The design system utilizes **Inter** exclusively to ensure a systematic, clean, and highly legible experience.
+Three locked families (loaded via `next/font`, no runtime font requests):
 
-High-impact headings use **ExtraBold** weights with tight letter-spacing to create a "locked" and authoritative visual block. Body copy uses **Regular** weight with a generous line height (1.6) to ensure maximum readability and a relaxed, airy feel. Buttons and small labels use **SemiBold** to distinguish them as functional elements without needing additional decorative cues. All type should be rendered with `-webkit-font-smoothing: antialiased` to maintain the premium, sharp look on high-resolution displays.
+- **Manrope** — all UI, body, navigation, sans headings, buttons, chips, form. Weights 400–800.
+- **Instrument Serif** — editorial accents only (Hero `Presence`, Contact `Template.`). Italic personality, never body text.
+- **Anton** — massive condensed display only (Hero headline, theatre intro wordmark). Single 400 weight, never synthesized bold.
+
+High-impact headings use ExtraBold Manrope (or Anton for poster moments) with tight letter-spacing. Oversized editorial type (intro wordmark, hero headline, section headings) is **intentional identity** — consistency comes from spacing relationships, max-widths, and responsive rules, never by shrinking it. Body copy uses Regular weight with generous line height (1.65–1.7). All type renders antialiased.
+
+Shared section headings (Services, Motion) use one fluid formula with a viewport fit-cap; Projects keeps deck-tuned caps within the same `.section-heading` rhythm (gap + balance shared, sizes intentionally distinct).
 
 ## Layout & Spacing
 
-The layout philosophy follows a **Fixed-Fluid Hybrid** model. Content is contained within a 1280px max-width wrapper but flows fluidly on smaller screens.
+**Canonical container:** `--container-max-width: 1480px`, consumed as `min(92vw, 1480px)` with centered `nav-inset` gutters. Named section dialects intentionally diverge and are documented at their components:
 
-Whitespace is treated as a core design element, not just a separator. Section gaps are intentionally large (160px+) to allow the brand's visual assets to "breathe." A 12-column grid is used for desktop layouts, with elements often centered or spanning specific column counts (e.g., 6 columns for text blocks) to maintain an editorial rhythm. On mobile, margins reduce to 20px, and the layout collapses to a single-column vertical stack.
+- `hero composition` — centered text, custom px rhythm around portraits.
+- `project deck` — `min(94vw, 80rem)` sticky-stage frame.
+- `video cinematic` — height-driven `max-w` so the 16:9 player clears the floating nav.
+- `contact form` — `800px` panel (`700px` at wide desktop).
+
+**Responsive modes:** `compact` below 1024px, `wide` at 1024px+. Hero, Services, Video grid, Projects grid, floating pill, and the menu sheet all switch at `lg` (CSS and JS agree). Gutters switch 20px/24px at 768px; contact density compresses at 768px for 100svh fit. Squeeze guards at ≤380px protect the wordmark and lockups; short-height guards (≤940/820px) compress contact chrome; landscape-mobile rules compress the hero. Fluid `clamp()/min()/max()` interpolates within modes — no JS-driven sizing.
+
+**Contact density:** the form owns compact editorial density via `--form-*` semantic tokens (single source for all breakpoint overrides). Shared `Input`/`Textarea`/`ChipGroup` expose neutral defaults; the scoped contact layer owns in-form values.
 
 ## Elevation & Depth
 
-Hierarchy is established through **Tonal Layering** and **Soft Shadows**.
-
-Instead of traditional drop shadows that mimic a direct light source, this design system uses ambient, multi-layered occlusion shadows. Shadows should be ultra-diffused (0% to 15% opacity max) and inherit the dark background tint.
-
-Interactive elements like cards use a subtle "inner glow" via a top border of `rgba(255,255,255,0.05)` to simulate a beveled edge. When an element is raised (on hover), it should transition smoothly with a background color shift from `#202020` to a slightly lighter tint, coupled with a scale increase of 1.02x to mimic physical proximity.
+Hierarchy is established through **tonal layering and soft ambient shadows** (`--shadow-sm/md/lg`, theme-aware). Interactive elements carry a subtle top inner glow. Hover lifts are restrained (`-translate-y-px` + shadow step); press depths are frozen per control family (buttons `0.985`, icon controls `0.96`).
 
 ## Shapes
 
-The shape language is sophisticated and modern. All containers and buttons utilize a **0.5rem (8px)** base radius. This provides a soft, approachable feel that balances the aggressive "industrial" nature of the dark color palette.
-
-For larger components like hero images or primary cards, use `rounded-xl` (1.5rem/24px) to emphasize their role as distinct content modules. Form inputs and chips maintain the base 8px radius for a consistent functional look.
+Radius language (semantic, not flat): `sm 10px` / `md 14px` (buttons) / `lg 20px` (cards, panels, inputs) / `xl 24px` / `2xl 32px` / `full` (chips, pill nav). Mobile form controls share `--radius-form-compact 15px`.
 
 ## Components
 
-- **Buttons:** Primary buttons are solid White with #0E0E0E text. Secondary buttons are outlined with `border_subtle`. Transitions must be slow (300ms) using `cubic-bezier(0.4, 0, 0.2, 1)`.
-- **Cards:** Cards use the `#202020` surface color with a 1px `border_subtle`. They should have no shadow in their default state, only gaining a soft ambient shadow upon interaction.
-- **Inputs:** Input fields are background-less with a bottom border of `border_subtle`. On focus, the border transitions to full White.
-- **Chips/Badges:** Small, subtle containers with `#171717` background and `text_secondary`. These should be used for categories or tags.
-- **Lists:** Clean, border-separated rows with `body-md` text. Hovering a row should trigger a subtle `#171717` background highlight.
-- **Navigation:** A sticky, glassmorphic header using `backdrop-filter: blur(12px)` and a background of `rgba(14, 14, 14, 0.8)` ensures content remains legible while scrolling.
+- **Buttons:** `sm ≈ 36px / md ≈ 44px / lg ≈ 48px` ladder, text sizes owned by the size map only. Primary = lacquer; secondary = bordered transparent; ghost = borderless. Contact submit = `lg` base with a named density exception (44px desktop for stage fit, 52px mobile touch target).
+- **Cards:** bordered surfaces, rest shadow only on active/hover. Services accordion expands active `3.2:1` via CSS `flex-grow`; mobile uses `grid-rows` expansion.
+- **Inputs/Textarea:** bordered, `rounded-lg`, ring-30 focus; contact density via tokens.
+- **Chips:** `compact 40px/12px` and `default 44px/14px`, `rounded-full`; contact references the system via scoped overrides, never a parallel scale.
+- **Video list:** border-separated index rows (`12px` tracked titles, `11px` meta, 16:9 thumbs); active row carries a lacquer micro-indicator.
+- **Navigation:** transparent 40/48px bar (sticky on compact, absolute on wide), 36px control family (Hire, theme, menu), floating pill with gliding lacquer indicator on wide, menu sheet with focus trap below `lg`.
+
+## Performance Contract
+
+- CSS owns geometry (`clamp()`, grid/flex, container-relative units). No JS font/padding measurement, no resize listeners for layout, no per-frame React state.
+- Scroll: native scrollport, no snap; settle correction and gesture navigation are the only scroll-time systems. Video uses velocity gating + imperative play/pause + one `scaleX` progress loop; Projects deck measures geometry on mount/resize and quantizes progress — sheets consume MotionValues, never re-render per frame.
+- Animation cost order: CSS transition → WAAPI/imperative → RAF → React state (state only for genuine app state).
+- Media: hero portrait preloaded (LCP), first video poster warmed, video bytes on visibility, next-video JIT preload, project neighbor idle-warm, two-sheet deck virtualization.

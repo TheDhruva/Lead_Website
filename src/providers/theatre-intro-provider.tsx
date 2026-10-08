@@ -10,6 +10,8 @@ import {
   useSyncExternalStore,
 } from "react";
 
+import { isReducedMotionPreferred } from "@/lib/media";
+
 interface TheatreIntroContextValue {
   hasEntered: boolean;
   isReturning: boolean;
@@ -79,7 +81,7 @@ function setTheatreLock(locked: boolean) {
 
 function computeIntroState(): IntroBootState {
   const returning = readIntroSeen();
-  const reduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+  const reduced = isReducedMotionPreferred();
 
   if (reduced) {
     applyTheatreDone();

@@ -2,6 +2,7 @@
 
 import { useSyncExternalStore } from "react";
 
+import { MEDIA_COARSE_POINTER, MEDIA_MOBILE } from "@/constants/breakpoints";
 import { useMediaQuery } from "@/hooks/use-media-query";
 import { useReducedMotion } from "@/hooks/use-reduced-motion";
 
@@ -58,8 +59,8 @@ function subscribeDeviceCap(): () => void {
  */
 export function usePerformanceTier(): PerformanceTier {
   const prefersReducedMotion = useReducedMotion();
-  const isCoarsePointer = useMediaQuery("(pointer: coarse)");
-  const isMobileLayout = useMediaQuery("(max-width: 767px)");
+  const isCoarsePointer = useMediaQuery(MEDIA_COARSE_POINTER);
+  const isMobileLayout = useMediaQuery(MEDIA_MOBILE);
   const deviceCap = useSyncExternalStore(
     subscribeDeviceCap,
     getDeviceCap,

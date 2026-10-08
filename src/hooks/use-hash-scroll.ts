@@ -3,8 +3,8 @@
 import { useEffect } from "react";
 
 import { resolveSectionId } from "@/constants";
-import { requestLazySectionMount } from "@/lib/lazy-section-mount";
-import { scrollToSectionElement } from "@/lib/scroll-position";
+import { cancelGestureNavigation } from "@/lib/gesture-navigation-controller";
+import { navigateToSectionId } from "@/lib/section-registry";
 import { useTheatreIntro } from "@/providers/theatre-intro-provider";
 
 /**
@@ -20,7 +20,6 @@ export function useHashScroll() {
     if (!hash || hash.length < 2) return;
 
     const id = resolveSectionId(hash.slice(1));
-    requestLazySectionMount(id);
 
     let cancelled = false;
     let rafId = 0;
@@ -30,11 +29,15 @@ export function useHashScroll() {
       if (cancelled) return;
       const target = document.getElementById(id);
       if (!target) return false;
-      // wait one frame for layout to settle after mount
+      // Wait one frame for layout to settle after mount, then run THE
+      // canonical section command — the same one navbar/CTA/gesture use
+      // (mount request + pinned target + distance-aware tween). Identical
+      // element, identical destination, identical flags.
       rafId = window.requestAnimationFrame(() => {
         if (cancelled) return;
-        const el = document.getElementById(id);
-        if (el) scrollToSectionElement(el);
+        if (!document.getElementById(id)) return;
+        cancelGestureNavigation();
+        navigateToSectionId(id);
       });
       return true;
     };

@@ -1,3 +1,4 @@
+import { MEDIA_COARSE_POINTER, MEDIA_MOBILE } from "@/constants/breakpoints";
 import type { VideoItem } from "@/types";
 
 export interface VideoSourceEntry {
@@ -8,7 +9,7 @@ export interface VideoSourceEntry {
 /** Prefer mobile variants on narrow viewports and coarse pointers. */
 export function prefersMobileVideo(): boolean {
   if (typeof window === "undefined") return false;
-  return window.matchMedia("(max-width: 767px), (pointer: coarse)").matches;
+  return window.matchMedia(`${MEDIA_MOBILE}, ${MEDIA_COARSE_POINTER}`).matches;
 }
 
 function pickVariant(

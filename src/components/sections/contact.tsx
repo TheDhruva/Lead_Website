@@ -5,7 +5,6 @@ import { useRef } from "react";
 
 import { FileText } from "lucide-react";
 
-import { Reveal } from "@/components/animations/reveal";
 import { AnimatedText } from "@/components/motion/animated-text";
 import { ContactFormSkeleton } from "@/components/ui/contact-form-skeleton";
 import { Container } from "@/components/ui/container";
@@ -56,80 +55,77 @@ export function Contact() {
         <div className="contact-scene__main grid min-h-0 min-w-0 flex-1 grid-cols-1 items-start gap-4 max-md:gap-3.5 lg:items-start lg:gap-0">
           <div className="cinematic-layer cinematic-layer--links min-w-0 lg:self-center">
             <div className="contact-scene__intro flex min-w-0 flex-col gap-4 max-md:gap-3 md:gap-4">
-              <Reveal>
-                <h2
-                  id="contact-heading"
-                  className="contact-scene__heading cinematic-layer cinematic-layer--heading font-headline-xl font-extrabold text-foreground"
-                >
-                  <span className="contact-scene__heading-line block">
-                    <AnimatedText segments="Your Brand Deserves" level="word" />
-                  </span>
-                  <span className="contact-scene__heading-line block">
-                    <AnimatedText
-                      delay={0.12}
-                      segments="More Than Another"
-                      level="word"
-                    />
-                  </span>
-                  <span className="contact-scene__heading-line contact-scene__heading-line--accent font-display block italic">
-                    <AnimatedText
-                      delay={0.24}
-                      segments="Template."
-                      level="word"
-                    />
-                  </span>
-                </h2>
-              </Reveal>
+              <h2
+                id="contact-heading"
+                className="contact-scene__heading cinematic-layer cinematic-layer--heading font-headline-xl font-extrabold text-foreground"
+              >
+                {/* Calm decompression cascade after Projects: 0 / 80 / 160ms. */}
+                <span className="contact-scene__heading-line block">
+                  <AnimatedText segments="Your Brand Deserves" level="word" />
+                </span>
+                <span className="contact-scene__heading-line block">
+                  <AnimatedText
+                    delay={0.08}
+                    segments="More Than Another"
+                    level="word"
+                  />
+                </span>
+                <span className="contact-scene__heading-line contact-scene__heading-line--accent font-display block italic">
+                  <AnimatedText
+                    delay={0.16}
+                    segments="Template."
+                    level="word"
+                  />
+                </span>
+              </h2>
 
               <div className="flex min-w-0 flex-col gap-4 max-md:gap-3 md:gap-4">
-                <Reveal>
-                  <a
-                    href={resumeLink.href}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    onMouseEnter={hoverTick}
-                    onClick={() => play("ui-click")}
-                    className="contact-scene__resume-desktop group hidden min-h-11 w-fit items-center gap-3 text-foreground-secondary transition-colors duration-200 hover:text-foreground active:scale-[0.985] motion-reduce:active:scale-100 focus-visible:rounded-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--background)] md:inline-flex"
-                  >
-                    <FileText
-                      className="h-5 w-5"
-                      aria-hidden="true"
-                      strokeWidth={1.75}
-                    />
-                    <span className="font-sans text-[15px] font-medium tracking-wide">
-                      View {resumeLink.label}
-                    </span>
-                  </a>
-                </Reveal>
+                <a
+                  href={resumeLink.href}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  onMouseEnter={hoverTick}
+                  onClick={() => play("ui-click")}
+                  className="contact-scene__resume-desktop group hidden min-h-11 w-fit items-center gap-3 text-foreground-secondary transition-colors duration-200 hover:text-foreground active:scale-[0.985] motion-reduce:active:scale-100 focus-visible:rounded-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--background)] md:inline-flex"
+                >
+                  <FileText
+                    className="h-5 w-5"
+                    aria-hidden="true"
+                    strokeWidth={1.75}
+                  />
+                  <span className="font-sans text-[15px] font-medium tracking-wide">
+                    View {resumeLink.label}
+                  </span>
+                </a>
 
                 <nav
                   aria-label="Social links"
                   className="contact-scene__links flex flex-col gap-2 md:gap-2"
                 >
-                  <Reveal className="min-w-0">
-                    <a
-                      href={resumeLink.href}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      aria-label={`View ${resumeLink.label}`}
-                      onMouseEnter={hoverTick}
-                      onClick={() => play("ui-click")}
-                      className="contact-scene__link contact-scene__link--resume group inline-flex min-h-10 w-fit max-w-full min-w-0 items-center gap-1.5 text-foreground-secondary transition-colors duration-200 hover:text-foreground active:scale-[0.985] motion-reduce:active:scale-100 focus-visible:rounded-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--background)] md:hidden"
-                    >
-                      <FileText
-                        className="h-[18px] w-[18px] shrink-0"
-                        aria-hidden="true"
-                        strokeWidth={1.75}
-                      />
-                      <span className="whitespace-nowrap font-sans text-[14px] font-medium tracking-wide">
-                        Résumé
-                      </span>
-                    </a>
-                  </Reveal>
+                  <a
+                    href={resumeLink.href}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    aria-label={`View ${resumeLink.label}`}
+                    onMouseEnter={hoverTick}
+                    onClick={() => play("ui-click")}
+                    className="contact-scene__link contact-scene__link--resume group inline-flex min-h-10 w-fit max-w-full min-w-0 items-center gap-1.5 text-foreground-secondary transition-colors duration-200 hover:text-foreground active:scale-[0.985] motion-reduce:active:scale-100 focus-visible:rounded-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--background)] md:hidden"
+                  >
+                    <FileText
+                      className="h-[18px] w-[18px] shrink-0"
+                      aria-hidden="true"
+                      strokeWidth={1.75}
+                    />
+                    <span className="whitespace-nowrap font-sans text-[14px] font-medium tracking-wide">
+                      Résumé
+                    </span>
+                  </a>
                   {socialLinks.map((link) => (
-                    <Reveal key={link.id} className="min-w-0">
-                      <SocialIcon link={link} className="contact-scene__link" />
-                    </Reveal>
+                    <SocialIcon
+                      link={link}
+                      className="contact-scene__link"
+                      key={link.id}
+                    />
                   ))}
                 </nav>
               </div>
@@ -137,9 +133,9 @@ export function Contact() {
           </div>
 
           <div className="cinematic-layer cinematic-layer--panel min-w-0 w-full max-w-full self-start lg:self-center">
-            <Reveal className="contact-scene__panel w-full overflow-hidden">
+            <div className="contact-scene__panel w-full overflow-hidden">
               <ContactFormLazy />
-            </Reveal>
+            </div>
           </div>
         </div>
       </Container>

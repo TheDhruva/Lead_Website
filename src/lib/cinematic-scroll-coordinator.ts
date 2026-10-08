@@ -8,8 +8,6 @@ import {
   type ScrollMotionFrame,
   type SectionRect,
   computeSectionEnterProgress,
-  computeSectionExitProgress,
-  computeVelocityScale,
   getScrollMotionFrame,
 } from "@/lib/scroll-motion-engine";
 
@@ -18,7 +16,6 @@ export type CinematicSectionPreset =
 
 interface CinematicEntry {
   element: HTMLElement;
-  isMobile: boolean;
   /**
    * Content-space geometry (relative to the scrollport at scrollTop=0),
    * measured outside the hot scroll path. Per-frame viewport rects are
@@ -27,24 +24,28 @@ interface CinematicEntry {
    */
   contentTop: number;
   height: number;
-  /** Last written custom-property strings — only meaningful changes write. */
+  /** Last written custom-property string — only meaningful changes write. */
   lastEnter: string | null;
-  lastExit: string | null;
-  lastVelocity: string | null;
 }
 
 /** Skip sections more than ~1 viewport away from the visible area. */
 const OFFSCREEN_MARGIN_VH = 0.2;
 
 /**
- * Visual quantization for scroll-linked vars. Steps are sized below the
- * just-noticeable difference of every consumer in globals.css (opacity
- * deltas ≤ 0.0045, transform deltas ≤ 0.26px) so output is visually
- * identical, while gentle wheel scrolling crosses a step only every ~18px
- * instead of writing (and invalidating a whole section subtree) every frame.
+ * Visual quantization for the scroll-linked enter var. Steps are sized
+ * below the just-noticeable difference of every consumer in globals.css
+ * (opacity deltas ≤ 0.0045, transform deltas ≤ 0.26px) so output is
+ * visually identical, while gentle wheel scrolling crosses a step only
+ * every ~18px instead of writing (and invalidating a whole section
+ * subtree) every frame.
+ *
+ * Only `--section-enter` is published: it is the sole var any CSS rule
+ * consumes (section-level heading/media/detail drift). The former
+ * `--section-exit` / `--velocity-scale` channels were measured and
+ * written per frame but read by nothing — pure style-invalidation cost
+ * on every scroll tick, now removed.
  */
-const PROGRESS_STEP = 100; // 0.01 → enter/exit toFixed(2)
-const VELOCITY_STEP = 1000; // 0.001 → velocity-scale toFixed(3)
+const PROGRESS_STEP = 100; // 0.01 → enter toFixed(2)
 
 const entries = new Map<HTMLElement, CinematicEntry>();
 
@@ -60,9 +61,11 @@ let invalidateRaf = 0;
 const LIMIT_EPS = 2;
 
 function clearCinematicVars(el: HTMLElement): void {
+  el.style.removeProperty("--section-enter");
+  // Legacy channels (removed from the publish path): clear defensively
+  // in case an older session's inline styles persist on a revived node.
   el.style.removeProperty("--section-progress");
   el.style.removeProperty("--section-exit");
-  el.style.removeProperty("--section-enter");
   el.style.removeProperty("--velocity-scale");
 }
 
@@ -177,16 +180,6 @@ export function tickCinematicSections(motion: ScrollMotionFrame): void {
       PROGRESS_STEP,
       2,
     );
-    const exit = quantize(
-      computeSectionExitProgress(rect, viewportH),
-      PROGRESS_STEP,
-      2,
-    );
-    const velocity = quantize(
-      computeVelocityScale(motion.velocity, entry.isMobile),
-      VELOCITY_STEP,
-      3,
-    );
 
     // Write only values that actually changed: identical strings never
     // touch the section subtree (no style invalidation, no recalc).
@@ -194,30 +187,18 @@ export function tickCinematicSections(motion: ScrollMotionFrame): void {
       entry.element.style.setProperty("--section-enter", enter);
       entry.lastEnter = enter;
     }
-    if (exit !== entry.lastExit) {
-      entry.element.style.setProperty("--section-exit", exit);
-      entry.lastExit = exit;
-    }
-    if (velocity !== entry.lastVelocity) {
-      entry.element.style.setProperty("--velocity-scale", velocity);
-      entry.lastVelocity = velocity;
-    }
   });
 }
 
 export function registerCinematicSection(
   element: HTMLElement,
   preset: CinematicSectionPreset,
-  isMobile: boolean,
 ): void {
   entries.set(element, {
     element,
-    isMobile,
     contentTop: 0,
     height: 0,
     lastEnter: null,
-    lastExit: null,
-    lastVelocity: null,
   });
   element.dataset.cinematic = preset;
   // Bursty mounts coalesce via the trailing invalidator.

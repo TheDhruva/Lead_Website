@@ -21,6 +21,10 @@ export function SectionSkeleton({ tone, id }: SectionSkeletonProps) {
       className={cn(
         "section-frame motion-reduce:animate-none animate-pulse",
         toneClasses[tone],
+        // Projects: hold deck geometry while the chunk loads so the
+        // placeholder → skeleton → deck chain keeps one stable height
+        // (see .section-skeleton-projects + LazySection reservation).
+        tone === "projects" && "section-skeleton-projects",
       )}
       aria-busy="true"
       aria-label="Loading section"

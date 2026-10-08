@@ -45,6 +45,10 @@ const VIDEO_ENTRANCE_HEADING_MS = 520;
 const VIDEO_ENTRANCE_PLAYER_MS = 560;
 const VIDEO_ENTRANCE_ROW_MS = 440;
 const PRELOAD_THRESHOLD = 0.75;
+/** Motion frames above this velocity pause decoding during the gesture. */
+const SCROLL_PAUSE_VELOCITY = 0.05;
+/** Silence after the last motion frame before playback resumes (150–250ms). */
+const SCROLL_SETTLE_RESUME_MS = 200;
 const EASE_CINEMATIC = "cubic-bezier(0.22, 1, 0.36, 1)";
 
 function formatNum(n: number) {
@@ -82,6 +86,8 @@ function VideoProjectRow({
   onSelect: (id: string) => void;
   onHoverItem?: (id: string) => void;
 }) {
+  // Small-mobile compaction (≤380px): narrower thumb + tighter gap
+  // frees ~28px for the truncating text column. Desktop untouched.
   return (
     <m.button
       type="button"
@@ -97,21 +103,22 @@ function VideoProjectRow({
       aria-label={`Play ${item.title}`}
       aria-current={isActive ? "true" : undefined}
       className={cn(
-        "group relative flex w-full items-center gap-3 py-3 text-left",
+        "group relative flex w-full items-center gap-3 py-3 text-left max-[380px]:gap-2",
         "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-inset",
       )}
     >
-      {/* lacquer micro-indicator — active row only */}
+      {/* lacquer micro-indicator — active row only. 200ms (state
+          class) so selection feels immediate next to the 360ms cut. */}
       <span
         aria-hidden
         className={cn(
-          "absolute top-1/2 left-0 h-6 w-[2px] -translate-y-1/2 rounded-full bg-[var(--accent-cherry)] transition-opacity duration-300",
+          "absolute top-1/2 left-0 h-6 w-[2px] -translate-y-1/2 rounded-full bg-[var(--accent-cherry)] transition-opacity duration-200",
           isActive ? "opacity-100" : "opacity-0",
         )}
       />
       <span
         className={cn(
-          "w-7 shrink-0 pl-3 font-sans text-[11px] tabular-nums",
+          "w-7 shrink-0 pl-3 font-sans text-[11px] tabular-nums max-[380px]:w-6 max-[380px]:pl-2",
           isActive ? "text-foreground" : "text-foreground-secondary",
         )}
       >
@@ -134,7 +141,7 @@ function VideoProjectRow({
           {item.meta}
         </span>
       </span>
-      <span className="relative h-[54px] w-[96px] shrink-0 overflow-hidden rounded-md bg-black sm:h-[62px] sm:w-[108px]">
+      <span className="relative h-[54px] w-[96px] shrink-0 overflow-hidden rounded-md bg-black max-[380px]:h-[45px] max-[380px]:w-[80px] sm:h-[62px] sm:w-[108px]">
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img
           src={item.poster}
@@ -170,11 +177,11 @@ function VideoProjectList({
   onHoverItem?: (id: string) => void;
 }) {
   return (
-    // Mobile (<lg): natural height — all rows participate in page flow and
-    // #scroll-container stays the ONLY vertical scroller. No nested
-    // scrollport, no gesture capture, no overscroll containment.
-    // Desktop (lg+): bounded docked rail co-visible with the player.
-    <div className="min-w-0 lg:min-h-0 lg:max-h-[calc(100svh-var(--nav-safe-top)-var(--floating-nav-clearance)-10rem)] lg:overflow-y-auto lg:overscroll-x-none lg:overscroll-y-contain lg:[scrollbar-width:thin] lg:[scrollbar-color:var(--scrollbar-thumb)_transparent]">
+    // One vertical scroller only (#scroll-container): the index is natural
+    // height at every breakpoint. A bounded inner rail used to trap wheel,
+    // trackpad, touch, and keyboard gestures inside the list — removed by
+    // design; the player + index compose within the section instead.
+    <div className="min-w-0">
       <div className="flex flex-col divide-y divide-[var(--border)]">
         {videoItems.map((item, idx) => (
           <VideoProjectRow
@@ -183,7 +190,7 @@ function VideoProjectList({
             num={formatNum(idx + 1)}
             isActive={idx === currentIndex}
             entered={entered}
-            entranceDelayMs={60 + idx * 40}
+            entranceDelayMs={100 + idx * 30}
             reduceMotion={reduceMotion}
             onSelect={onSelect}
             onHoverItem={onHoverItem}
@@ -241,24 +248,27 @@ export function VideoShowcase() {
   const [isTransitioning, setIsTransitioning] = useState(false);
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [autoplayBlocked, setAutoplayBlocked] = useState(false);
-  /**
-   * Scroll-settle video state (SCROLLING_PAUSED). While the user actively
-   * scrolls, decoding + texture upload + progress writes would compete
-   * with scroll compositing — so the showcase holds its currentTime and
-   * stays paused, resuming ~350ms after motion truly ends (not per
-   * velocity dip: every motion frame resets the timer, so slow continuous
-   * scrolling never flaps play/pause). Toggles at most twice per
-   * gesture — never per frame.
-   */
-  const [scrollPaused, setScrollPaused] = useState(false);
 
   const isMutedRef = useRef(true);
   const currentIndexRef = useRef(0);
   const isPlayingRef = useRef(false);
   const reducedMotionRef = useRef(false);
-  // True while SCROLLING_PAUSED owns the pause (distinct from the user's
-  // explicit pause and from visibility gating).
-  const scrollPausedRef = useRef(false);
+  /**
+   * Scroll-settle hold (SCROLLING_PAUSED) — ref-only, never React state.
+   * While the user actively scrolls, decoding + texture upload + progress
+   * writes would compete with scroll compositing, so the showcase holds
+   * its currentTime and stays paused, resuming ~200ms after motion truly
+   * ends. Pause/resume act imperatively on the stable <video> element:
+   * scroll frames never render. Distinct from the user's explicit pause
+   * and from visibility gating.
+   */
+  const scrollHoldRef = useRef(false);
+  /** The single scroll-settle timer — reset on every motion frame. */
+  const resumeTimerRef = useRef<number | null>(null);
+  /** Ref mirrors for the imperative subscriber (avoids re-subscribing). */
+  const settledVisibleRef = useRef(false);
+  const initializedRef = useRef(false);
+  const autoplayBlockedRef = useRef(false);
   // Explicit user stop (pause) — autoplay must not override it.
   const userPausedRef = useRef(false);
 
@@ -287,6 +297,15 @@ export function VideoShowcase() {
   useEffect(() => {
     reducedMotionRef.current = prefersReducedMotion;
   }, [prefersReducedMotion]);
+  useEffect(() => {
+    settledVisibleRef.current = isSectionVisibleSettled;
+  }, [isSectionVisibleSettled]);
+  useEffect(() => {
+    initializedRef.current = initialized;
+  }, [initialized]);
+  useEffect(() => {
+    autoplayBlockedRef.current = autoplayBlocked;
+  }, [autoplayBlocked]);
 
   // lazy init — only when section approaches viewport; entrance fires once
   useEffect(() => {
@@ -347,76 +366,119 @@ export function VideoShowcase() {
     return () => window.clearTimeout(id);
   }, [isSectionVisible]);
 
-  // pause when section leaves viewport — or while the user is actively
-  // scrolling through it (SCROLLING_PAUSED: hold currentTime, decode
-  // nothing, resume after settle via the scroll effect below).
+  // Poster bridge: warm every poster bitmap once (six small stills) so
+  // a film switch resolves from cache — poster → player ready → video,
+  // never poster → black → video. Fire-and-forget; failures fall back
+  // to the normal loading path.
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    for (const item of videoItems) {
+      try {
+        const img = new window.Image();
+        (img as HTMLImageElement & { decoding?: string }).decoding = "async";
+        img.src = item.poster;
+      } catch {
+        // Non-fatal: the bridge <img> still loads normally.
+      }
+    }
+  }, []);
+
+  // Imperative resume shared by the visibility gate and the
+  // scroll-settle timer: plays only when every policy agrees (mounted,
+  // settled-visible, not user-stopped, not blocked, not already playing,
+  // scroll bus idle, motion allowed). Never seeks — pause/resume
+  // preserve currentTime. Mute state is enforced synchronously below.
+  const tryResumePlayback = useCallback(() => {
+    const v = activeRef.current;
+    // Reduced motion: no autoplay ever — poster stays, playback is
+    // explicit via the play control only.
+    if (reducedMotionRef.current) return;
+    if (!v || !initializedRef.current || !settledVisibleRef.current) return;
+    if (userPausedRef.current || autoplayBlockedRef.current) return;
+    if (isPlayingRef.current || !v.paused) return;
+    if (isScrollActive()) return;
+    v.muted = globalMuted || isMutedRef.current;
+    void v
+      .play()
+      .then(() => {
+        if (!isMutedRef.current) setVideoAudioActive(true);
+      })
+      .catch(() => setAutoplayBlocked(true));
+  }, [globalMuted, setVideoAudioActive]);
+
+  // Visibility gate — the only React-state-driven media toggle, firing
+  // solely on settled transitions (150ms debounce above), never per
+  // frame. The scroll hold pauses/resumes imperatively in the subscriber
+  // below without touching React state.
   useEffect(() => {
     if (!initialized) return;
     const v = activeRef.current;
     if (!v) return;
-    if (!isSectionVisibleSettled || scrollPaused) {
+    if (!isSectionVisibleSettled) {
       v.pause();
       if (!isMutedRef.current) setVideoAudioActive(false);
       if (rafRef.current) cancelAnimationFrame(rafRef.current);
-    } else if (
-      isSectionVisibleSettled &&
-      !scrollPaused &&
-      !isScrollActive() &&
-      !isPlayingRef.current &&
-      !autoplayBlocked &&
-      !userPausedRef.current
-    ) {
-      // resume autoplay when returning — unless the user explicitly stopped
-      v.muted = globalMuted || isMutedRef.current;
-      void v.play().catch(() => setAutoplayBlocked(true));
+    } else if (!scrollHoldRef.current) {
+      // Resume autoplay when returning — unless the user explicitly
+      // stopped or the scroll hold owns the pause.
+      tryResumePlayback();
     }
   }, [
     isSectionVisibleSettled,
-    scrollPaused,
     initialized,
     autoplayBlocked,
-    globalMuted,
+    tryResumePlayback,
     setVideoAudioActive,
   ]);
 
-  // Scroll-settle state machine: OUTSIDE / VISIBLE_IDLE / VISIBLE_PLAYING
-  // transitions stay in the visibility effect above; this effect only
-  // owns SCROLLING_PAUSED. Motion frames arrive only while scroll offset
-  // changes, so "no frames for 350ms" reliably means the gesture (and
-  // its momentum tail) ended — every frame resets the timer, which is
-  // what prevents play/pause flapping during slow continuous scrolls.
-  // currentTime is preserved: pause/resume never seeks.
+  // Scroll-settle controller — owns SCROLLING_PAUSED with refs and ONE
+  // debounce timer only. Motion frames publish solely while scroll offset
+  // changes, so the timer is a true settle detector: EVERY frame (fast
+  // or slow tail) resets the single timer, and only genuine silence
+  // releases the hold. This never flaps (slow continuous scrolling keeps
+  // resetting) and never sticks (a fast flick with no slow tail still
+  // gets its resume — the timer is armed on the last frame received).
+  // currentTime is preserved: pause/resume never seek, the element is
+  // never recreated.
   useEffect(() => {
     if (!initialized) return;
-    let resumeTimer: number | null = null;
-    const clearResume = () => {
-      if (resumeTimer !== null) {
-        window.clearTimeout(resumeTimer);
-        resumeTimer = null;
+    const armResume = () => {
+      if (resumeTimerRef.current !== null) {
+        window.clearTimeout(resumeTimerRef.current);
       }
+      resumeTimerRef.current = window.setTimeout(() => {
+        resumeTimerRef.current = null;
+        if (!scrollHoldRef.current) return;
+        scrollHoldRef.current = false;
+        tryResumePlayback();
+      }, SCROLL_SETTLE_RESUME_MS);
     };
     const unsubscribe = subscribeScrollMotion((motion) => {
       const v = activeRef.current;
       if (!v) return;
-      if (Math.abs(motion.velocity) > 0.05) {
-        clearResume();
-        if (!v.paused && !userPausedRef.current && !scrollPausedRef.current) {
-          scrollPausedRef.current = true;
-          setScrollPaused(true);
-        }
-      } else if (scrollPausedRef.current && resumeTimer === null) {
-        resumeTimer = window.setTimeout(() => {
-          resumeTimer = null;
-          scrollPausedRef.current = false;
-          setScrollPaused(false);
-        }, 350);
+      if (
+        Math.abs(motion.velocity) > SCROLL_PAUSE_VELOCITY &&
+        !v.paused &&
+        !userPausedRef.current &&
+        !scrollHoldRef.current
+      ) {
+        // First fast frame of a gesture: hold currentTime immediately
+        // (imperative — no render) and silence video-side audio.
+        scrollHoldRef.current = true;
+        v.pause();
+        if (!isMutedRef.current) setVideoAudioActive(false);
       }
+      // Any motion — fast or slow tail — pushes the settle point out.
+      if (scrollHoldRef.current) armResume();
     });
     return () => {
-      clearResume();
       unsubscribe();
+      if (resumeTimerRef.current !== null) {
+        window.clearTimeout(resumeTimerRef.current);
+        resumeTimerRef.current = null;
+      }
     };
-  }, [initialized]);
+  }, [initialized, tryResumePlayback, setVideoAudioActive]);
 
   // helper to set sources on a video element
   const setVideoSources = useCallback(
@@ -565,8 +627,10 @@ export function VideoShowcase() {
       v.addEventListener("playing", markReady, { once: true });
     }
 
-    // autoplay muted when visible (settled signal — see declaration)
-    if (isSectionVisibleSettled) {
+    // autoplay muted when visible (settled signal — see declaration).
+    // Reduced motion never autoplays: the poster remains until the user
+    // explicitly presses play.
+    if (isSectionVisibleSettled && !prefersReducedMotion) {
       const p = v.play();
       if (p) {
         p.then(() => {
@@ -598,6 +662,7 @@ export function VideoShowcase() {
     initialized,
     isSectionVisibleSettled,
     globalMuted,
+    prefersReducedMotion,
     setVideoSources,
     setVideoAudioActive,
   ]);
@@ -734,6 +799,10 @@ export function VideoShowcase() {
       cutAnimRef.current?.cancel();
       if (switchTimeoutRef.current !== null) {
         window.clearTimeout(switchTimeoutRef.current);
+      }
+      if (resumeTimerRef.current !== null) {
+        window.clearTimeout(resumeTimerRef.current);
+        resumeTimerRef.current = null;
       }
       if (rafRef.current) cancelAnimationFrame(rafRef.current);
       // Refs are intentionally read at cleanup time (unmount) to release video resources.
@@ -873,7 +942,7 @@ export function VideoShowcase() {
         {/* ── editorial heading ──
             Ownership split: cinematic scroll owns the outer wrapper,
             Framer Motion owns the inner entrance wrapper. */}
-        <div className="cinematic-layer cinematic-layer--header mb-5 md:mb-8">
+        <div className="cinematic-layer cinematic-layer--header section-heading">
           <m.div
             initial={prefersReducedMotion ? false : { opacity: 0 }}
             animate={enteredOnce ? { opacity: 1 } : {}}
@@ -905,7 +974,6 @@ export function VideoShowcase() {
             transition={{
               duration: VIDEO_ENTRANCE_PLAYER_MS / 1000,
               ease: [0.22, 1, 0.36, 1],
-              delay: prefersReducedMotion ? 0 : 0.06,
             }}
           >
             <div
@@ -1011,8 +1079,11 @@ export function VideoShowcase() {
                     style={{ ["--progress" as string]: "0" }}
                   >
                     <div
-                      className="absolute inset-y-0 left-0 w-full bg-[var(--accent-cherry)]"
-                      style={{ transform: "scaleX(var(--progress, 0))" }}
+                      className="absolute inset-y-0 left-0 w-full origin-left bg-[var(--accent-cherry)]"
+                      style={{
+                        transform: "scaleX(var(--progress, 0))",
+                        transformOrigin: "left center",
+                      }}
                     />
                   </div>
                 </div>
@@ -1036,9 +1107,10 @@ export function VideoShowcase() {
                   <span className="flex flex-col items-center gap-2">
                     <span
                       className={cn(
-                        "inline-flex h-[60px] w-[60px] items-center justify-center rounded-full border border-white/30 bg-black/55 text-white transition-[background-color,opacity] duration-300 ease-[cubic-bezier(0.22,1,0.36,1)] motion-reduce:transition-none md:h-[72px] md:w-[72px]",
-                        isPlaying &&
-                          "opacity-0 group-hover:opacity-100 group-focus-visible:opacity-100",
+                        "inline-flex h-[60px] w-[60px] items-center justify-center rounded-full border border-white/30 bg-black/55 text-white transition-[background-color,opacity,transform] duration-200 ease-[cubic-bezier(0.22,1,0.36,1)] motion-reduce:scale-100 motion-reduce:transition-none md:h-[72px] md:w-[72px]",
+                        isPlaying
+                          ? "scale-95 opacity-0 group-hover:scale-100 group-hover:opacity-100 group-focus-visible:scale-100 group-focus-visible:opacity-100"
+                          : "scale-100",
                       )}
                     >
                       {isPlaying ? (

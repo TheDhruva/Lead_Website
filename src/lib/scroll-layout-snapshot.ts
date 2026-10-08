@@ -19,10 +19,3 @@ export function createScrollLayoutSnapshot(
 
   return { viewportH, rects };
 }
-
-export function getSnapshotRect(
-  snapshot: ScrollLayoutSnapshot,
-  element: HTMLElement,
-): DOMRect | null {
-  return snapshot.rects.get(element) ?? null;
-}

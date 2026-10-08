@@ -33,7 +33,10 @@ export function MuteButton({ className }: MuteButtonProps) {
       initial={prefersReducedMotion ? false : { opacity: 0, y: 8 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.8, delay: 1.2, ease: EASE }}
-      whileHover={prefersReducedMotion ? undefined : { scale: 1.04 }}
+      // No hover scale: hover is carried by the bg/color CSS transition
+      // below (same as every other control). Press uses the frozen
+      // icon-family depth (0.96, see PRESS_SCALE_ICON) — deeper than the
+      // button family's 0.985, intentionally, and documented here.
       whileTap={prefersReducedMotion ? undefined : { scale: 0.96 }}
       onClick={() => {
         if (!unlocked) {

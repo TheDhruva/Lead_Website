@@ -1,3 +1,5 @@
+import { isReducedMotionPreferred } from "@/lib/media";
+
 export const SCROLL_CONTAINER_ID = "scroll-container";
 
 export function getScrollContainer(): HTMLElement | null {
@@ -36,14 +38,6 @@ export interface ScrollContainerOptions {
   onSettled?: (info: { cancelled: boolean }) => void;
 }
 
-function prefersReducedMotion(): boolean {
-  return (
-    typeof window !== "undefined" &&
-    typeof window.matchMedia === "function" &&
-    window.matchMedia("(prefers-reduced-motion: reduce)").matches
-  );
-}
-
 /** Restrained ease — decisive settle, no overshoot, no elastic feel. */
 function easeInOutCubic(t: number): number {
   return t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2;
@@ -57,6 +51,27 @@ interface ActiveTween {
 
 let activeTween: ActiveTween | null = null;
 let tweenSeq = 0;
+
+/**
+ * Same-gesture wheel shield — set only by the gesture navigation
+ * controller for the duration of its own flight.
+ *
+ * Background: the 24px wheel deadband below exists so a user can abort
+ * a NAVBAR flight with fresh input. But a gesture-triggered flight IS
+ * the user's gesture, and its own residual momentum (hundreds of px on
+ * a trackpad tail) would trip the deadband within milliseconds and tear
+ * the tween down mid-travel — native momentum + JS tween fighting each
+ * other. While the shield is set, wheel events it claims never reach the
+ * deadband accumulator. Touch and scroll-keys stay instant-cancel (finger
+ * down and keypresses are unambiguous takeover intent).
+ */
+let wheelCancelShield: ((event: WheelEvent) => boolean) | null = null;
+
+export function setWheelCancelShield(
+  shield: ((event: WheelEvent) => boolean) | null,
+): void {
+  wheelCancelShield = shield;
+}
 
 /**
  * Snap-suspend coordination — the single authority over snap interference
@@ -92,11 +107,6 @@ export function restoreContainerSnap(): void {
   if (!container) return;
   delete container.dataset.snapSuspended;
   container.style.removeProperty("scroll-snap-type");
-}
-
-/** For tests/diagnostics only — never branch runtime behavior on this. */
-export function isContainerSnapSuspended(): boolean {
-  return snapSuspendCount > 0;
 }
 
 function stopActiveTween(): void {
@@ -145,10 +155,10 @@ export function scrollContainerTo(
     behavior === "smooth" &&
     typeof duration === "number" &&
     duration > 0 &&
-    !prefersReducedMotion();
+    !isReducedMotionPreferred();
 
   if (!useTween) {
-    if (behavior === "auto" || prefersReducedMotion()) {
+    if (behavior === "auto" || isReducedMotionPreferred()) {
       container.scrollTop = Math.max(0, top);
     } else {
       container.scrollTo({ top, behavior });
@@ -189,6 +199,9 @@ export function scrollContainerTo(
   const WHEEL_CANCEL_PX = 24;
   let wheelAccum = 0;
   const cancelOnWheel = (event: WheelEvent) => {
+    // Same-gesture residual owned by the gesture flight: never counts
+    // toward cancellation. One null check when no flight is shielded.
+    if (wheelCancelShield?.(event)) return;
     wheelAccum += Math.abs(event.deltaY) + Math.abs(event.deltaX);
     if (wheelAccum >= WHEEL_CANCEL_PX) finish(true);
   };

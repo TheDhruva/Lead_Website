@@ -17,6 +17,23 @@ export const SECTION_IDS = {
   contact: "contact",
 } as const;
 
+/**
+ * Canonical section order — the single source of truth for the one
+ * continuous composition (Theatre Intro → Hero/Work → Services →
+ * Video → Projects → Contact). Navigation, the active-section observer,
+ * gesture intent, choreography, and settling all resolve against this
+ * list; nothing may define its own copy.
+ */
+export const SECTION_ORDER = [
+  SECTION_IDS.work,
+  SECTION_IDS.services,
+  SECTION_IDS.video,
+  SECTION_IDS.projects,
+  SECTION_IDS.contact,
+] as const;
+
+export type SectionId = (typeof SECTION_ORDER)[number];
+
 /** Legacy hashes map to current section ids. */
 const SECTION_ALIASES: Record<string, string> = {
   hero: SECTION_IDS.work,
@@ -65,10 +82,10 @@ export const ACTIVE_SECTION_THRESHOLDS = [0, 0.2, 0.4, 0.6, 0.8, 1] as const;
 export const THEATRE_INTRO_LOAD_MS = 1400;
 /** Title split reveal before the loading line starts */
 export const THEATRE_INTRO_REVEAL_MS = 900;
-/** Idle time in "ready" state before the intro auto-advances without audio */
-export const THEATRE_INTRO_AUTO_EXIT_MS = 450;
-/** Beat between paper-cutout expression swaps in the hero (idle work budget) */
-export const FACE_CYCLE_INTERVAL_MS = 4500;
+/** Beat between paper-cutout expression swaps in the hero (idle work budget).
+ * Quiet visual evolution, not a demanding animation — 7s keeps the hero
+ * alive without pulling attention during reading. */
+export const FACE_CYCLE_INTERVAL_MS = 7000;
 
 /** Shared cinematic motion language — premium ease-out throughout */
 export const EASING_OUT = [0.22, 1, 0.36, 1] as const;
@@ -81,6 +98,9 @@ export const EASING_OUT = [0.22, 1, 0.36, 1] as const;
 export const EASING_SIGNATURE: [number, number, number, number] = [
   0.16, 1, 0.3, 1,
 ];
+
+/** One press depth per control family — never introduce others. */
+export const PRESS_SCALE_ICON = 0.96;
 
 export const MOTION = {
   /** Restrained section reveals — editorial, premium */
@@ -107,4 +127,22 @@ export const MOTION = {
   title: { duration: 0.6, stagger: 0.02 },
   /** Exit de-assembly scales relative to the matching entrance values */
   exit: { durationScale: 0.7, staggerScale: 0.8 },
+  /**
+   * Quiet block exit — "enter with personality, leave with restraint".
+   * Hero headlines keep expressive character entrances but exit as one
+   * block (opacity + tiny lift, no per-character stagger), so section
+   * handoffs never burst ~100 nodes at once.
+   */
+  blockExit: { y: -8 },
 } as const;
+
+/**
+ * Motion hierarchy (see implementation plan):
+ * L1 signature (intro→hero, video→projects, projects scroll) — strong,
+ *   EASING_SIGNATURE, 600–900ms, max 2 simultaneous majors.
+ * L2 section arrival — opacity + 8–12px, 400–600ms, EASING_OUT.
+ * L3 interaction (buttons, pill, accordion, form) — 180–300ms.
+ * L4 static — no animation; content simply appears.
+ */
+/** Project info follows the visual takeover (rise) instead of competing. */
+export const PROJECT_INFO_FOLLOW_DELAY_S = 0.1;

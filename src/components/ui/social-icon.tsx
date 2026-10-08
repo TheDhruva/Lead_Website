@@ -113,7 +113,7 @@ export function SocialIcon({ link, className }: SocialIconProps) {
       }}
       onClick={() => play("ui-click")}
       className={cn(
-        "group inline-flex min-h-10 w-fit max-w-full min-w-0 items-center gap-2 text-foreground-secondary transition-[transform,color] duration-[220ms] ease-[cubic-bezier(0.22,1,0.36,1)] max-md:gap-1.5 md:min-h-11 md:gap-3",
+        "group inline-flex min-h-10 w-fit max-w-full min-w-0 items-center gap-2 text-foreground-secondary transition-[transform,color] duration-200 ease-[cubic-bezier(0.22,1,0.36,1)] max-md:gap-1.5 md:min-h-11 md:gap-3",
         "hover:translate-x-1 hover:text-foreground",
         "active:scale-[0.985] motion-reduce:transform-none motion-reduce:active:scale-100",
         "focus-visible:rounded-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--background)]",
@@ -121,7 +121,7 @@ export function SocialIcon({ link, className }: SocialIconProps) {
       )}
     >
       <Icon
-        className="h-[18px] w-[18px] shrink-0 transition-transform duration-[220ms] ease-out group-hover:scale-110 md:h-5 md:w-5"
+        className="h-[18px] w-[18px] shrink-0 transition-transform duration-200 ease-out group-hover:scale-110 md:h-5 md:w-5"
         aria-hidden="true"
       />
       <span className="whitespace-nowrap font-sans text-[14px] font-medium tracking-wide md:text-base">

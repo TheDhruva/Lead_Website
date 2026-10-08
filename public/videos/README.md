@@ -1,15 +1,15 @@
 # Video assets
 
-Showcase videos (muted, looping):
+Showcase videos (muted, looping). Each clip ships as a normalized ladder —
+desktop + mobile variants in MP4, HEVC (`-hevc`), and WebM:
 
-- `showcase-1.mp4` — landscape
-- `showcase-2.mp4` — landscape
-- `showcase-3.mp4` — landscape
-- `showcase-4.mp4` — landscape
-- `showcase-5.mp4` — landscape
-- `showcase-6.mp4` — portrait
+- `showcase-{n}-norm.mp4` / `showcase-{n}-norm.webm` — desktop
+- `showcase-{n}-hevc-norm.mp4` — desktop HEVC
+- `showcase-{n}-mobile-norm.mp4` / `showcase-{n}-mobile-norm.webm` — mobile
+- `showcase-{n}-mobile-hevc-norm.mp4` — mobile HEVC
 
-Each clip also has HEVC (`.mp4` with `-hevc` suffix) and WebM (`.webm`) variants for smaller delivery. Poster frames live in `public/images/videos/showcase-{n}-poster.webp`.
+Clips 1–5 are landscape, clip 6 is portrait. Poster frames live in
+`public/images/videos/showcase-{n}-poster.webp`.
 
 ## Re-encode / regenerate
 

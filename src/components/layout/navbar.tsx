@@ -3,33 +3,30 @@
 import { useCallback, useEffect, useId, useRef, useState } from "react";
 
 import { ArrowUpRight, Menu, X } from "lucide-react";
+import { createPortal } from "react-dom";
 
 import { Button } from "@/components/ui/button";
 import { ThemeToggle } from "@/components/ui/theme-toggle";
-import { NAV_ITEMS, SECTION_IDS } from "@/constants";
+import { NAV_ITEMS, SECTION_ORDER } from "@/constants";
 import { useActiveSection } from "@/hooks/use-active-section";
 import { useNavMetrics } from "@/hooks/use-nav-metrics";
 import { useSfxHandlers } from "@/hooks/use-sfx-handlers";
 import { lockScrollPanel, unlockScrollPanel } from "@/lib/scroll-lock";
 import { cn } from "@/lib/utils";
 
-const SECTION_LIST = [
-  SECTION_IDS.work,
-  SECTION_IDS.services,
-  SECTION_IDS.video,
-  SECTION_IDS.projects,
-  SECTION_IDS.contact,
-] as const;
+/** Active-section observation resolves against the canonical order. */
+const SECTION_LIST = SECTION_ORDER;
 
 /**
  * Minimal editorial top navigation — a transparent bar attached edge to
  * edge at the very top (macOS menu-bar style), no background, no border,
  * no shadow. Mobile: sticky so it stays attached while scrolling.
  * Desktop: absolute, scrolling away with the page unchanged.
- * Section links live in the mobile menu sheet; desktop uses CTAs.
+ * Section links live in the menu sheet below lg; desktop uses CTAs.
  */
 export function Navbar() {
   const [menuOpen, setMenuOpen] = useState(false);
+  const [portalMounted, setPortalMounted] = useState(false);
   const menuId = useId();
   const navRef = useRef<HTMLElement>(null);
   const menuButtonRef = useRef<HTMLButtonElement>(null);
@@ -37,6 +34,17 @@ export function Navbar() {
   const { play, onClick } = useSfxHandlers();
 
   useNavMetrics(navRef);
+
+  // Portal target exists only on the client — the menu overlay renders
+  // at document level so the navbar's backdrop-filter can never become
+  // its containing block (fixed inset-0 then means the real viewport).
+  // Deferred to a post-paint frame (not synchronous in the effect body):
+  // the menu can only open on user input, long after first paint, so
+  // this never delays anything visible.
+  useEffect(() => {
+    const raf = requestAnimationFrame(() => setPortalMounted(true));
+    return () => cancelAnimationFrame(raf);
+  }, []);
 
   const closeMenu = useCallback(() => setMenuOpen(false), []);
 
@@ -137,7 +145,7 @@ export function Navbar() {
             <button
               ref={menuButtonRef}
               type="button"
-              className="inline-flex h-9 w-9 shrink-0 cursor-pointer items-center justify-center rounded-full text-foreground transition-colors duration-200 hover:bg-card-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring md:hidden"
+              className="inline-flex h-9 w-9 shrink-0 cursor-pointer items-center justify-center rounded-full text-foreground transition-colors duration-200 hover:bg-card-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring lg:hidden"
               aria-expanded={menuOpen}
               aria-controls={menuId}
               aria-label={menuOpen ? "Close menu" : "Open menu"}
@@ -155,94 +163,103 @@ export function Navbar() {
           </div>
         </div>
 
-        {/* Mobile menu sheet — simple overlay, no animation system */}
-        {menuOpen ? (
-          <div className="fixed inset-0 z-20 md:hidden">
-            <button
-              type="button"
-              aria-label="Close menu"
-              onClick={closeMenu}
-              className="absolute inset-0 cursor-default bg-overlay"
-            />
-            <div
-              id={menuId}
-              role="dialog"
-              aria-modal="true"
-              aria-label="Menu"
-              className="nav-menu-panel absolute top-0 right-0 left-0 border-b border-border bg-background px-5 pt-4 pb-5 z-10"
-            >
-              <div className="flex h-10 items-center justify-between">
-                <span className="font-sans text-[13px] font-bold tracking-[0.22em] text-foreground uppercase">
-                  The&nbsp;Dhruva
-                </span>
-                <button
-                  type="button"
-                  onClick={closeMenu}
-                  aria-label="Close menu"
-                  className="inline-flex h-9 w-9 items-center justify-center rounded-full text-foreground transition-colors duration-200 hover:bg-card-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-                >
-                  <X className="h-5 w-5" aria-hidden="true" strokeWidth={2} />
-                </button>
-              </div>
-              <ul className="mt-2 flex flex-col">
-                {NAV_ITEMS.map((item, index) => {
-                  const id = item.href.replace("#", "");
-                  const isActive = displayId === id;
+        {/* Mobile menu sheet lives here in the tree only as null — the
+            real overlay is portalled to document.body below, outside the
+            navbar's backdrop-filter containing context. */}
+      </nav>
+      {/* Fullscreen menu overlay at root level: genuinely 100vw × 100vh,
+          immune to navbar filter/transform containment, and correct
+          across chrome expand/retract, scroll, rotation, and height
+          changes (fixed anchors track the visual viewport). */}
+      {portalMounted && menuOpen
+        ? createPortal(
+            <div className="fixed inset-0 z-[70] lg:hidden">
+              <button
+                type="button"
+                aria-label="Close menu"
+                onClick={closeMenu}
+                className="absolute inset-0 cursor-default bg-overlay"
+              />
+              <div
+                id={menuId}
+                role="dialog"
+                aria-modal="true"
+                aria-label="Menu"
+                className="nav-menu-panel absolute top-0 right-0 left-0 border-b border-border bg-background px-5 pt-4 pb-5 z-10"
+              >
+                <div className="flex h-10 items-center justify-between">
+                  <span className="font-sans text-[13px] font-bold tracking-[0.22em] text-foreground uppercase">
+                    The&nbsp;Dhruva
+                  </span>
+                  <button
+                    type="button"
+                    onClick={closeMenu}
+                    aria-label="Close menu"
+                    className="inline-flex h-9 w-9 items-center justify-center rounded-full text-foreground transition-colors duration-200 hover:bg-card-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                  >
+                    <X className="h-5 w-5" aria-hidden="true" strokeWidth={2} />
+                  </button>
+                </div>
+                <ul className="mt-2 flex flex-col">
+                  {NAV_ITEMS.map((item, index) => {
+                    const id = item.href.replace("#", "");
+                    const isActive = displayId === id;
 
-                  return (
-                    <li
-                      key={item.href}
-                      className="nav-menu-item"
-                      style={{
-                        ["--nav-item-delay" as string]: `${index * 45}ms`,
-                      }}
-                    >
-                      <a
-                        href={item.href}
-                        onClick={(event) => {
-                          event.preventDefault();
-                          go(item.href);
+                    return (
+                      <li
+                        key={item.href}
+                        className="nav-menu-item"
+                        style={{
+                          ["--nav-item-delay" as string]: `${index * 45}ms`,
                         }}
-                        aria-current={isActive ? "true" : undefined}
-                        className={cn(
-                          "flex items-center justify-between border-b border-divider py-2.5 font-sans text-sm font-semibold tracking-[0.14em] uppercase transition-colors duration-200 last:border-b-0 focus-visible:rounded-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
-                          isActive
-                            ? "text-lacquer dark:text-bright-lacquer"
-                            : "text-foreground",
-                        )}
                       >
-                        <span className="inline-flex items-center gap-2.5">
+                        <a
+                          href={item.href}
+                          onClick={(event) => {
+                            event.preventDefault();
+                            go(item.href);
+                          }}
+                          aria-current={isActive ? "true" : undefined}
+                          className={cn(
+                            "flex items-center justify-between border-b border-divider py-2.5 font-sans text-sm font-semibold tracking-[0.14em] uppercase transition-colors duration-200 last:border-b-0 focus-visible:rounded-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+                            isActive
+                              ? "text-lacquer dark:text-bright-lacquer"
+                              : "text-foreground",
+                          )}
+                        >
+                          <span className="inline-flex items-center gap-2.5">
+                            <span
+                              aria-hidden="true"
+                              className={cn(
+                                "h-[2px] w-4 rounded-full transition-colors duration-200",
+                                isActive
+                                  ? "bg-lacquer dark:bg-bright-lacquer"
+                                  : "bg-transparent",
+                              )}
+                            />
+                            {item.label}
+                          </span>
                           <span
                             aria-hidden="true"
                             className={cn(
-                              "h-[2px] w-4 rounded-full transition-colors duration-200",
+                              "text-xs transition-[opacity,transform] duration-200",
                               isActive
-                                ? "bg-lacquer dark:bg-bright-lacquer"
-                                : "bg-transparent",
+                                ? "translate-x-0 text-lacquer opacity-100 dark:text-bright-lacquer"
+                                : "-translate-x-1 text-foreground-secondary opacity-0",
                             )}
-                          />
-                          {item.label}
-                        </span>
-                        <span
-                          aria-hidden="true"
-                          className={cn(
-                            "text-xs transition-[opacity,transform] duration-200",
-                            isActive
-                              ? "translate-x-0 text-lacquer opacity-100 dark:text-bright-lacquer"
-                              : "-translate-x-1 text-foreground-secondary opacity-0",
-                          )}
-                        >
-                          →
-                        </span>
-                      </a>
-                    </li>
-                  );
-                })}
-              </ul>
-            </div>
-          </div>
-        ) : null}
-      </nav>
+                          >
+                            →
+                          </span>
+                        </a>
+                      </li>
+                    );
+                  })}
+                </ul>
+              </div>
+            </div>,
+            document.body,
+          )
+        : null}
     </>
   );
 }

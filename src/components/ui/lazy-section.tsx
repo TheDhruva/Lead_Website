@@ -23,6 +23,15 @@ interface LazySectionProps {
   className?: string;
   /** Height reserved for the placeholder before content mounts. */
   minHeight?: CSSProperties["minHeight"];
+  /**
+   * Optional md-and-up reservation override (applied via the
+   * `lazy-reserve` class + CSS vars so it stays responsive — an inline
+   * style could never be beaten by a breakpoint class). Needed when the
+   * mounted geometry is breakpoint-dependent (e.g. the Projects deck:
+   * 480svh below md, 600svh at/above). Without this the placeholder
+   * swaps to a much taller section mid-scroll and the page jumps.
+   */
+  minHeightMd?: CSSProperties["minHeight"];
   /** Start loading this far before the section enters the viewport. */
   rootMargin?: string;
   /** Server-renderable summary content visible to crawlers while the section is unmounted. */
@@ -40,6 +49,7 @@ export function LazySection({
   id,
   className,
   minHeight = "min(66svh, 700px)",
+  minHeightMd,
   rootMargin = "0px 0px 600px 0px",
   srContent,
 }: LazySectionProps) {
@@ -75,12 +85,25 @@ export function LazySection({
 
   const shouldMount = forceMount || isInView;
 
+  // Responsive reservation path: values travel as CSS vars so the
+  // breakpoint rule in `.lazy-reserve` can switch between them. (An
+  // inline min-height would beat every class, making md overrides
+  // impossible.) Sections without minHeightMd keep the plain style.
+  const reserveStyle = (
+    minHeightMd
+      ? {
+          ["--lazy-min" as string]: minHeight,
+          ["--lazy-min-md" as string]: minHeightMd,
+        }
+      : { minHeight }
+  ) as CSSProperties;
+
   const placeholder = (
     <section
       ref={ref}
       id={id}
-      className={cn("min-h-0", className)}
-      style={{ minHeight }}
+      className={cn("min-h-0", minHeightMd && "lazy-reserve", className)}
+      style={reserveStyle}
       aria-hidden={srContent ? undefined : "true"}
       aria-busy="true"
       tabIndex={srContent ? undefined : -1}

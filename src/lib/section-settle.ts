@@ -1,4 +1,6 @@
-import { SECTION_IDS } from "@/constants";
+import { SECTION_IDS, SECTION_ORDER } from "@/constants";
+import { getDeckGeometry } from "@/lib/deck-geometry";
+import { isReducedMotionPreferred } from "@/lib/media";
 import {
   getOffsetInScrollContainer,
   getScrollContainer,
@@ -23,8 +25,10 @@ import { getSectionChoreography } from "@/lib/section-choreography";
  * - Tiny scrolls (<32px of gesture travel) never settle.
  * - Only the nearest section start within 14% of a viewport settles;
  *   anything farther is left exactly where the user left it.
- * - Projects interior travel is free: deep inside the deck track the
- *   settle is skipped entirely; only the track's top boundary settles.
+ * - Projects interior snaps to the nearest CARD boundary (one card per
+ *   gesture, always completing exactly): deep inside the deck track the
+ *   section-boundary settle is replaced by deck-card settle, using the
+ *   deck's published geometry — same idle/tween/cancel contract.
  * - Never competes with navbar/CTA/hash/keyboard navigation: skipped
  *   while `navigating`, and the correction itself is a normal
  *   scrollContainerTo tween — user input or a newer request supersedes
@@ -49,21 +53,8 @@ const GESTURE_WINDOW_MS = 2000;
     travel is storytelling, not section landing — never settle. */
 const PROJECTS_INTERIOR_RATIO = 0.6;
 
-const SETTLE_ORDER = [
-  SECTION_IDS.work,
-  SECTION_IDS.services,
-  SECTION_IDS.video,
-  SECTION_IDS.projects,
-  SECTION_IDS.contact,
-] as const;
-
-function prefersReducedMotion(): boolean {
-  return (
-    typeof window !== "undefined" &&
-    typeof window.matchMedia === "function" &&
-    window.matchMedia("(prefers-reduced-motion: reduce)").matches
-  );
-}
+/** Settle targets resolve against the canonical section order. */
+const SETTLE_ORDER = SECTION_ORDER;
 
 let bound = false;
 
@@ -119,7 +110,7 @@ export function startSectionSettle(): () => void {
     idleTimer = null;
     if (settling) return;
     if (typeof document !== "undefined" && document.hidden) return;
-    if (prefersReducedMotion()) {
+    if (isReducedMotionPreferred()) {
       gestureTracking = false;
       return;
     }
@@ -159,8 +150,13 @@ export function startSectionSettle(): () => void {
     }
     if (tops.size === 0) return;
 
-    // Projects protection: deep interior travel never settles. Only the
-    // track's top boundary participates in section landing.
+    // Projects deck: deep interior travel settles to the nearest CARD
+    // boundary — one card per gesture, always completing exactly where
+    // each sheet's rise completes (index / COUNT), so a card never rests
+    // mid-takeover. Uses the deck's published geometry (no measurement
+    // on this path); the correction is a normal cancellable tween, so
+    // fresh input instantly takes over and it can never fight the user.
+    // Entry/exit bands and unmounted decks keep prior behavior (return).
     const projectsTop = tops.get(SECTION_IDS.projects);
     if (typeof projectsTop === "number") {
       const projectsEl = document.getElementById(SECTION_IDS.projects);
@@ -170,6 +166,34 @@ export function startSectionSettle(): () => void {
         scroll > projectsTop + viewportH * PROJECTS_INTERIOR_RATIO &&
         scroll < projectsTop + trackH - viewportH * PROJECTS_INTERIOR_RATIO
       ) {
+        const deck = getDeckGeometry();
+        if (deck && deck.count > 0 && deck.travel > 0) {
+          const seg = deck.travel / deck.count;
+          if (seg > 0) {
+            const idx = Math.min(
+              deck.count - 1,
+              Math.max(0, Math.round((scroll - deck.start) / seg)),
+            );
+            const maxScroll = Math.max(
+              0,
+              container.scrollHeight - container.clientHeight,
+            );
+            const target = Math.max(
+              0,
+              Math.min(deck.start + idx * seg, maxScroll),
+            );
+            if (Math.abs(target - scroll) >= SETTLE_MIN_DELTA_PX) {
+              settling = true;
+              scrollContainerTo(target, {
+                behavior: "smooth",
+                duration: SETTLE_DURATION_MS,
+                onSettled: () => {
+                  settling = false;
+                },
+              });
+            }
+          }
+        }
         return;
       }
     }

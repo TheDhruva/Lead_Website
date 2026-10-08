@@ -38,6 +38,3 @@ export const anton = Anton({
   preload: true,
   fallback: ["Arial Narrow", "sans-serif"],
 });
-
-/** @deprecated Use `manrope` — kept for incremental migration safety. */
-export const inter = manrope;

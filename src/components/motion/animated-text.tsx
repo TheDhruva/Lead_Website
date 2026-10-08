@@ -34,6 +34,14 @@ interface AnimatedTextProps {
   gentle?: boolean;
   /** "char" assembles letters; "word" reveals whole words (supporting copy) */
   level?: "char" | "word";
+  /**
+   * Exit style — "deassemble" separates every character outward (legacy),
+   * "block" fades the whole text as one quiet block (opacity + tiny lift,
+   * no per-character stagger). Signature headlines keep expressive
+   * character entrances but should exit with "block": enter with
+   * personality, leave with restraint.
+   */
+  exit?: "deassemble" | "block";
 }
 
 /**
@@ -141,7 +149,8 @@ function buildWords(
  * EXIT (de-assembly, not a reversed replay): characters separate
  * outward from their settled positions with halved mirrored offsets,
  * a slight lift, half rotation and opacity falloff — faster and more
- * restrained than the entrance. Re-entering replays assembly.
+ * restrained than the entrance. Re-entering replays assembly. Pass
+ * exit="block" for a quiet whole-block fade instead (hero headlines).
  *
  * Deliberately no filter:blur() — per-character blur is paint per frame
  * × N nodes; opacity + translate + scale is visually cleaner and free.
@@ -157,6 +166,7 @@ function AnimatedTextComponent({
   start = true,
   gentle = false,
   level = "char",
+  exit = "deassemble",
 }: AnimatedTextProps) {
   const prefersReducedMotion = useReducedMotion();
   const simpleReveal = mode === "inview";
@@ -206,6 +216,9 @@ function AnimatedTextComponent({
   const isWord = simpleReveal || level === "word";
   const duration = isWord ? MOTION.word.duration : MOTION.char.duration;
   const exitDuration = duration * MOTION.exit.durationScale;
+  // Block exits ignore per-character stagger entirely: one shared delay
+  // (the base) so ~100 nodes never burst at once on scroll-away.
+  const quietBlockExit = exit === "block";
   // Slightly deeper rest scale compensates for the removed blur: the
   // assembly still reads as depth (0.985 → 1 + rise) without any paint.
   const restScale = isWord ? 1 : 0.985;
@@ -241,10 +254,17 @@ function AnimatedTextComponent({
     },
     exit: (custom: CharCustom) => ({
       opacity: 0,
-      x: simpleReveal ? 0 : Math.round(custom.x * -0.5 + custom.cx * 6),
-      y: simpleReveal ? -4 : Math.round(custom.y * -0.5 - 7 * custom.s),
-      scale: isWord ? 1 : 0.985,
-      rotate: simpleReveal ? 0 : custom.rot * -0.5,
+      x:
+        quietBlockExit || simpleReveal
+          ? 0
+          : Math.round(custom.x * -0.5 + custom.cx * 6),
+      y: quietBlockExit
+        ? MOTION.blockExit.y
+        : simpleReveal
+          ? -4
+          : Math.round(custom.y * -0.5 - 7 * custom.s),
+      scale: quietBlockExit ? 1 : isWord ? 1 : 0.985,
+      rotate: quietBlockExit || simpleReveal ? 0 : custom.rot * -0.5,
     }),
   };
 
@@ -298,7 +318,7 @@ function AnimatedTextComponent({
                         ? {
                             duration: exitDuration,
                             ease: EASING_SIGNATURE,
-                            delay: entry.exitDelay,
+                            delay: quietBlockExit ? delay : entry.exitDelay,
                           }
                         : {
                             duration,

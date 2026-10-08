@@ -2,6 +2,13 @@ import { type InputHTMLAttributes, forwardRef } from "react";
 
 import { cn } from "@/lib/utils";
 
+import {
+  FIELD_CONTROL_CLASS,
+  FIELD_CONTROL_ERROR_CLASS,
+  FieldError,
+  FieldLabel,
+} from "./field";
+
 export interface InputProps extends InputHTMLAttributes<HTMLInputElement> {
   label: string;
   error?: string;
@@ -13,33 +20,20 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(
 
     return (
       <div>
-        <label
-          htmlFor={inputId}
-          className="mb-2 block font-sans text-[13px] font-medium text-foreground"
-        >
-          {label}
-        </label>
+        <FieldLabel id={inputId}>{label}</FieldLabel>
         <input
           ref={ref}
           id={inputId}
           aria-invalid={Boolean(error)}
           aria-describedby={error ? `${inputId}-error` : undefined}
           className={cn(
-            "w-full rounded-[20px] border border-input-border bg-input px-4 py-3 text-foreground transition-[border-color,box-shadow,background-color] duration-200 ease-[cubic-bezier(0.4,0,0.2,1)] placeholder:text-muted-foreground focus:border-ring focus:outline-none focus:ring-2 focus:ring-ring/30",
-            error && "border-error focus:border-error focus:ring-error",
+            FIELD_CONTROL_CLASS,
+            error && FIELD_CONTROL_ERROR_CLASS,
             className,
           )}
           {...props}
         />
-        {error ? (
-          <p
-            id={`${inputId}-error`}
-            role="alert"
-            className="mt-2 text-sm text-error"
-          >
-            {error}
-          </p>
-        ) : null}
+        <FieldError id={inputId} message={error} />
       </div>
     );
   },

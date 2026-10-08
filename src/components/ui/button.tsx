@@ -32,6 +32,10 @@ const variantClasses: Record<ButtonVariant, string> = {
     "bg-transparent border border-transparent text-muted-foreground hover:text-foreground hover:bg-card-hover active:scale-[0.985] focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--background)]",
 };
 
+/* Single source of truth for control sizing: sm ≈ 36px, md ≈ 44px,
+   lg ≈ 48px. Text sizes live ONLY here — the base class below carries
+   no text size so sizes can never contradict it. Tracking 0.04em is
+   the component authority (the `text-button` theme token predates it). */
 const sizeClasses: Record<ButtonSize, string> = {
   sm: "min-h-9 px-4 py-2 text-[13px]",
   md: "min-h-11 px-6 py-3 text-[14px]",
@@ -77,7 +81,7 @@ export const Button = forwardRef<HTMLButtonElement, ButtonProps>(
           if (sfx) playClick();
         }}
         className={cn(
-          "inline-flex cursor-pointer items-center justify-center gap-2 rounded-md font-sans text-sm font-semibold tracking-[0.04em] whitespace-nowrap uppercase transition-[transform,box-shadow,background-color,border-color,color] duration-[180ms] ease-[cubic-bezier(0.16,1,0.3,1)] disabled:pointer-events-none disabled:opacity-50 motion-reduce:transform-none motion-reduce:transition-colors [&_svg]:size-4 [&_svg]:shrink-0",
+          "inline-flex cursor-pointer items-center justify-center gap-2 rounded-md font-sans font-semibold tracking-[0.04em] whitespace-nowrap uppercase transition-[transform,box-shadow,background-color,border-color,color] duration-[180ms] ease-[cubic-bezier(0.16,1,0.3,1)] disabled:pointer-events-none disabled:opacity-50 motion-reduce:transform-none motion-reduce:transition-colors [&_svg]:size-4 [&_svg]:shrink-0",
           variantClasses[variant],
           sizeClasses[size],
           fullWidth && "w-full",

@@ -12,7 +12,11 @@ import { useTheatreIntro } from "@/providers/theatre-intro-provider";
 
 const ENTRANCE_EASE = [0.16, 1, 0.3, 1] as const;
 const EXIT_EASE = [0.4, 0, 0.2, 1] as const;
-const EXIT_DURATION = 0.68;
+/** Short redundant-fade exits — the curtain owns the exit duration. */
+const EXIT_DURATION = 0.4;
+/** Signature curtain lift: opacity only (major cinematic, 600–900ms). */
+const CURTAIN_EXIT_DURATION = 0.6;
+const CURTAIN_EXIT_DELAY = 0.1;
 
 type IntroPhase = "reveal" | "loading" | "ready" | "exiting" | "gone";
 
@@ -147,15 +151,11 @@ export function TheatreIntro() {
             }
           }}
           tabIndex={showEnterPrompt ? 0 : -1}
-          initial={{ opacity: 1, y: 0, scale: 1 }}
-          animate={
-            exiting
-              ? { opacity: 0, y: -24, scale: 1.02 }
-              : { opacity: 1, y: 0, scale: 1 }
-          }
+          initial={{ opacity: 1 }}
+          animate={exiting ? { opacity: 0 } : { opacity: 1 }}
           transition={{
-            duration: exiting ? 0.4 : 0,
-            delay: exiting ? 0.55 : 0,
+            duration: exiting ? CURTAIN_EXIT_DURATION : 0,
+            delay: exiting ? CURTAIN_EXIT_DELAY : 0,
             ease: EXIT_EASE,
           }}
           onAnimationComplete={() => {
@@ -181,7 +181,7 @@ export function TheatreIntro() {
             }
             transition={{
               duration: exiting ? EXIT_DURATION : 0.5,
-              delay: exiting ? 0 : 0.7,
+              delay: exiting ? 0 : 0.3,
               ease: ENTRANCE_EASE,
             }}
             onClick={(event) => {
@@ -204,7 +204,7 @@ export function TheatreIntro() {
             }
             transition={{
               duration: exiting ? EXIT_DURATION : 0.58,
-              delay: exiting ? 0.02 : 0.48,
+              delay: exiting ? 0 : 0.3,
               ease: ENTRANCE_EASE,
             }}
           >
@@ -224,7 +224,7 @@ export function TheatreIntro() {
                   }
                   transition={
                     exiting
-                      ? { duration: 0.4, ease: ENTRANCE_EASE }
+                      ? { duration: EXIT_DURATION, ease: ENTRANCE_EASE }
                       : { duration: 0.55, ease: ENTRANCE_EASE }
                   }
                 >
@@ -246,21 +246,12 @@ export function TheatreIntro() {
                   ))}
                 </m.div>
 
-                <m.div
-                  className="theatre-stage__dhruva-row"
-                  aria-hidden="true"
-                  initial={{ letterSpacing: "0.03em", scale: 1, y: 0 }}
-                  animate={
-                    exiting
-                      ? { letterSpacing: "-0.02em", scale: 1.05, y: -30 }
-                      : { letterSpacing: "0em", scale: 1, y: 0 }
-                  }
-                  transition={
-                    exiting
-                      ? { duration: 0.9, ease: ENTRANCE_EASE }
-                      : { duration: 0.7, ease: ENTRANCE_EASE }
-                  }
-                >
+                {/* DHRUVA identity — letters assemble (signature); the row
+                    itself is static. A previous letterSpacing/scale/y tween
+                    here forced layout per frame for an imperceptible
+                    tracking shift — removed. The fade wrapper below owns
+                    the exit. */}
+                <div className="theatre-stage__dhruva-row" aria-hidden="true">
                   <m.div
                     className="theatre-stage__dhruva-fade"
                     aria-hidden="true"
@@ -268,7 +259,7 @@ export function TheatreIntro() {
                     animate={exiting ? { opacity: 0 } : { opacity: 1 }}
                     transition={
                       exiting
-                        ? { delay: 0.55, duration: 0.35, ease: EXIT_EASE }
+                        ? { delay: 0.1, duration: 0.4, ease: EXIT_EASE }
                         : { duration: 0.01 }
                     }
                   >
@@ -297,7 +288,7 @@ export function TheatreIntro() {
                       </m.span>
                     ))}
                   </m.div>
-                </m.div>
+                </div>
               </div>
 
               <m.p
@@ -312,7 +303,7 @@ export function TheatreIntro() {
                 }
                 transition={{
                   duration: exiting ? EXIT_DURATION : 0.62,
-                  delay: exiting ? 0.08 : 0.52,
+                  delay: exiting ? 0.05 : 0.35,
                   ease: ENTRANCE_EASE,
                 }}
               >

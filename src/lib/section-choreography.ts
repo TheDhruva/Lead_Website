@@ -1,6 +1,6 @@
 import { useSyncExternalStore } from "react";
 
-import { SECTION_IDS } from "@/constants";
+import { SECTION_ORDER } from "@/constants";
 import {
   type ScrollDirection,
   getScrollMotionFrame,
@@ -25,15 +25,7 @@ import {
  */
 
 /** Canonical section order for the one continuous composition. */
-export const CHOREOGRAPHY_ORDER = [
-  SECTION_IDS.work,
-  SECTION_IDS.services,
-  SECTION_IDS.video,
-  SECTION_IDS.projects,
-  SECTION_IDS.contact,
-] as const;
-
-export type ChoreographySectionId = (typeof CHOREOGRAPHY_ORDER)[number];
+export const CHOREOGRAPHY_ORDER = SECTION_ORDER;
 
 export interface SectionChoreographyState {
   /** Visually dominant section (navbar highlights this). */

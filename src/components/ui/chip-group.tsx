@@ -87,11 +87,11 @@ export function ChipGroup({
       >
         {label}
       </legend>
+      {/* Neutral defaults: compact 6px / default 8px. The contact density
+          layer (`.contact-scene__panel … [role="radiogroup"]`) owns the
+          in-form values, so no breakpoint variant lives here. */}
       <div
-        className={cn(
-          "flex flex-wrap",
-          compact ? "gap-1.5 max-md:gap-1.25" : "gap-2",
-        )}
+        className={cn("flex flex-wrap", compact ? "gap-1.5" : "gap-2")}
         role="radiogroup"
         aria-labelledby={labelId}
       >
@@ -114,7 +114,7 @@ export function ChipGroup({
               onClick={() => selectOption(option)}
               onKeyDown={(event) => handleKeyDown(event, index)}
               className={cn(
-                "rounded-full border font-label-md transition-[border-color,background-color,color,box-shadow,transform] duration-[250ms] ease-out",
+                "rounded-full border font-label-md transition-[border-color,background-color,color,box-shadow,transform] duration-200 ease-[cubic-bezier(0.16,1,0.3,1)]",
                 "active:scale-[0.985] motion-reduce:active:scale-100",
                 "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--background)]",
                 compact

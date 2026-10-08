@@ -3,7 +3,6 @@
 import dynamic from "next/dynamic";
 import { useEffect } from "react";
 
-import { PageTransition } from "@/components/animations/page-transition";
 import { FloatingNav } from "@/components/layout/floating-nav";
 import { GlobalCanvas } from "@/components/layout/global-canvas";
 import { Navbar } from "@/components/layout/navbar";
@@ -14,6 +13,7 @@ import { SectionSkeleton } from "@/components/ui/section-skeleton";
 import { SECTION_IDS } from "@/constants";
 import { projectRows, services, videoItems } from "@/data";
 import { useContainerKeyboardScroll } from "@/hooks/use-container-keyboard-scroll";
+import { useGestureNavigation } from "@/hooks/use-gesture-navigation";
 import { useHashScroll } from "@/hooks/use-hash-scroll";
 import { useSectionSettle } from "@/hooks/use-section-settle";
 import {
@@ -77,6 +77,7 @@ function HashScrollSync() {
   useHashScroll();
   useContainerKeyboardScroll();
   useSectionSettle();
+  useGestureNavigation();
   return null;
 }
 
@@ -159,7 +160,7 @@ export function HomePageContent() {
       <SectionChunkPrefetch />
       <AudioGestureUnlock />
       {showMute ? <MuteButton /> : null}
-      <PageTransition data-page-shell className="relative h-[100svh]">
+      <div data-page-shell className="relative h-[100svh]">
         <a
           href="#main-content"
           className="sr-only focus:not-sr-only focus:absolute focus:top-4 focus:left-4 focus:z-[110] focus:rounded-full focus:bg-primary focus:px-4 focus:py-2 focus:text-primary-foreground"
@@ -226,7 +227,14 @@ export function HomePageContent() {
             <LazySection
               id={SECTION_IDS.projects}
               className="section-tone-projects section-placeholder"
-              minHeight="100svh"
+              // Reserve the deck's genuine geometry (track 480svh + pb-10
+              // below md, 600svh + md:pb-14 at/above) so the
+              // placeholder → skeleton → deck chain never changes
+              // document height mid-scroll. A 100svh placeholder here
+              // would grow ~500svh on mount and visibly jump the page
+              // on fast first-visit flicks.
+              minHeight="calc(480svh + 2.5rem)"
+              minHeightMd="calc(600svh + 3.5rem)"
               // Design Work carries the image stack — mount early so
               // chunk + image fetches clear the scroll path before entry.
               rootMargin="0px 0px 2000px 0px"
@@ -265,7 +273,7 @@ export function HomePageContent() {
             </LazySection>
           </main>
         </div>
-      </PageTransition>
+      </div>
     </>
   );
 }
