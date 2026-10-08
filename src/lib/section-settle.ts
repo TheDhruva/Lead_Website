@@ -1,4 +1,5 @@
 import { SECTION_IDS, SECTION_ORDER } from "@/constants";
+import { MEDIA_DESKTOP } from "@/constants/breakpoints";
 import { getDeckGeometry } from "@/lib/deck-geometry";
 import { isReducedMotionPreferred } from "@/lib/media";
 import {
@@ -112,6 +113,12 @@ export function startSectionSettle(): () => void {
     idleTimer = null;
     if (settling) return;
     if (typeof document !== "undefined" && document.hidden) return;
+    // Small-screen touch scrolling should remain continuous. Settling near a
+    // section boundary makes a normal swipe appear to jump unexpectedly.
+    if (!window.matchMedia(MEDIA_DESKTOP).matches) {
+      gestureTracking = false;
+      return;
+    }
     if (isReducedMotionPreferred()) {
       gestureTracking = false;
       return;

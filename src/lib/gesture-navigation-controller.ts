@@ -1,4 +1,5 @@
 import { SECTION_IDS, SECTION_ORDER } from "@/constants";
+import { MEDIA_DESKTOP } from "@/constants/breakpoints";
 import {
   getOffsetInScrollContainer,
   getScrollContainer,
@@ -127,6 +128,9 @@ export function startGestureNavigation(): () => void {
   let flightCancel: (() => void) | null = null;
   let flightSign: 1 | -1 = 1;
   let reversalAccum = 0;
+
+  const isDesktopViewport = () =>
+    typeof window !== "undefined" && window.matchMedia(MEDIA_DESKTOP).matches;
 
   const clearReleaseTimer = () => {
     if (releaseTimer !== null) {
@@ -475,6 +479,13 @@ export function startGestureNavigation(): () => void {
 
   const onTouchStart = (event: TouchEvent) => {
     lastInputAt = nowMs();
+    // Touch scrolling stays native below the desktop breakpoint. Section
+    // intent on small screens makes ordinary swipes feel like teleportation.
+    if (!isDesktopViewport()) {
+      touchActive = false;
+      touchSuppressed = true;
+      return;
+    }
     if (
       phase === "target_locked" ||
       getSectionChoreography().navigating ||
@@ -513,6 +524,13 @@ export function startGestureNavigation(): () => void {
 
   const onTouchEnd = (event: TouchEvent) => {
     lastInputAt = nowMs();
+    if (!isDesktopViewport()) {
+      touchActive = false;
+      touchSuppressed = false;
+      touchTarget = null;
+      touchMoves = [];
+      return;
+    }
     if (!touchActive) {
       touchSuppressed = false;
       return;
